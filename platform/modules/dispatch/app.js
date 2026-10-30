@@ -3252,6 +3252,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cityRules = cityRules.filter(r => norm(r.transportadora) === targetCarrier);
             }
 
+            // v3.25.9: Desativar transportadoras inativas — não aparecem em cotações
+            cityRules = cityRules.filter(r => {
+                const c = r.transportadora;
+                if (window.isCarrierActive && !window.isCarrierActive(c)) return false;
+                if (r.redespacho && r.redespacho !== '-' && r.redespacho !== '') {
+                    if (window.isCarrierActive && !window.isCarrierActive(r.redespacho)) return false;
+                }
+                return true;
+            });
+
             if (cityRules.length === 0) {
                 if (!silent) {
                     if (targetCarrier) alert(`A transportadora ${targetCarrier} não possui tabela para a cidade ${city}.`);
@@ -3605,7 +3615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Transportadora da Coleta:</label>
                     <select id="fob-carrier-${index}" class="form-input" style="padding: 4px 8px; font-size: 0.9rem; width: 100%; height: 32px;" onchange="window.onFobCarrierChange(${index})">
                         <option value="">-- Selecione --</option>
-                        ${carrierList.sort().map(c => `<option value="${c}">${c}</option>`).join('')}
+                        ${carrierList.filter(c => !window.isCarrierActive || window.isCarrierActive(c)).sort().map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                     <div id="fob-info-${index}" style="margin-top: 6px; font-size: 0.8rem; padding: 6px 10px; background: rgba(59,130,246,0.07); border-radius: 8px; border: 1px solid rgba(59,130,246,0.15); display: none;">
                         <span id="fob-horario-${index}" style="color: var(--primary-color);"></span>
@@ -3999,12 +4009,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Default to first carrier if activeCarrier is invalid
             if (!activeCarrier || !groups[activeCarrier]) activeCarrier = carriers[0];
 
-            // Render Tabs
-            tabContainer.innerHTML = carriers.map(c => `
-            <button class="tab-btn ${c === activeCarrier ? 'active' : ''}" onclick="window.setActiveCarrier('${c}')">
-                ${c} (${groups[c].length})
+            // Render Tabs (v3.25.9: indica visualmente transportadoras inativas)
+            tabContainer.innerHTML = carriers.map(c => {
+                const isAct = !window.isCarrierActive || window.isCarrierActive(c);
+                const inactLabel = !isAct ? ' <span style="color:#ef4444; font-size:0.68rem; font-weight:700;">(INATIVA)</span>' : '';
+                return `
+            <button class="tab-btn ${c === activeCarrier ? 'active' : ''}" onclick="window.setActiveCarrier('${c}')" ${!isAct ? 'style="opacity: 0.72;"' : ''}>
+                ${c}${inactLabel} (${groups[c].length})
             </button>
-        `).join('');
+        `;
+            }).join('');
 
             // Filter and Sort rules of active carrier
             let activeRules = [...groups[activeCarrier]];
@@ -4246,6 +4260,91 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        // v3.25.9: Helper global para verificação de transportadora ativa
+        window.isCarrierActive = function(name) {
+            if (!name) return false;
+            const clean = String(name).trim().toUpperCase();
+            const info = (typeof carrierInfo !== 'undefined' && carrierInfo[clean])
+                ? carrierInfo[clean]
+                : ((Utils.getStorage('carrier_info_v2') || {})[clean] || {});
+            const cfg = (typeof carrierConfigs !== 'undefined' && carrierConfigs[clean])
+                ? carrierConfigs[clean]
+                : ((Utils.getStorage('carrier_configs') || {})[clean] || {});
+            if (info.ativo === false || cfg.ativo === false || info.status === 'inativo') {
+                return false;
+            }
+            return true;
+        };
+
+        // v3.25.9: Botão / Chave para Ativar/Desativar transportadora com 1 clique
+        window.toggleCarrierStatus = async function(name) {
+            if (!name) return;
+            const clean = String(name).trim().toUpperCase();
+
+            // Reler storages locais
+            carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+            if (Array.isArray(carrierInfo)) carrierInfo = {};
+            carrierConfigs = Utils.getStorage('carrier_configs') || {};
+            if (Array.isArray(carrierConfigs)) carrierConfigs = {};
+
+            const info = carrierInfo[clean] || {};
+            const currentActive = (info.ativo !== false);
+            const newStatus = !currentActive; // inverte o estado
+
+            if (!carrierInfo[clean]) {
+                carrierInfo[clean] = {
+                    cnpj: '-',
+                    ie: '-',
+                    address: '-',
+                    city: '-',
+                    reliability: 3,
+                    isRedespacho: false,
+                    freteNegociado: false,
+                    createdAt: new Date().toISOString()
+                };
+            }
+            carrierInfo[clean].ativo = newStatus;
+            carrierInfo[clean].updatedAt = new Date().toISOString();
+
+            if (!carrierConfigs[clean]) {
+                carrierConfigs[clean] = { taxaFixa: 0, gris: 0, icms: 0, valorVolume: 0 };
+            }
+            carrierConfigs[clean].ativo = newStatus;
+
+            // Salva localmente
+            Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+            Utils.saveRaw('carrier_configs', JSON.stringify(carrierConfigs));
+
+            // Sincroniza nuvem
+            if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                Utils.Cloud.save('carrier_info_v2', carrierInfo);
+                Utils.Cloud.save('carrier_configs', carrierConfigs);
+            }
+
+            // Atualiza componentes e telas
+            renderCarrierConfigs();
+            populateCarrierSelect();
+            if (typeof renderRulesList === 'function') renderRulesList();
+            if (window.CarrierSwitchModule && typeof window.CarrierSwitchModule.init === 'function') {
+                window.CarrierSwitchModule.init();
+            }
+
+            const msg = newStatus
+                ? `✅ Transportadora "${clean}" reativada com sucesso! Ela voltará a aparecer nas cotações.`
+                : `⏸️ Transportadora "${clean}" desativada. Ocultada de cotações e seleções.`;
+            showToast(msg);
+
+            if (Utils.writeLog) {
+                Utils.writeLog(
+                    newStatus ? 'CARRIER_ACTIVATE' : 'CARRIER_DEACTIVATE',
+                    'Transportadora',
+                    `Transportadora ${clean} ${newStatus ? 'ativada' : 'desativada'}`,
+                    { carrier: clean, ativo: newStatus },
+                    null
+                );
+            }
+        };
+
         window.renderCarrierConfigs = () => {
             const body = document.getElementById('carrierConfigsBody');
             if (!body) return;
@@ -4316,7 +4415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tenantId = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '?';
                 body.innerHTML = `
                 <tr>
-                    <td colspan="6" style="padding: 2rem; text-align: center;">
+                    <td colspan="7" style="padding: 2rem; text-align: center;">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; color: var(--text-secondary);">
                             <span class="material-icons-round" style="font-size: 3rem; color: var(--accent-warning, #f59e0b);">local_shipping</span>
                             <div>
@@ -4345,6 +4444,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const info = carrierInfo[c] || { cnpj: '-', ie: '-', address: '-', city: '-' };
                 const safeC = c.replace(/'/g, "\\'");
                 const inList = carrierList.includes(c);
+                const isActive = window.isCarrierActive(c);
+                const isActive = window.isCarrierActive(c);
 
                 // v3.16.13: formata data de cadastro
                 let dateLabel = '';
@@ -4367,8 +4468,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ? `<span style="background:rgba(245,158,11,0.18);color:#f59e0b;font-size:0.65rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;border:1px solid rgba(245,158,11,0.35);" title="Transportadora / Embarcação Fluvial de Redespacho">REDESPACHO</span>`
                     : '';
 
+                // Badge de Status (Ativa / Inativa - v3.25.9)
+                const statusBadge = isActive
+                    ? `<span class="badge-status-active" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:9999px; font-size:0.72rem; font-weight:700; background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);"><span class="material-icons-round" style="font-size:0.9rem;">check_circle</span> ATIVA</span>`
+                    : `<span class="badge-status-inactive" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:9999px; font-size:0.72rem; font-weight:700; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);"><span class="material-icons-round" style="font-size:0.9rem;">pause_circle</span> INATIVA</span>`;
+
+                // Botão de Ativar / Desativar com 1 clique (v3.25.9)
+                const toggleBtn = isActive
+                    ? `<button class="btn btn-secondary" onclick="window.toggleCarrierStatus('${safeC}')" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); display: inline-flex; align-items: center; gap: 4px;" title="Desativar transportadora (não aparecerá em cotações e seleções)">
+                        <span class="material-icons-round" style="font-size: 1.05rem;">pause_circle</span> Desativar
+                       </button>`
+                    : `<button class="btn btn-secondary" onclick="window.toggleCarrierStatus('${safeC}')" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); display: inline-flex; align-items: center; gap: 4px;" title="Reativar transportadora (voltará a aparecer em cotações e seleções)">
+                        <span class="material-icons-round" style="font-size: 1.05rem;">play_circle</span> Ativar
+                       </button>`;
+
+                const rowStyle = isActive
+                    ? 'border-bottom: 2px solid var(--border-color);'
+                    : 'border-bottom: 2px solid var(--border-color); background: rgba(148,163,184,0.05); opacity: 0.72;';
+
                 return `
-            <tr style="border-bottom: 2px solid var(--border-color);" data-carrier-name="${safeC}">
+            <tr style="${rowStyle}" data-carrier-name="${safeC}" data-carrier-active="${isActive ? 'true' : 'false'}">
                 <td>
                     <div style="font-weight: 700; color: var(--text-primary); display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
                         <span>${c}</span>${orphanBadge}${redespBadge}
@@ -4376,54 +4495,63 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">CNPJ: ${info.cnpj}</div>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 1px;">${dateLabel}</div>
                 </td>
+                <td style="text-align: center;">
+                    ${statusBadge}
+                </td>
                 <td>
-                    <input type="number" step="0.01" value="${config.taxaFixa}" 
+                    <input type="number" step="0.01" value="${config.taxaFixa}"
                         id="taxaFixa_${c}" class="form-input" style="padding: 0.4rem; max-width: 100px;">
                 </td>
                 <td>
-                    <input type="number" step="0.01" value="${config.gris}" 
+                    <input type="number" step="0.01" value="${config.gris}"
                         id="gris_${c}" class="form-input" style="padding: 0.4rem; max-width: 80px;">
                 </td>
                 <td>
-                    <input type="number" step="0.01" value="${config.icms}" 
+                    <input type="number" step="0.01" value="${config.icms}"
                         id="icms_${c}" class="form-input" style="padding: 0.4rem; max-width: 80px;">
                 </td>
                 <td>
-                    <input type="number" step="0.01" value="${config.valorVolume || 0}" 
+                    <input type="number" step="0.01" value="${config.valorVolume || 0}"
                         id="valorVolume_${c}" class="form-input" style="padding: 0.4rem; max-width: 80px;">
                 </td>
-                <td style="text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem; align-items: center;">
+                <td style="text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    ${toggleBtn}
+
                     <button class="btn btn-secondary" onclick="window.editCarrier('${safeC}')" style="padding: 0.3rem; min-width: auto; background: rgba(0,123,255,0.1); color: #007bff; border: none;" title="Editar Cadastro">
                         <span class="material-icons-round" style="font-size: 1.2rem;">edit</span>
                     </button>
-
 
                     <button class="btn btn-primary" onclick="window.updateCarrierConfig('${safeC}')" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
                         SALVAR
                     </button>
 
-                    <button class="btn btn-secondary" onclick="window.removeCarrier('${safeC}')" style="padding: 0.4rem; min-width: auto; background: rgba(255,0,0,0.1); color: var(--accent-danger); border: none;">
+                    <button class="btn btn-secondary" onclick="window.removeCarrier('${safeC}')" style="padding: 0.4rem; min-width: auto; background: rgba(255,0,0,0.1); color: var(--accent-danger); border: none;" title="Excluir Definitivamente">
                         <span class="material-icons-round" style="font-size: 1.2rem;">delete_outline</span>
                     </button>
                 </td>
             </tr>
             `;
-
-
             }).join('');
         };
 
-        // v3.24.4: Filtro rápido de busca na listagem de transportadoras
+        // v3.25.9: Filtro de busca na listagem de transportadoras com suporte a Status (Todas/Ativas/Inativas)
         window.filterCarrierConfigs = (q) => {
-            const term = (q || '').toUpperCase().trim();
+            const qEl = document.getElementById('searchCarrierConfigs');
+            const statusEl = document.getElementById('filterCarrierStatus');
+            const term = (q !== undefined && typeof q === 'string' ? q : (qEl ? qEl.value : '')).toUpperCase().trim();
+            const statusFilter = statusEl ? statusEl.value : 'all';
+
             const rows = document.querySelectorAll('#carrierConfigsBody tr');
             rows.forEach(row => {
-                if (!term) {
-                    row.style.display = '';
-                } else {
-                    const text = row.innerText.toUpperCase();
-                    row.style.display = text.includes(term) ? '' : 'none';
-                }
+                const text = row.innerText.toUpperCase();
+                const matchesText = !term || text.includes(term);
+
+                const isInactive = row.getAttribute('data-carrier-active') === 'false';
+                let matchesStatus = true;
+                if (statusFilter === 'active') matchesStatus = !isInactive;
+                else if (statusFilter === 'inactive') matchesStatus = isInactive;
+
+                row.style.display = (matchesText && matchesStatus) ? '' : 'none';
             });
         };
 
@@ -4481,6 +4609,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('newCarrierReliability').value = info.reliability || '3';
             document.getElementById('newCarrierIsRedespacho').checked = info.isRedespacho === true;
             document.getElementById('newCarrierFreteNegociado').checked = info.freteNegociado === true;
+            const ativoEl = document.getElementById('newCarrierAtivo');
+            if (ativoEl) ativoEl.checked = (info.ativo !== false);
 
 
             // Set Edit Mode
@@ -4503,6 +4633,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             form.reset();
             document.getElementById('newCarrierName').readOnly = false;
             document.getElementById('editingCarrierMode').value = 'false';
+            const ativoEl = document.getElementById('newCarrierAtivo');
+            if (ativoEl) ativoEl.checked = true;
 
             const btnSubmit = document.getElementById('btnSubmitCarrier');
             btnSubmit.innerHTML = 'CADASTRAR TRANSPORTADORA';
@@ -4552,7 +4684,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const datalist = document.getElementById('carrierList');
             const input = document.getElementById('ruleCarrier');
             if (datalist) {
-                datalist.innerHTML = carrierList.sort().map(c => `<option value="${c}">`).join('');
+                datalist.innerHTML = carrierList.filter(c => !window.isCarrierActive || window.isCarrierActive(c)).sort().map(c => `<option value="${c}">`).join('');
             }
             populateRedispatchSelect();
 
@@ -4577,10 +4709,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Save current selection if exists
             const currentVal = select.value;
 
-            // Filter ONLY carriers formally registered with isRedespacho === true
+            // Filter ONLY carriers formally registered with isRedespacho === true and currently active (v3.25.9)
             const redespachoCarriers = carrierList.filter(c => {
                 const info = carrierInfo[c];
-                return info && info.isRedespacho === true;
+                const isActive = !window.isCarrierActive || window.isCarrierActive(c);
+                return info && info.isRedespacho === true && isActive;
             }).sort();
 
             let optionsHtml = '<option value="">Sem Redespacho</option>';
@@ -4712,6 +4845,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const freteNegociadoInput = document.getElementById('newCarrierFreteNegociado');
+                const ativoInput = document.getElementById('newCarrierAtivo');
+                const isAtivo = ativoInput ? ativoInput.checked : true;
+
                 // v3.16.13: preserva createdAt existente na edição, cria novo timestamp no cadastro
                 const existingCreatedAt = (carrierInfo[name] && carrierInfo[name].createdAt) || null;
                 carrierInfo[name] = {
@@ -4722,9 +4858,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     reliability: parseInt(reliabilityInput.value) || 3,
                     isRedespacho: isRedespachoInput ? isRedespachoInput.checked : false,
                     freteNegociado: freteNegociadoInput ? freteNegociadoInput.checked : false,
+                    ativo: isAtivo,
                     createdAt: existingCreatedAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
+
+                if (!carrierConfigs[name]) carrierConfigs[name] = { taxaFixa: 0, gris: 0, icms: 0, valorVolume: 0 };
+                carrierConfigs[name].ativo = isAtivo;
 
                 Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
                 Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
