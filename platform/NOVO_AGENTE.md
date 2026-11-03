@@ -1,3 +1,4 @@
+- **2026-11-03** (v3.4.0 / Plataforma v3.21.121 - Build 221): Melhorias no Módulo Cotação & Demanda — Auto-Match aprimorado (prefixos de montadoras OEM, zeros à esquerda, correção de OCR e detecção de códigos CNH na descrição), priorização de colunas tabulares, Live Match no Mapeador de Colunas e ações diretas de Vincular/Desvincular ERP na tabela de Cotação e Conferência.
 # NOVO AGENTE: Guia Fundamental do ParreiraLog
 
 Olá, novo agente (ou desenvolvedor)! Se você está lendo isso, assumiu o desenvolvimento contínuo da plataforma **ParreiraLog** (ou Parreira Plataforma). Este documento é a **espinha dorsal** do projeto. Leia-o atentamente para compreender a estrutura, os padrões de integração e, principalmente, as regras rigorosas de atualização antes de modificar o código.

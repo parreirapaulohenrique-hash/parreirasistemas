@@ -234,10 +234,15 @@ const DemandaApp = (function() {
                   "</td>"
                 : "";
 
+            // v3.4.0: Vínculo e Desvinculação rápida direto na tabela de Cotação
             var refHtml = item.erpCodigoFab
-                ? "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
+                ? "<div style='display:flex;align-items:center;flex-wrap:wrap;gap:4px;'>" +
+                  "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
+                  "<button type='button' onclick='DemandaApp.desvincularItemCotacao(" + i + ")' title='Desvincular produto ERP' style='background:rgba(239,68,68,.12);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;font-size:.68rem;font-weight:700;display:inline-flex;align-items:center;'>✕</button>" +
+                  "</div>" +
                   (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
-                : "<span style='font-weight:600'>" + _esc(item.refOriginal || "—") + "</span>";
+                : "<div><span style='font-weight:600'>" + _esc(item.refOriginal || "—") + "</span></div>" +
+                  "<button type='button' onclick='DemandaApp.buscarErpItemCotacao(" + i + ")' style='background:rgba(59,130,246,.12);border:1px dashed rgba(59,130,246,.4);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.68rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-top:2px;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular ERP</button>";
 
             var descHtml = item.erpProdutoDesc
                 ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(item.erpProdutoDesc) + "</span>" +
@@ -1457,7 +1462,11 @@ const DemandaApp = (function() {
             (matchCount > 0 ? "<span style='color:var(--accent-success);font-weight:700'>⚡ " + matchCount + "/" + itens.length + " identificados na Central Peças</span> &nbsp;·&nbsp; " : "") +
             "<span style='color:var(--accent-success)'><strong>" + ok + "</strong> ok</span>" +
             (err > 0 ? " &nbsp;·&nbsp; <span style='color:var(--accent-warning)'><strong>" + err + "</strong> com alerta</span>" : "") +
-            " &nbsp;·&nbsp; " + itens.length + " total";
+            " &nbsp;·&nbsp; " + itens.length + " total" +
+            "<div style='margin-top:.45rem;display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;'>" +
+            "<button type='button' onclick='DemandaApp.reexecutarAutoMatchConferencia()' style='background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);border-radius:4px;padding:.2rem .55rem;color:#60a5fa;font-size:.72rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.85rem'>sync</span> Re-executar Auto-Match</button>" +
+            "<button type='button' onclick='DemandaApp.desvincularTodosConferencia()' style='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:4px;padding:.2rem .55rem;color:#ef4444;font-size:.72rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.85rem'>link_off</span> Desvincular Todos</button>" +
+            "</div>";
         if (chkAll) chkAll.checked = true;
 
         tbody.innerHTML = itens.map(function(item, i) {
@@ -1466,10 +1475,27 @@ const DemandaApp = (function() {
             var rowStyle = hasErr ? "opacity:.75" : "";
             var m = item._match;
 
+            var tlMap = {
+                'cod_fab_exato': 'Exato',
+                'cross_ref_exato': 'Cross-Ref',
+                'prefixo_oem_removido': 'Prefixo OEM',
+                'zeros_removidos': 'Sem Zeros',
+                'ocr_letra_o_para_zero': 'OCR Corrigido',
+                'ocr_letra_i_para_um': 'OCR Corrigido',
+                'ocr_zero_para_c': 'OCR Corrigido',
+                'rolamento_normativo': 'Rolamento',
+                'cod_cnh_na_descricao': 'CNH Descrição',
+                'codigo_na_descricao': 'Cód. Descrição',
+                'dimensao_fixador': 'Dimensão',
+                'concorrente_map': 'Concorrente',
+                'manual_conferencia': 'Manual'
+            };
+            var matchBadgeTipo = (m && m.tipoMatch) ? (" <span style='font-size:.65rem;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,.22);color:#10b981;margin-left:4px'>[" + (tlMap[m.tipoMatch] || m.tipoMatch) + "]</span>") : "";
+
             var matchPill = m
                 ? "<div id='conf-match-" + i + "' style='margin-top:.25rem;display:flex;align-items:center;gap:.35rem;font-size:.72rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:4px;padding:.15rem .4rem;color:#10b981'>" +
                     "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
-                    "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong> — " + _esc(m.erpProdutoDesc) + "</span>" +
+                    "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong>" + matchBadgeTipo + " — " + _esc(m.erpProdutoDesc) + "</span>" +
                     "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
                     (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
                     (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") +
@@ -1513,6 +1539,64 @@ const DemandaApp = (function() {
     }
 
     var _buscaErpConferenciaIdx = null;
+    var _buscaErpCotacaoIdx = null; // v3.4.0: Vínculo direto de item da cotação
+
+    function buscarErpItemCotacao(idx) {
+        if (!_itens || !_itens[idx]) return;
+        _buscaErpCotacaoIdx = idx;
+        var it = _itens[idx];
+        var query = (it.refOriginal || it.erpCodigoFab || "").trim() || (it.descOriginal || it.erpProdutoDesc || "").trim();
+        _abrirBuscaERP(null, query, it.descOriginal || it.erpProdutoDesc || "");
+    }
+
+    function desvincularItemCotacao(idx) {
+        if (!_itens || !_itens[idx]) return;
+        var it = _itens[idx];
+        var refRemovida = it.erpCodigoFab || it.refOriginal;
+        it.erpProdutoId = null;
+        it.erpCodigoFab = '';
+        it.erpProdutoDesc = '';
+        it.fabricante = '';
+        it.estoqueFilial = null;
+        it.precoUnitario = null;
+        it.status = 'demanda_recebida';
+        renderItens();
+        _toast("Vínculo do item " + (idx + 1) + " (" + refRemovida + ") desvinculado com sucesso.", "info");
+    }
+
+    function reexecutarAutoMatchConferencia() {
+        if (!_importItensTemp || !_importItensTemp.length) return;
+        var count = 0;
+        var concSel = document.getElementById("confSelectConcorrente");
+        var concNome = concSel ? (concSel.value || "").trim() : (_concorrenteAtual ? _concorrenteAtual.nome : "");
+        _importItensTemp.forEach(function(it) {
+            if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+                var m = DemandaSearch.smartMatch({
+                    refOriginal: it.refOriginal,
+                    descOriginal: it.descOriginal,
+                    precoConcorrente: it.precoConcorrente,
+                    concorrenteNome: concNome
+                });
+                if (m) {
+                    it._match = m;
+                    it._manualUnlinked = false;
+                    count++;
+                }
+            }
+        });
+        _showConferencia(_importItensTemp);
+        _toast("Auto-match re-executado: " + count + "/" + _importItensTemp.length + " identificados na Central Peças!", "success");
+    }
+
+    function desvincularTodosConferencia() {
+        if (!_importItensTemp || !_importItensTemp.length) return;
+        _importItensTemp.forEach(function(it) {
+            it._match = null;
+            it._manualUnlinked = true;
+        });
+        _showConferencia(_importItensTemp);
+        _toast("Todos os vínculos foram limpos na conferência.", "info");
+    }
 
     function desvincularConferenciaItem(idx) {
         if (!_importItensTemp || !_importItensTemp[idx]) return;
@@ -3770,6 +3854,7 @@ const DemandaApp = (function() {
         _buscaErpItemId = null;
         _buscaErpItemRef = "";
         _buscaErpConferenciaIdx = null;
+        _buscaErpCotacaoIdx = null;
     }
 
     function _executarBuscaERP() {
@@ -3907,6 +3992,34 @@ const DemandaApp = (function() {
 
     function _vincularProduto(produto) {
         if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+
+        // Caso 1.5: Vinculação direta a partir da Tabela de Cotação (Nova Cotação)
+        if (_buscaErpCotacaoIdx !== null && _buscaErpCotacaoIdx !== undefined && _itens && _itens[_buscaErpCotacaoIdx]) {
+            var cotIdx = _buscaErpCotacaoIdx;
+            var itemCot = _itens[cotIdx];
+            var estqCot = Number(produto.estoque || 0);
+            var prcCot = Number(produto.preco || 0);
+            var refP = produto.referencia || produto.erpId || "";
+
+            itemCot.erpProdutoId   = String(produto.erpId || "");
+            itemCot.erpCodigoFab   = refP;
+            itemCot.erpProdutoDesc = produto.desc || "";
+            itemCot.fabricante     = produto.fabricante || "";
+            itemCot.estoqueFilial  = estqCot;
+            itemCot.precoUnitario  = prcCot;
+            itemCot.preco          = prcCot;
+            itemCot.status         = estqCot > 0 ? "estoque_disponivel" : "sem_estoque";
+
+            if (itemCot.refOriginal && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
+                DemandaSearch.addConcorrenteMapping(itemCot.refOriginal, refP);
+            }
+
+            _buscaErpCotacaoIdx = null;
+            _fecharBuscaERP();
+            renderItens();
+            _toast("Peça " + refP + " vinculada ao item " + (cotIdx + 1) + " da cotação!", "success");
+            return;
+        }
 
         // Caso 1: Vinculação direta a partir do modal de Conferência de Importação
         if (_buscaErpConferenciaIdx !== null && _buscaErpConferenciaIdx !== undefined && _importItensTemp && _importItensTemp[_buscaErpConferenciaIdx]) {
@@ -8191,6 +8304,10 @@ const DemandaApp = (function() {
         fecharModalImportarCatalogo:  fecharModalImportarCatalogo,
         processarImportacaoCatalogo:  processarImportacaoCatalogo,
         sincronizarTodasCotacoes:     sincronizarTodasCotacoes,
+        buscarErpItemCotacao:         buscarErpItemCotacao,
+        desvincularItemCotacao:       desvincularItemCotacao,
+        reexecutarAutoMatchConferencia: reexecutarAutoMatchConferencia,
+        desvincularTodosConferencia:  desvincularTodosConferencia,
     };
 
     async function sincronizarTodasCotacoes() {

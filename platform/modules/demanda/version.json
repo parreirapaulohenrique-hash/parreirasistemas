@@ -1,9 +1,9 @@
 {
-  "version": "3.3.16",
-  "build": "20261019-v3.3.16",
+  "version": "3.4.0",
+  "build": "20261103-v3.4.0",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-19",
-  "change": "v3.3.16 - fix(demanda): recuperacao exaustiva de cotacoes locais e remotas (multi-caminho 500 limites, recuperacao de subcolecoes com mais de 200 itens e scan local)",
-  "releaseDate": "2026-10-19T18:15:00-03:00"
+  "lastUpdate": "2026-11-03",
+  "change": "v3.4.0: Melhorias completas de Importação e Auto-Match (resolução de prefixos OEM, limpeza de ruídos OCR, prioridade tabular, live match no Mapeador e ações diretas de vincular/desvincular na Cotação).",
+  "releaseDate": "2026-11-03T10:00:00-03:00"
 }

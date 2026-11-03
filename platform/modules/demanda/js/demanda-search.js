@@ -89,10 +89,18 @@ const DemandaSearch = (() => {
     function _extractBaseRef(ref) {
         if (!ref) return '';
         var r = String(ref).trim();
+        // v3.4.0: Remove prefixos de montadoras/marcas agrícolas (JD, CNH, CASE, NH, AGCO, MF, etc.)
+        var semPref = r.replace(/^(?:JD|JOHN\s*DEERE|CNH|CASE(?:\s*IH)?|NEW\s*HOLLAND|NH|AGCO|MASSEY(?:\s*FERGUSON)?|MF|VALTRA|J\.?A\.?|JA|MAX|PROD)\s*[-_./:\s]\s*/i, '').trim();
+        if (semPref) r = semPref;
+
         // Remove sufixos comuns de marcas ou concorrentes (/JA, -INA, /PFI, /228, /199, -952, /RL, /FC, etc.)
         var base = r.replace(/[\/\-_](?:JA|INA|PFI|REX|FEY|CISER|RL|FC|THOR|DB|\d{2,4})$/i, '').trim();
         if (base.indexOf('/') >= 0) {
             base = base.split('/')[0].trim();
+        }
+        // Remove zeros à esquerda se for código numérico longo (ex: 0084350623 -> 84350623)
+        if (/^0+[1-9]\d{4,}/.test(base)) {
+            base = base.replace(/^0+/, '');
         }
         return base || r;
     }
@@ -383,13 +391,46 @@ const DemandaSearch = (() => {
             }
         }
 
-        // 2. Busca por Código de Fabricante ou CrossRef Exato (testando baseRef limpa e refOrig)
+        // 2. Busca por Código de Fabricante ou CrossRef Exato + Resoluções Avançadas (v3.4.0: Prefixos OEM, Zeros, OCR)
         var codesToTest = [];
-        if (baseClean && baseClean.length >= 3) codesToTest.push(baseClean);
-        if (refClean && refClean.length >= 3 && refClean !== baseClean) codesToTest.push(refClean);
+        function _addCandidate(candStr, candTipo, scoreBase) {
+            if (!candStr) return;
+            var cClean = String(candStr).toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (cClean.length >= 3 && !codesToTest.some(function(x) { return x.c === cClean; })) {
+                codesToTest.push({ c: cClean, raw: candStr, tipo: candTipo, scoreBase: scoreBase || 100 });
+            }
+        }
 
+        // a) Referência Direta e Base Limpa
+        _addCandidate(baseClean, 'cod_fab_exato', 100);
+        _addCandidate(refClean, 'cod_fab_exato', 100);
+
+        // b) Código sem prefixo de montadora (ex: JD-RE199682 -> RE199682, CNH-84350623 -> 84350623)
+        var semPrefixo = refOrig.replace(/^(?:JD|JOHN\s*DEERE|CNH|CASE(?:\s*IH)?|NEW\s*HOLLAND|NH|AGCO|MASSEY(?:\s*FERGUSON)?|MF|VALTRA|J\.?A\.?|JA|MAX)\s*[-_./:\s]\s*/i, '');
+        if (semPrefixo && semPrefixo !== refOrig) {
+            _addCandidate(_extractBaseRef(semPrefixo), 'prefixo_oem_removido', 99);
+            _addCandidate(semPrefixo, 'prefixo_oem_removido', 98);
+        }
+
+        // c) Código sem zeros à esquerda (ex: 00325494 -> 325494)
+        if (/^0+[1-9]/.test(baseClean)) _addCandidate(baseClean.replace(/^0+/, ''), 'zeros_removidos', 99);
+        if (/^0+[1-9]/.test(refClean)) _addCandidate(refClean.replace(/^0+/, ''), 'zeros_removidos', 99);
+
+        // d) Correções de ruídos de OCR (O <-> 0, I <-> 1, etc.)
+        if (/[A-Z0-9]*O[A-Z0-9]*/i.test(refClean) && /\d{3,}/.test(refClean)) {
+            _addCandidate(refClean.replace(/O/g, '0'), 'ocr_letra_o_para_zero', 97);
+        }
+        if (/[0-9]+[IL][0-9]+/i.test(refClean)) {
+            _addCandidate(refClean.replace(/[IL]/gi, '1'), 'ocr_letra_i_para_um', 97);
+        }
+        if (/^0[A-Z]\d{5}/.test(refClean)) {
+            _addCandidate('C' + refClean.slice(1), 'ocr_zero_para_c', 96);
+        }
+
+        // Executa busca para cada candidato de código
         for (var cIdx = 0; cIdx < codesToTest.length; cIdx++) {
-            var c = codesToTest[cIdx];
+            var cand = codesToTest[cIdx];
+            var c = cand.c;
             var exactCandidates = [];
             for (var i = 0; i < skus.length; i++) {
                 var s = skus[i];
@@ -398,9 +439,9 @@ const DemandaSearch = (() => {
                 var crossC = String(s[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
                 if (c === fabC || c === erpC) {
-                    exactCandidates.push({ sku: s, score: 100, tipo: 'cod_fab_exato' });
+                    exactCandidates.push({ sku: s, score: cand.scoreBase, tipo: cand.tipo });
                 } else if (c.length >= 4 && crossC.indexOf(c) >= 0) {
-                    exactCandidates.push({ sku: s, score: 96, tipo: 'cross_ref_exato' });
+                    exactCandidates.push({ sku: s, score: Math.min(cand.scoreBase, 96), tipo: cand.tipo === 'cod_fab_exato' ? 'cross_ref_exato' : (cand.tipo + '_cross') });
                 }
             }
             if (exactCandidates.length > 0) {
@@ -455,17 +496,23 @@ const DemandaSearch = (() => {
             }
         }
 
-        // 4. Extração de Código Alfanumérico Embutido na Descrição (ex: "BLINDAGEM KK34847", "MOLA AX10319")
+        // 4. Extração de Código Embutido na Descrição (v3.4.0: Alfanuméricos + Numéricos CNH de 6-10 dígitos)
         var tokensDesc = descUpper.match(/[A-Z0-9\/\-\.]{4,}/g) || [];
         for (var t = 0; t < tokensDesc.length; t++) {
             var tokC = tokensDesc[t].replace(/[^A-Z0-9]/g, '');
-            if (tokC.length >= 4 && !/^[A-Z]+$/.test(tokC) && !/^[0-9]+$/.test(tokC)) {
+            var isAlfaNum = (tokC.length >= 4 && !/^[A-Z]+$/.test(tokC) && !/^[0-9]+$/.test(tokC));
+            var isNumericCNH = (tokC.length >= 6 && tokC.length <= 10 && /^[0-9]+$/.test(tokC) && /^(?:84|87|51|73|86|47|14|33|32|37|38|34)/.test(tokC));
+
+            if (isAlfaNum || isNumericCNH) {
                 for (var j = 0; j < skus.length; j++) {
                     var sj = skus[j];
                     var fabJ = String(sj[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                     var crossJ = String(sj[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    if (tokC === fabJ || (tokC.length >= 5 && crossJ.indexOf(tokC) >= 0)) {
-                        return _formatMatchResult(sj, 95, 'codigo_na_descricao');
+                    var erpJ = String(sj[0] || '');
+                    if (tokC === fabJ || tokC === erpJ) {
+                        return _formatMatchResult(sj, 96, isNumericCNH ? 'cod_cnh_na_descricao' : 'codigo_na_descricao');
+                    } else if (tokC.length >= 5 && crossJ.indexOf(tokC) >= 0) {
+                        return _formatMatchResult(sj, 94, 'cross_na_descricao');
                     }
                 }
             }
