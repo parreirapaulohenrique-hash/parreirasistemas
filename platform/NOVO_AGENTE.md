@@ -192,6 +192,11 @@ Nossa esteira de atualização tem um fluxo cravado em pedra para **evitar perda
 >
 > Ignorar este processo coloca código não testado em produção e compromete a operação em tempo real dos clientes.
 
+> 🚨 **REGRA ABSOLUTA — PROIBIDO ABRIR NAVEGADOR PARA TESTES (SUBAGENTES)**
+> O agente está **terminantemente proibido de abrir o navegador** (seja via Edge, Chrome, subagente de browser ou scripts de automação visual) para testar o funcionamento, telas, formulários ou fluxos da aplicação.
+> **Procedimento Obrigatório:** Conclua a implementação, faça a validação estática/sintática e o deploy para homologação via deploy.ps1. Em seguida, **solicite diretamente ao usuário (Paulo Parreira) que faça os testes no navegador**.
+> *Regra incluída em 2026-11-03 por ordem expressa do usuário (Paulo Parreira).*
+
 ### Passo 1: Backup Preventivo em Camadas (ANTES de qualquer alteração)
 **OBRIGATÓRIO antes de tocar em qualquer código.** Essa etapa garante que existe uma cópia de segurança íntegra do estado atual caso algo dê errado durante o desenvolvimento.
 
