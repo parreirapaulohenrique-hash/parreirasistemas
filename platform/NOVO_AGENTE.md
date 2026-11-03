@@ -726,3 +726,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 
 
 
+
+* **2026-11-03 (v3.21.122 / Demanda v3.4.1 — Build 222):**
+  - **Pesquisa Manual Integrada na Central de Cotação (demanda-app.js, demanda-search.js, index.html):**
+    * Substituído o placeholder 'Pesquisa no ERP em implementação' por integração real completa ao motor DemandaSearch.
+    * A busca agora conecta dinamicamente à base de 10.896 SKUs MaxData (COMPACT_SKUS), Firestore Techbase (	enants/{tenant}/demanda/techbase/products) e API MaxData ERP em tempo real.
+    * Renderização rica via .product-card exibindo referência, código ERP, fabricante, estoque por filial (🟢 Em Estoque / 🟡 Sem Estoque), badge de correspondência (✓ Exato, 🔄 Similar, 📝 Catálogo) e preços de venda/atacado.
+    * Adição direta à tabela de cotação com 1 clique (ou incremento automático de quantidade caso o item já exista na cotação).
+    * Suporte à tecla Enter para disparo imediato da pesquisa e botão de inclusão como item avulso caso o produto não seja localizado.

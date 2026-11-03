@@ -1,9 +1,9 @@
 {
-  "version": "3.4.0",
-  "build": "20261103-v3.4.0",
+  "version": "3.4.1",
+  "build": "20261103-v3.4.1",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-03",
-  "change": "v3.4.0: Melhorias completas de Importação e Auto-Match (resolução de prefixos OEM, limpeza de ruídos OCR, prioridade tabular, live match no Mapeador e ações diretas de vincular/desvincular na Cotação).",
-  "releaseDate": "2026-11-03T10:00:00-03:00"
+  "change": "v3.4.1: Ativação da Pesquisa Manual Integrada na Central de Cotação — conexão automática com DemandaSearch (ERP MaxData, Firestore Techbase e catálogo COMPACT_SKUS), cards visuais de produtos com estoque e preço, e adição direta à cotação com 1 clique.",
+  "releaseDate": "2026-11-03T15:55:00-03:00"
 }

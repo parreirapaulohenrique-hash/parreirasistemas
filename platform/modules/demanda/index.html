@@ -242,10 +242,11 @@
                                 <input
                                     id="searchInput"
                                     type="text"
-                                    placeholder="Referência, descrição, EAN, máquina/modelo... (mín. 3 caracteres)"
+                                    placeholder="Referência, código, descrição, máquina... (Enter para buscar)"
                                     autocomplete="off"
                                     spellcheck="false"
                                     oninput="DemandaApp.onSearchInput(this.value)"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();DemandaApp.executarBuscaManualImediata(this.value);}"
                                 >
                                 <button class="search-clear" id="searchClear" onclick="DemandaApp.clearSearch()">
                                     <span class="material-icons-round" style="font-size:1rem">close</span>
@@ -6422,7 +6423,7 @@
     <script src="js/demanda-imagem-demarcador.js?v=3.21.118"></script>
     <script src="js/demanda-textocolunas.js?v=3.21.118"></script>
     <script src="js/demanda-mapeador.js?v=3.21.118"></script>
-    <script src="js/demanda-search.js?v=3.21.118"></script>
+    <script src="js/demanda-search.js?v=3.21.122"></script>
     <script src="js/demanda-lookup.js?v=3.21.66"></script>
     <script src="js/demanda-pdf.js?v=3.21.118"></script>
     <script src="js/demanda-clientes.js?v=3.21.66"></script>
@@ -6431,7 +6432,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.118"></script>
+    <script src="js/demanda-app.js?v=3.21.122"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

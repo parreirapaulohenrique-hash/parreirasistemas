@@ -61,10 +61,16 @@ const DemandaSearch = (() => {
         if (window.ErpIntegration && ErpIntegration.getActive) {
             return ErpIntegration.getActive();
         }
-        // Fallback: instancia direto com config do sessionStorage
+        // Fallback: instancia direto com config do sessionStorage ou padrões Central Peças
         if (window.MaxDataAdapter) {
-            const cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
-            if (!cfg.baseUrl) throw new Error('ERP não configurado. Faça login primeiro.');
+            let cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
+            if (!cfg.baseUrl) {
+                cfg = {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 1,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                };
+            }
             return new MaxDataAdapter(_getTenantId(), cfg);
         }
         throw new Error('MaxDataAdapter não encontrado. Verifique os scripts carregados.');
@@ -281,13 +287,13 @@ const DemandaSearch = (() => {
             } else if (qNorm.length >= 4 && descNorm.includes(qNorm)) {
                 score = 80;
                 tipoMatch = 'desc_contem';
-            } else if (qWords.length >= 2) {
+            } else if (qWords.length >= 1) {
                 let hitWords = 0;
                 for (const w of qWords) {
                     if (desc.includes(w)) hitWords++;
                 }
-                if (hitWords >= Math.min(2, qWords.length)) {
-                    score = 75 + Math.round((hitWords / qWords.length) * 10);
+                if (hitWords >= 1) {
+                    score = 70 + Math.round((hitWords / qWords.length) * 15);
                     tipoMatch = 'desc_palavras';
                 }
             }

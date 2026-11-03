@@ -140,13 +140,19 @@ const DemandaApp = (function() {
     // PESQUISA UNIVERSAL (coluna esquerda)
     // ════════════════════════════════════════════════════════
 
+    // PESQUISA UNIVERSAL (coluna esquerda)
+    // ════════════════════════════════════════════════════════
+
+    var _ultimosResultadosBusca = [];
+
     function onSearchInput(value) {
         clearTimeout(_searchTimeout);
         var b = document.getElementById("searchClear");
         if (b) b.style.display = value.length > 0 ? "flex" : "none";
         var r = document.getElementById("searchResults");
         if (!r) return;
-        if (value.length < 3) {
+        var q = (value || "").trim();
+        if (q.length < 2) {
             // Restaura placeholder
             r.innerHTML = "";
             var ph = document.getElementById("searchPlaceholder");
@@ -154,12 +160,115 @@ const DemandaApp = (function() {
             return;
         }
         _searchTimeout = setTimeout(function() {
-            // TODO Fase 3: integrar DemandaSearch com ERP
-            r.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--text-secondary)'>" +
-                "<span class='material-icons-round' style='font-size:2rem;opacity:.4'>manage_search</span>" +
-                "<p style='margin-top:.5rem;font-size:.85rem'>Pesquisa no ERP em implementação.<br>Use a entrada rápida (→) para adicionar itens manualmente.</p>" +
+            executarBuscaManual(q);
+        }, 300);
+    }
+
+    function executarBuscaManualImediata(value) {
+        clearTimeout(_searchTimeout);
+        var q = (value || "").trim();
+        if (q.length >= 2) {
+            executarBuscaManual(q);
+        }
+    }
+
+    function executarBuscaManual(q) {
+        var r = document.getElementById("searchResults");
+        if (!r) return;
+
+        r.innerHTML = "<div class='search-loading'>" +
+            "<span class='material-icons-round spin' style='font-size:1.6rem;color:var(--primary-color)'>sync</span>" +
+            "<span>Buscando \"<strong>" + _esc(q) + "</strong>\" no ERP e catálogo...</span>" +
+            "</div>";
+
+        if (typeof DemandaSearch === "undefined" || typeof DemandaSearch.search !== "function") {
+            r.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
+                "<p style='font-weight:600'>Motor de busca DemandaSearch não carregado.</p>" +
                 "</div>";
-        }, 350);
+            return;
+        }
+
+        var filId = (typeof window !== "undefined" && window.DemandaFilial) ? window.DemandaFilial.atual() : 1;
+        DemandaSearch.search(q, { filialId: filId, limit: 40 })
+            .then(function(resultados) {
+                if (!resultados || resultados.length === 0) {
+                    r.innerHTML = "<div style='padding:2.5rem 1.5rem;text-align:center;color:var(--text-secondary)'>" +
+                        "<span class='material-icons-round' style='font-size:2.8rem;opacity:.35'>search_off</span>" +
+                        "<h4 style='margin-top:.6rem;font-size:1rem;font-weight:600;color:var(--text-primary)'>Nenhum produto encontrado</h4>" +
+                        "<p style='font-size:.82rem;opacity:.75;margin-top:.3rem;max-width:320px;margin-left:auto;margin-right:auto;line-height:1.4'>" +
+                            "Não encontramos resultados para \"<strong>" + _esc(q) + "</strong>\" no ERP ou catálogo." +
+                        "</p>" +
+                        "<div style='margin-top:1.2rem;display:flex;justify-content:center;gap:.6rem'>" +
+                            "<button type='button' class='btn btn-secondary btn-sm' onclick='DemandaApp.adicionarItemManualBusca(\"" + _esc(q) + "\")'>" +
+                                "<span class='material-icons-round' style='font-size:.9rem'>add_shopping_cart</span> " +
+                                "Adicionar \"" + _esc(q) + "\" à cotação mesmo assim" +
+                            "</button>" +
+                        "</div>" +
+                    "</div>";
+                    return;
+                }
+
+                _ultimosResultadosBusca = resultados;
+
+                var countHtml = "<div style='display:flex;justify-content:space-between;align-items:center;padding:.4rem .65rem;margin-bottom:.65rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:6px;font-size:.78rem;color:#60a5fa'>" +
+                    "<span><strong style='color:#fff'>" + resultados.length + "</strong> " + (resultados.length === 1 ? "produto encontrado" : "produtos encontrados") + "</span>" +
+                    "<span style='font-size:.72rem;color:var(--text-secondary)'>Clique para adicionar à cotação</span>" +
+                "</div>";
+
+                var cardsHtml = resultados.map(function(p, idx) {
+                    var estq = Number(p.estoqueFilial != null ? p.estoqueFilial : (p.estoque != null ? p.estoque : (p.saldoEstoque || 0)));
+                    var prc = Number(p.precoUnitario != null ? p.precoUnitario : (p.preco || p.valorVenda || 0));
+                    var prcAtacado = Number(p.valorAtacado || 0);
+                    var refP = p.referencia || p.codigoFab || p.erpCodigoFab || p.codigoErp || p.erpProdutoId || "?";
+                    var descP = p.erpProdutoDesc || p.descricao || "Sem descrição";
+                    var marcaP = p.fabricante || p.marca || "";
+
+                    var badgeEstq = estq > 0
+                        ? "<span class='badge badge-stock'>🟢 Em Estoque (" + estq + " UN)</span>"
+                        : "<span class='badge badge-no-stock'>🟡 Sem Estoque (0 UN)</span>";
+
+                    var matchTxt = (p.tipoMatch === "exato" || p.tipoMatch === "fab_exato" || (p.score && p.score >= 98))
+                        ? "✓ Exato"
+                        : ((p.tipoMatch === "cross_ref" || p.tipoMatch === "similar") ? "🔄 Similar" : "📝 Catálogo");
+                    var badgeMatch = "<span class='badge badge-erp'>" + matchTxt + "</span>";
+
+                    var precoStr = prc > 0 ? "R$ " + prc.toFixed(2).replace(".", ",") : "";
+                    var atacadoStr = (prcAtacado > 0 && Math.abs(prcAtacado - prc) > 0.01)
+                        ? "<span style='font-size:.68rem;color:var(--text-secondary);display:block'>Atacado: R$ " + prcAtacado.toFixed(2).replace(".", ",") + "</span>"
+                        : "";
+
+                    return "<div class='product-card' onclick='DemandaApp.adicionarProdutoDoErp(" + idx + ")' title='Clique para adicionar à cotação'>" +
+                        "<div class='product-thumb'><span class='material-icons-round'>build_circle</span></div>" +
+                        "<div class='product-info'>" +
+                            "<div class='product-desc' title='" + _esc(descP) + "'>" + _esc(descP) + "</div>" +
+                            "<div class='product-meta'>" +
+                                "<span class='product-ref'>" + _esc(refP) + "</span>" +
+                                (p.codigoErp ? "<span style='font-size:.7rem;color:var(--text-secondary)'>Cód: <strong>" + _esc(p.codigoErp) + "</strong></span>" : "") +
+                                (marcaP ? "<span class='product-maker'>" + _esc(marcaP) + "</span>" : "") +
+                            "</div>" +
+                            "<div class='product-badges'>" + badgeEstq + badgeMatch + "</div>" +
+                        "</div>" +
+                        "<div style='display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;flex-shrink:0'>" +
+                            (precoStr ? "<span class='product-price'>" + precoStr + "</span>" + atacadoStr : "") +
+                            "<button type='button' class='btn-add-item' onclick='event.stopPropagation(); DemandaApp.adicionarProdutoDoErp(" + idx + ")'>" +
+                                "<span class='material-icons-round'>add</span> Adicionar" +
+                            "</button>" +
+                        "</div>" +
+                    "</div>";
+                }).join("");
+
+                r.innerHTML = countHtml + cardsHtml;
+            })
+            .catch(function(err) {
+                console.error("[DemandaApp] Erro na busca manual:", err);
+                r.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
+                    "<span class='material-icons-round' style='font-size:2rem'>error_outline</span>" +
+                    "<p style='margin-top:.5rem;font-size:.85rem'>Erro ao consultar produtos: " + _esc(err.message || String(err)) + "</p>" +
+                    "<button type='button' class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick='DemandaApp.adicionarItemManualBusca(\"" + _esc(q) + "\")'>" +
+                        "Adicionar \"" + _esc(q) + "\" manualmente" +
+                    "</button>" +
+                "</div>";
+            });
     }
 
     function clearSearch() {
@@ -173,9 +282,61 @@ const DemandaApp = (function() {
         }
     }
 
+    function adicionarProdutoDoErp(idx) {
+        if (!_ultimosResultadosBusca || !_ultimosResultadosBusca[idx]) return;
+        var p = _ultimosResultadosBusca[idx];
+        var estq = Number(p.estoqueFilial != null ? p.estoqueFilial : (p.estoque != null ? p.estoque : (p.saldoEstoque || 0)));
+        var prc = Number(p.precoUnitario != null ? p.precoUnitario : (p.preco || p.valorVenda || 0));
+        var refP = p.referencia || p.codigoFab || p.erpCodigoFab || p.codigoErp || p.erpProdutoId || "";
+        var descP = p.erpProdutoDesc || p.descricao || "";
+        var marcaP = p.fabricante || p.marca || "";
+
+        var novoItem = {
+            refOriginal: refP,
+            descOriginal: descP,
+            qtdeSolicitada: 1,
+            erpProdutoId: String(p.erpProdutoId || p.codigoErp || ""),
+            erpCodigoFab: refP,
+            erpProdutoDesc: descP,
+            fabricante: marcaP,
+            estoqueFilial: estq,
+            precoUnitario: prc,
+            preco: prc,
+            status: estq > 0 ? "estoque_disponivel" : "sem_estoque"
+        };
+
+        var existente = _itens.find(function(it) {
+            return (novoItem.erpProdutoId && it.erpProdutoId === novoItem.erpProdutoId) ||
+                   (novoItem.refOriginal && it.refOriginal && it.refOriginal.toUpperCase() === novoItem.refOriginal.toUpperCase());
+        });
+
+        if (existente) {
+            existente.qtdeSolicitada = (existente.qtdeSolicitada || 1) + 1;
+            _toast("Quantidade de " + refP + " aumentada para " + existente.qtdeSolicitada + " na cotação!", "info");
+        } else {
+            _itens.push(novoItem);
+            _toast("Peça " + refP + " adicionada à cotação!", "success");
+        }
+        renderItens();
+    }
+
+    function adicionarItemManualBusca(ref) {
+        if (!ref || !ref.trim()) return;
+        var refTrim = ref.trim();
+        _itens.push({
+            refOriginal: refTrim,
+            descOriginal: "",
+            qtdeSolicitada: 1,
+            status: "demanda_recebida"
+        });
+        renderItens();
+        _toast("Item " + refTrim + " adicionado à cotação!", "info");
+    }
+
     function selectSearchResult(id) {
-        // TODO Fase 3: adicionar item do ERP direto
-        console.log("[DemandaApp] selectSearchResult:", id);
+        if (!_ultimosResultadosBusca) return;
+        var idx = _ultimosResultadosBusca.findIndex(function(p){ return p.erpProdutoId === id || p.codigoErp === id || p.referencia === id; });
+        if (idx >= 0) adicionarProdutoDoErp(idx);
     }
 
     // ════════════════════════════════════════════════════════
@@ -8308,6 +8469,9 @@ const DemandaApp = (function() {
         desvincularItemCotacao:       desvincularItemCotacao,
         reexecutarAutoMatchConferencia: reexecutarAutoMatchConferencia,
         desvincularTodosConferencia:  desvincularTodosConferencia,
+        adicionarProdutoDoErp:        adicionarProdutoDoErp,
+        adicionarItemManualBusca:     adicionarItemManualBusca,
+        executarBuscaManualImediata:  executarBuscaManualImediata,
     };
 
     async function sincronizarTodasCotacoes() {
