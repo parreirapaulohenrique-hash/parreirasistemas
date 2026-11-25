@@ -860,13 +860,60 @@ const DemandaApp = (function () {
     // ════════════════════════════════════════════════════════
 
     var _pdfBlobUrl = null;
-    var _ultimoArquivoImportado = null; // v3.5.2: Preserva arquivo em memória para voltar sem perder dados
+    var _ultimoArquivoImportado = null; // v3.5.3: Preserva arquivo em memória para voltar sem perder dados
+
+    function _setUltimoArquivo(obj) {
+        _ultimoArquivoImportado = obj;
+        _atualizarBannerArquivoAtivo();
+    }
+
+    function _atualizarBannerArquivoAtivo() {
+        var el = document.getElementById("bannerArquivoAtivo");
+        var nomeEl = document.getElementById("bannerNomeArquivo");
+        if (!el) return;
+        if (_ultimoArquivoImportado && (_ultimoArquivoImportado.file || _ultimoArquivoImportado.rows)) {
+            el.style.display = "flex";
+            if (nomeEl) nomeEl.textContent = _ultimoArquivoImportado.nome || "Documento";
+        } else {
+            el.style.display = "none";
+        }
+    }
+
+    function retomarUltimoArquivo() {
+        if (!_ultimoArquivoImportado) {
+            _toast("Nenhum arquivo recente em memória.", "info");
+            return;
+        }
+        var arq = _ultimoArquivoImportado;
+        if (arq.rows && window.DemandaMapeador) {
+            DemandaMapeador.abrir({
+                rows: arq.rows,
+                fonte: arq.fonte || "excel",
+                nome: arq.nome || "Arquivo",
+                file: arq.file,
+                dataUrl: arq.dataUrl,
+                estadoDemarcador: arq.estadoDemarcador,
+                toast: _toast,
+                onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); }
+            });
+        } else if (arq.file) {
+            if (arq.fonte === "foto") _abrirImportFoto(arq.file);
+            else if (arq.fonte === "pdf") _abrirImportPDF(arq.file);
+            else if (arq.fonte === "excel") onExcelFileSelected(arq.file);
+        }
+    }
+
+    function descartarUltimoArquivo() {
+        _ultimoArquivoImportado = null;
+        _atualizarBannerArquivoAtivo();
+        _toast("Arquivo em memória descartado.", "info");
+    }
 
     function _abrirImportPDF(fileParam) {
         function _processarPDF(file) {
             if (!file) return;
 
-            _ultimoArquivoImportado = { file: file, nome: file.name || "Cotação PDF", fonte: "pdf" };
+            _setUltimoArquivo({ file: file, nome: file.name || "Cotação PDF", fonte: "pdf" });
             // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
             _toast("Renderizando página do PDF para demarcação visual...", "info");
             (async function () {
@@ -885,6 +932,7 @@ const DemandaApp = (function () {
                                         DemandaMapeador.abrir({
                                             rows: grade,
                                             fonte: "pdf",
+                                            _cb: _setUltimoArquivo({ file: file, nome: file.name || "Cotação PDF", fonte: "pdf", rows: grade, estadoDemarcador: estadoDemarcador }),
                                             nome: file.name || "Cotação PDF",
                                             file: file,
                                             dataUrl: rend.dataUrl,
@@ -1088,7 +1136,7 @@ const DemandaApp = (function () {
     function _abrirImportFoto(fileParam) {
         function _processarFoto(file) {
             if (!file) return;
-            _ultimoArquivoImportado = { file: file, nome: file.name || "Foto / Print", fonte: "foto" };
+            _setUltimoArquivo({ file: file, nome: file.name || "Foto / Print", fonte: "foto" });
 
             // Se o Demarcador de Imagem estiver disponível, abre diretamente a imagem para demarcação antes do OCR!
             if (window.DemandaImagemDemarcador) {
@@ -1101,6 +1149,7 @@ const DemandaApp = (function () {
                         DemandaMapeador.abrir({
                             rows: grade,
                             fonte: "foto",
+                            _cb: _setUltimoArquivo({ file: file, nome: file.name || "Foto / Print", fonte: "foto", rows: grade, estadoDemarcador: estadoDemarcador }),
                             nome: file.name || "Foto / Print",
                             file: file,
                             dataUrl: estadoDemarcador ? estadoDemarcador.dataUrl : '',
@@ -1515,7 +1564,7 @@ const DemandaApp = (function () {
         }
         if (area) area.style.display = "none";
 
-        _ultimoArquivoImportado = { file: file, nome: file.name, fonte: "excel" };
+        _setUltimoArquivo({ file: file, nome: file.name, fonte: "excel" });
         // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
         if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
             DemandaImport.lerGradeArquivo(file).then(function (rows) {
@@ -1524,6 +1573,7 @@ const DemandaApp = (function () {
                 if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
                 DemandaMapeador.abrir({
                     rows: rows, fonte: "excel", nome: file.name, file: file, toast: _toast,
+                    _cb: _setUltimoArquivo({ file: file, nome: file.name, fonte: "excel", rows: rows }),
                     onVoltar: function () { openImportModal("excel"); },
                     onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
                     onAutomatico: function () {
@@ -8715,6 +8765,8 @@ const DemandaApp = (function () {
         adicionarProdutoDoErp: adicionarProdutoDoErp,
         adicionarItemManualBusca: adicionarItemManualBusca,
         executarBuscaManualImediata: executarBuscaManualImediata,
+        retomarUltimoArquivo: retomarUltimoArquivo,
+        descartarUltimoArquivo: descartarUltimoArquivo,
     };
 
     async function sincronizarTodasCotacoes() {
