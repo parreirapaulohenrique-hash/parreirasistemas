@@ -237,16 +237,22 @@ const DemandaMapeador = (() => {
                 Object.assign(v, d.out);
                 alternativas = alternativas.concat(d.alternativas);
             });
-            const ref  = _str(v.ref).toUpperCase();
-            const desc = _str(v.desc);
+            // v3.4.0: Sanitização avançada de ruídos de OCR e pontuações em códigos e descrições
+            let ref  = _str(v.ref).toUpperCase().trim();
+            ref = ref.replace(/^[*|~"“”'`.–—\s]+/, '').replace(/[*|~"“”'`.–—\s]+$/, '');
+            let desc = _str(v.desc).trim();
+            desc = desc.replace(/^[*|~"“”'`.–—\s]+/, '');
+
             if (!ref && !desc) continue;
             if (!ref && /^(sub-?\s*)?total\b|^valor\s+total|^total\s+geral/i.test(desc)) continue;
             // Filtro defensivo contra rodapés típicos caso não tenham sido excluídos manualmente
             if (/^(servi[çc]os?:?|frete:?|nro\s+itens:?|total\s+de\s+itens:?|condi[çc][ãa]o\s+de\s+pagamento:?)/i.test(ref)) continue;
 
-            const qRaw = v.qtde;
-            const qtdeInformada = _str(qRaw) !== '';
-            let qtde = _num(qRaw);
+            // v3.4.0: Tratamento de quantidade com unidades de medida e formatação BR
+            const qStr = _str(v.qtde).toLowerCase().replace(/\b(?:un|und|pç|pc|cx|jg|mts?|kg)\b/gi, '').trim();
+            const qRaw = qStr;
+            const qtdeInformada = qStr !== '';
+            let qtde = _num(qStr);
             const qtdeInvalida = qtdeInformada && !(qtde > 0);
             if (!(qtde > 0)) qtde = 1;
             let unit = _num(v.unit);
@@ -543,11 +549,33 @@ const DemandaMapeador = (() => {
         _st.itensPrev = itens;
         const semRef = itens.filter(i => !i.refOriginal).length;
         const qInv = itens.filter(i => i._qtdeInvalida).length;
+
+        // v3.4.0: Live Match Check no preview do mapeador
+        let totalIdentificados = 0;
+        const matchMap = new Map();
+        if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+            itens.forEach((it, idx) => {
+                if (it.refOriginal) {
+                    const m = DemandaSearch.smartMatch(it);
+                    if (m) {
+                        totalIdentificados++;
+                        matchMap.set(idx, m);
+                    }
+                }
+            });
+        }
+
         const usados = _camposUsados();
         const faltam = [];
         if (!usados.has('ref') && !usados.has('desc')) faltam.push('Referência ou Descrição');
+
+        const badgeIdentificados = totalIdentificados > 0
+            ? `<div class="mpd-kpi" style="border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08);color:#10b981"><b style="color:#10b981">${totalIdentificados}</b><span style="color:#10b981">no catálogo ERP</span></div>`
+            : '';
+
         $('mpdResumo').innerHTML =
             `<div class="mpd-kpi"><b>${itens.length}</b><span>itens</span></div>` +
+            badgeIdentificados +
             `<div class="mpd-kpi ${semRef ? 'warn' : ''}"><b>${semRef}</b><span>sem referência</span></div>` +
             `<div class="mpd-kpi ${qInv ? 'warn' : ''}"><b>${qInv}</b><span>qtde inválida</span></div>` +
             (!usados.has('qtde') ? '<div class="mpd-alerta">Qtde não posicionada: todos os itens entram com 1.</div>' : '') +
@@ -555,10 +583,26 @@ const DemandaMapeador = (() => {
         const cols = ['ref', 'desc', 'qtde'].concat(usados.has('marca') ? ['marca'] : []).concat((usados.has('unit') || usados.has('total')) ? ['preco'] : []).concat(['obs']);
         const lab = { ref: 'Referência', desc: 'Descrição', qtde: 'Qtde', marca: 'Marca', preco: 'Preço', obs: 'Obs' };
         let h = '<thead><tr><th style="width:40px">Lin.</th>' + cols.map(c => `<th>${lab[c]}</th>`).join('') + '<th style="width:36px;text-align:center">Excluir</th></tr></thead><tbody>';
-        itens.slice(0, 40).forEach(it => {
-            const val = { ref: it.refOriginal, desc: it.descOriginal, qtde: String(it.qtdeSolicitada).replace('.', ','), marca: it.marca, preco: it.precoConcorrente ? it.precoConcorrente.toFixed(2).replace('.', ',') : '', obs: it.obs };
+        itens.slice(0, 40).forEach((it, idx) => {
+            const m = matchMap.get(idx);
+            let refDisplay = _esc(it.refOriginal);
+            if (m) {
+                const estqTxt = (m.estoqueFilial > 0) ? `${m.estoqueFilial} un` : '0';
+                refDisplay += ` <span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(16,185,129,.18);color:#10b981;" title="Identificado no ERP: ${m.erpProdutoDesc || ''} (Estoque: ${estqTxt})">🟢 ERP (${estqTxt})</span>`;
+            } else if (it.refOriginal) {
+                refDisplay += ` <span style="display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:1px 4px;border-radius:4px;background:rgba(245,158,11,.15);color:#f59e0b;" title="Código novo / sem vínculo automático">⚪ Novo</span>`;
+            }
+
+            const val = {
+                ref: refDisplay,
+                desc: _esc(it.descOriginal),
+                qtde: _esc(String(it.qtdeSolicitada).replace('.', ',')),
+                marca: _esc(it.marca),
+                preco: it.precoConcorrente ? _esc(it.precoConcorrente.toFixed(2).replace('.', ',')) : '',
+                obs: _esc(it.obs)
+            };
             h += `<tr class="${!it.refOriginal || it._qtdeInvalida ? 'warn' : ''}"><td>#${it._rowNum}</td>` +
-                cols.map(c => `<td class="c-${c}">${_esc(val[c])}</td>`).join('') +
+                cols.map(c => `<td class="c-${c}">${val[c]}</td>`).join('') +
                 `<td style="text-align:center"><button class="mpd-prev-del-b" data-exc="${it._rawIndex}" title="Excluir item ${it._rowNum} (${_esc(it.refOriginal || it.descOriginal)})"><span class="material-icons-round" style="font-size:14px;color:#f87171">delete_outline</span></button></td>` +
                 '</tr>';
         });

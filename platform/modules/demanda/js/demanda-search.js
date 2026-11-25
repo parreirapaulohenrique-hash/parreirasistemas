@@ -34,7 +34,7 @@ const DemandaSearch = (() => {
             }
             const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
             if (s && s.tenantId) return String(s.tenantId);
-        } catch (_) {}
+        } catch (_) { }
         return String(localStorage.getItem('app_tenant_id') || 'centralpecas');
     }
 
@@ -61,10 +61,16 @@ const DemandaSearch = (() => {
         if (window.ErpIntegration && ErpIntegration.getActive) {
             return ErpIntegration.getActive();
         }
-        // Fallback: instancia direto com config do sessionStorage
+        // Fallback: instancia direto com config do sessionStorage ou padrões Central Peças
         if (window.MaxDataAdapter) {
-            const cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
-            if (!cfg.baseUrl) throw new Error('ERP não configurado. Faça login primeiro.');
+            let cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
+            if (!cfg.baseUrl) {
+                cfg = {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 1,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                };
+            }
             return new MaxDataAdapter(_getTenantId(), cfg);
         }
         throw new Error('MaxDataAdapter não encontrado. Verifique os scripts carregados.');
@@ -74,36 +80,44 @@ const DemandaSearch = (() => {
     const _DEFAULT_CONCORRENTE_MAP = {
         '00440185': 'CQ54027/1', // EIXO ESQUERDO DA RODA COBRIDORA (J.A. Agrícola -> Central Peças)
         '00440190': 'CQ54028/1', // EIXO DIREITO DA RODA COBRIDORA
-        '39':       'CQ69725',   // ALAVANCA DB
-        '399':      'CQ69723',   // EIXO DA RODA COBRIDORA 1100
-        'KK34847':  'KK14927',   // BLINDAGEM DA HASTE 1100/2100/DB
-        '1298':     'CQ16233',   // ARRUELA DB
+        '39': 'CQ69725',   // ALAVANCA DB
+        '399': 'CQ69723',   // EIXO DA RODA COBRIDORA 1100
+        'KK34847': 'KK14927',   // BLINDAGEM DA HASTE 1100/2100/DB
+        '1298': 'CQ16233',   // ARRUELA DB
         '83210508': 'M8 PARLOCK',// PORCA A/TRAVANTE M8
         '12577511': 'M12 PARLOC',// PORCA A/TRAVANTE M12
-        '1611':     'PS8X55',    // PARAFUSO SEXTAVADO AC MA 8.8 8X55
-        'ALM8':     '6004',      // ARRUELA LISA 8MM (Central Peças)
-        '14M7166':  'M8 PARLOCK',// PORCA A/TRAVANTE M8
-        '14M7291':  'M16FL',     // PORCA SEXT. FLANGE M16
+        '1611': 'PS8X55',    // PARAFUSO SEXTAVADO AC MA 8.8 8X55
+        'ALM8': '6004',      // ARRUELA LISA 8MM (Central Peças)
+        '14M7166': 'M8 PARLOCK',// PORCA A/TRAVANTE M8
+        '14M7291': 'M16FL',     // PORCA SEXT. FLANGE M16
     };
 
     function _extractBaseRef(ref) {
         if (!ref) return '';
         var r = String(ref).trim();
+        // v3.4.0: Remove prefixos de montadoras/marcas agrícolas (JD, CNH, CASE, NH, AGCO, MF, etc.)
+        var semPref = r.replace(/^(?:JD|JOHN\s*DEERE|CNH|CASE(?:\s*IH)?|NEW\s*HOLLAND|NH|AGCO|MASSEY(?:\s*FERGUSON)?|MF|VALTRA|J\.?A\.?|JA|MAX|PROD)\s*[-_./:\s]\s*/i, '').trim();
+        if (semPref) r = semPref;
+
         // Remove sufixos comuns de marcas ou concorrentes (/JA, -INA, /PFI, /228, /199, -952, /RL, /FC, etc.)
         var base = r.replace(/[\/\-_](?:JA|INA|PFI|REX|FEY|CISER|RL|FC|THOR|DB|\d{2,4})$/i, '').trim();
         if (base.indexOf('/') >= 0) {
             base = base.split('/')[0].trim();
         }
+        // Remove zeros à esquerda se for código numérico longo (ex: 0084350623 -> 84350623)
+        if (/^0+[1-9]\d{4,}/.test(base)) {
+            base = base.replace(/^0+/, '');
+        }
         return base || r;
     }
 
     var _GENERIC_STOPWORDS = {
-        'DE':1, 'DA':1, 'DO':1, 'DOS':1, 'DAS':1, 'COM':1, 'SEM':1, 'PARA':1, 'POR':1, 'EM':1, 'NO':1, 'NA':1, 'NOS':1, 'NAS':1,
-        'E':1, 'OU':1, 'A':1, 'O':1, 'AS':1, 'OS':1, 'UM':1, 'UMA':1, 'UN':1, 'PC':1, 'KG':1, 'M':1, 'MM':1, 'CM':1,
-        'ROLAMENTO':1, 'PARAFUSO':1, 'ARRUELA':1, 'PORCA':1, 'MANGOTE':1, 'RETENTOR':1, 'CORREIA':1,
-        'PINHAO':1, 'CONJUNTO':1, 'ANEL':1, 'DISCO':1, 'MOLA':1, 'CHAPA':1, 'SUPORTE':1, 'EIXO':1, 'VEDADOR':1,
-        'LISA':1, 'SEXTAVADO':1, 'ESFERAS':1, 'GERAL':1, 'ORIGINAL':1, 'ESPECIAL':1,
-        'COMPONENTE':1, 'REVISAO':1, 'MAQ':1, 'PECA':1, 'PECAS':1, 'ITEM':1, 'PRODUTO':1, 'SERVICO':1, 'DIVERSOS':1, 'OUTROS':1
+        'DE': 1, 'DA': 1, 'DO': 1, 'DOS': 1, 'DAS': 1, 'COM': 1, 'SEM': 1, 'PARA': 1, 'POR': 1, 'EM': 1, 'NO': 1, 'NA': 1, 'NOS': 1, 'NAS': 1,
+        'E': 1, 'OU': 1, 'A': 1, 'O': 1, 'AS': 1, 'OS': 1, 'UM': 1, 'UMA': 1, 'UN': 1, 'PC': 1, 'KG': 1, 'M': 1, 'MM': 1, 'CM': 1,
+        'ROLAMENTO': 1, 'PARAFUSO': 1, 'ARRUELA': 1, 'PORCA': 1, 'MANGOTE': 1, 'RETENTOR': 1, 'CORREIA': 1,
+        'PINHAO': 1, 'CONJUNTO': 1, 'ANEL': 1, 'DISCO': 1, 'MOLA': 1, 'CHAPA': 1, 'SUPORTE': 1, 'EIXO': 1, 'VEDADOR': 1,
+        'LISA': 1, 'SEXTAVADO': 1, 'ESFERAS': 1, 'GERAL': 1, 'ORIGINAL': 1, 'ESPECIAL': 1,
+        'COMPONENTE': 1, 'REVISAO': 1, 'MAQ': 1, 'PECA': 1, 'PECAS': 1, 'ITEM': 1, 'PRODUTO': 1, 'SERVICO': 1, 'DIVERSOS': 1, 'OUTROS': 1
     };
 
     // ── Resolução de Preços MaxData ERP (Preço de Venda x Custo) ──
@@ -171,29 +185,29 @@ const DemandaSearch = (() => {
         var prcVenda = Number(prcData.v || 0);
         var custo = Number(prcData.c || sku[11] || 0);
         return {
-            erpProdutoId:   codErp,
-            codigoErp:      codErp,
-            referencia:     codFab || codErp,
-            erpCodigoFab:   codFab || codErp,
-            codigoFab:      codFab,
-            descricao:      desc,
+            erpProdutoId: codErp,
+            codigoErp: codErp,
+            referencia: codFab || codErp,
+            erpCodigoFab: codFab || codErp,
+            codigoFab: codFab,
+            descricao: desc,
             erpProdutoDesc: desc,
-            marca:          marca,
-            fabricante:     marca,
-            estoqueFilial:  estq,
-            saldoEstoque:   estq,
-            preco:          prcVenda,
-            precoUnitario:  prcVenda,
-            precoVenda:     prcVenda,
-            valorVenda:     prcVenda,
-            valorAtacado:   Number(prcData.a || prcVenda),
-            custo:          custo,
-            valorCusto:     custo,
-            status:         estq > 0 ? 'estoque_disponivel' : 'sem_estoque',
-            score:          score,
-            tipoMatch:      tipoMatch,
-            confidencia:    score >= 95 ? 'alta' : 'media',
-            _rawSku:        sku
+            marca: marca,
+            fabricante: marca,
+            estoqueFilial: estq,
+            saldoEstoque: estq,
+            preco: prcVenda,
+            precoUnitario: prcVenda,
+            precoVenda: prcVenda,
+            valorVenda: prcVenda,
+            valorAtacado: Number(prcData.a || prcVenda),
+            custo: custo,
+            valorCusto: custo,
+            status: estq > 0 ? 'estoque_disponivel' : 'sem_estoque',
+            score: score,
+            tipoMatch: tipoMatch,
+            confidencia: score >= 95 ? 'alta' : 'media',
+            _rawSku: sku
         };
     }
 
@@ -205,7 +219,7 @@ const DemandaSearch = (() => {
                 var parsed = JSON.parse(saved);
                 if (parsed && typeof parsed === 'object') Object.assign(map, parsed);
             }
-        } catch (_) {}
+        } catch (_) { }
         return map;
     }
 
@@ -217,7 +231,7 @@ const DemandaSearch = (() => {
             map[cleanKey] = String(codFabOrErp).trim();
             map[String(refConcorrente).trim()] = String(codFabOrErp).trim();
             localStorage.setItem('demanda_concorrente_cross_ref', JSON.stringify(map));
-        } catch (_) {}
+        } catch (_) { }
     }
 
     // ── Busca na base local de 10.896 SKUs da integração MaxData ──────
@@ -273,13 +287,13 @@ const DemandaSearch = (() => {
             } else if (qNorm.length >= 4 && descNorm.includes(qNorm)) {
                 score = 80;
                 tipoMatch = 'desc_contem';
-            } else if (qWords.length >= 2) {
+            } else if (qWords.length >= 1) {
                 let hitWords = 0;
                 for (const w of qWords) {
                     if (desc.includes(w)) hitWords++;
                 }
-                if (hitWords >= Math.min(2, qWords.length)) {
-                    score = 75 + Math.round((hitWords / qWords.length) * 10);
+                if (hitWords >= 1) {
+                    score = 70 + Math.round((hitWords / qWords.length) * 15);
                     tipoMatch = 'desc_palavras';
                 }
             }
@@ -336,14 +350,14 @@ const DemandaSearch = (() => {
             return null;
         }
 
-        var refOrig  = '';
+        var refOrig = '';
         var descOrig = '';
         var precoConc = null;
 
         if (typeof itemOrQuery === 'string') {
             refOrig = itemOrQuery;
         } else if (itemOrQuery && typeof itemOrQuery === 'object') {
-            refOrig  = itemOrQuery.refOriginal || itemOrQuery.referencia || itemOrQuery.ref || '';
+            refOrig = itemOrQuery.refOriginal || itemOrQuery.referencia || itemOrQuery.ref || '';
             descOrig = itemOrQuery.descOriginal || itemOrQuery.descricao || itemOrQuery.desc || '';
             precoConc = itemOrQuery.precoConcorrente != null ? Number(itemOrQuery.precoConcorrente) : null;
         }
@@ -351,11 +365,11 @@ const DemandaSearch = (() => {
         refOrig = String(refOrig || '').trim();
         descOrig = String(descOrig || '').trim();
 
-        var baseRef   = _extractBaseRef(refOrig);
-        var refClean  = refOrig.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        var baseRef = _extractBaseRef(refOrig);
+        var refClean = refOrig.toUpperCase().replace(/[^A-Z0-9]/g, '');
         var baseClean = baseRef.toUpperCase().replace(/[^A-Z0-9]/g, '');
         var descUpper = descOrig.toUpperCase();
-        var skus      = window.COMPACT_SKUS;
+        var skus = window.COMPACT_SKUS;
 
         // 1. Mapeamento direto de Código de Concorrente (ex: J.A. Agrícola -> Central Peças)
         var mapConcorrente = _getConcorrenteMappings();
@@ -383,13 +397,46 @@ const DemandaSearch = (() => {
             }
         }
 
-        // 2. Busca por Código de Fabricante ou CrossRef Exato (testando baseRef limpa e refOrig)
+        // 2. Busca por Código de Fabricante ou CrossRef Exato + Resoluções Avançadas (v3.4.0: Prefixos OEM, Zeros, OCR)
         var codesToTest = [];
-        if (baseClean && baseClean.length >= 3) codesToTest.push(baseClean);
-        if (refClean && refClean.length >= 3 && refClean !== baseClean) codesToTest.push(refClean);
+        function _addCandidate(candStr, candTipo, scoreBase) {
+            if (!candStr) return;
+            var cClean = String(candStr).toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (cClean.length >= 3 && !codesToTest.some(function (x) { return x.c === cClean; })) {
+                codesToTest.push({ c: cClean, raw: candStr, tipo: candTipo, scoreBase: scoreBase || 100 });
+            }
+        }
 
+        // a) Referência Direta e Base Limpa
+        _addCandidate(baseClean, 'cod_fab_exato', 100);
+        _addCandidate(refClean, 'cod_fab_exato', 100);
+
+        // b) Código sem prefixo de montadora (ex: JD-RE199682 -> RE199682, CNH-84350623 -> 84350623)
+        var semPrefixo = refOrig.replace(/^(?:JD|JOHN\s*DEERE|CNH|CASE(?:\s*IH)?|NEW\s*HOLLAND|NH|AGCO|MASSEY(?:\s*FERGUSON)?|MF|VALTRA|J\.?A\.?|JA|MAX)\s*[-_./:\s]\s*/i, '');
+        if (semPrefixo && semPrefixo !== refOrig) {
+            _addCandidate(_extractBaseRef(semPrefixo), 'prefixo_oem_removido', 99);
+            _addCandidate(semPrefixo, 'prefixo_oem_removido', 98);
+        }
+
+        // c) Código sem zeros à esquerda (ex: 00325494 -> 325494)
+        if (/^0+[1-9]/.test(baseClean)) _addCandidate(baseClean.replace(/^0+/, ''), 'zeros_removidos', 99);
+        if (/^0+[1-9]/.test(refClean)) _addCandidate(refClean.replace(/^0+/, ''), 'zeros_removidos', 99);
+
+        // d) Correções de ruídos de OCR (O <-> 0, I <-> 1, etc.)
+        if (/[A-Z0-9]*O[A-Z0-9]*/i.test(refClean) && /\d{3,}/.test(refClean)) {
+            _addCandidate(refClean.replace(/O/g, '0'), 'ocr_letra_o_para_zero', 97);
+        }
+        if (/[0-9]+[IL][0-9]+/i.test(refClean)) {
+            _addCandidate(refClean.replace(/[IL]/gi, '1'), 'ocr_letra_i_para_um', 97);
+        }
+        if (/^0[A-Z]\d{5}/.test(refClean)) {
+            _addCandidate('C' + refClean.slice(1), 'ocr_zero_para_c', 96);
+        }
+
+        // Executa busca para cada candidato de código
         for (var cIdx = 0; cIdx < codesToTest.length; cIdx++) {
-            var c = codesToTest[cIdx];
+            var cand = codesToTest[cIdx];
+            var c = cand.c;
             var exactCandidates = [];
             for (var i = 0; i < skus.length; i++) {
                 var s = skus[i];
@@ -398,14 +445,14 @@ const DemandaSearch = (() => {
                 var crossC = String(s[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
                 if (c === fabC || c === erpC) {
-                    exactCandidates.push({ sku: s, score: 100, tipo: 'cod_fab_exato' });
+                    exactCandidates.push({ sku: s, score: cand.scoreBase, tipo: cand.tipo });
                 } else if (c.length >= 4 && crossC.indexOf(c) >= 0) {
-                    exactCandidates.push({ sku: s, score: 96, tipo: 'cross_ref_exato' });
+                    exactCandidates.push({ sku: s, score: Math.min(cand.scoreBase, 96), tipo: cand.tipo === 'cod_fab_exato' ? 'cross_ref_exato' : (cand.tipo + '_cross') });
                 }
             }
             if (exactCandidates.length > 0) {
                 // Prioriza quem tem estoque positivo e maior score
-                exactCandidates.sort(function(a, b) {
+                exactCandidates.sort(function (a, b) {
                     var estA = Number(a.sku[10] != null ? a.sku[10] : (a.sku[9] || 0));
                     var estB = Number(b.sku[10] != null ? b.sku[10] : (b.sku[9] || 0));
                     if (b.score !== a.score) return b.score - a.score;
@@ -445,7 +492,7 @@ const DemandaSearch = (() => {
                 }
             }
             if (bCand.length > 0) {
-                bCand.sort(function(a, b) {
+                bCand.sort(function (a, b) {
                     var estA = Number(a.sku[10] != null ? a.sku[10] : (a.sku[9] || 0));
                     var estB = Number(b.sku[10] != null ? b.sku[10] : (b.sku[9] || 0));
                     if (b.score !== a.score) return b.score - a.score;
@@ -455,17 +502,23 @@ const DemandaSearch = (() => {
             }
         }
 
-        // 4. Extração de Código Alfanumérico Embutido na Descrição (ex: "BLINDAGEM KK34847", "MOLA AX10319")
+        // 4. Extração de Código Embutido na Descrição (v3.4.0: Alfanuméricos + Numéricos CNH de 6-10 dígitos)
         var tokensDesc = descUpper.match(/[A-Z0-9\/\-\.]{4,}/g) || [];
         for (var t = 0; t < tokensDesc.length; t++) {
             var tokC = tokensDesc[t].replace(/[^A-Z0-9]/g, '');
-            if (tokC.length >= 4 && !/^[A-Z]+$/.test(tokC) && !/^[0-9]+$/.test(tokC)) {
+            var isAlfaNum = (tokC.length >= 4 && !/^[A-Z]+$/.test(tokC) && !/^[0-9]+$/.test(tokC));
+            var isNumericCNH = (tokC.length >= 6 && tokC.length <= 10 && /^[0-9]+$/.test(tokC) && /^(?:84|87|51|73|86|47|14|33|32|37|38|34)/.test(tokC));
+
+            if (isAlfaNum || isNumericCNH) {
                 for (var j = 0; j < skus.length; j++) {
                     var sj = skus[j];
                     var fabJ = String(sj[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                     var crossJ = String(sj[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    if (tokC === fabJ || (tokC.length >= 5 && crossJ.indexOf(tokC) >= 0)) {
-                        return _formatMatchResult(sj, 95, 'codigo_na_descricao');
+                    var erpJ = String(sj[0] || '');
+                    if (tokC === fabJ || tokC === erpJ) {
+                        return _formatMatchResult(sj, 96, isNumericCNH ? 'cod_cnh_na_descricao' : 'codigo_na_descricao');
+                    } else if (tokC.length >= 5 && crossJ.indexOf(tokC) >= 0) {
+                        return _formatMatchResult(sj, 94, 'cross_na_descricao');
                     }
                 }
             }
@@ -522,8 +575,8 @@ const DemandaSearch = (() => {
             .replace(/\bCUBRIDORA\b/g, 'COBRIDORA')
             .replace(/\bFLANG\b/g, 'FLANGEADO');
 
-        var rawWords = expDesc.split(/[^A-Z0-9]+/).filter(function(w) { return w.length >= 3; });
-        var expWords = rawWords.filter(function(w) { return !_GENERIC_STOPWORDS[w]; });
+        var rawWords = expDesc.split(/[^A-Z0-9]+/).filter(function (w) { return w.length >= 3; });
+        var expWords = rawWords.filter(function (w) { return !_GENERIC_STOPWORDS[w]; });
 
         if (expWords.length >= 2) {
             var bestSku = null;
@@ -565,7 +618,7 @@ const DemandaSearch = (() => {
      * @returns {Promise<Array<ResultadoBusca>>}
      */
     async function search(query, opts = {}) {
-        const q     = (query || '').trim();
+        const q = (query || '').trim();
         if (!q || q.length < 2) return [];
 
         const { filialId = ((typeof window !== 'undefined' && window.DemandaFilial) ? window.DemandaFilial.atual() : 1), limit = 25, forceRefresh = false } = opts;
@@ -577,7 +630,7 @@ const DemandaSearch = (() => {
         }
 
         const results = [];
-        const seen    = new Set();
+        const seen = new Set();
 
         // CAMADA -1 (ULTRA RÁPIDA / OFFLINE): Base de 10.896 SKUs MaxData integrados (window.COMPACT_SKUS)
         try {
@@ -661,7 +714,7 @@ const DemandaSearch = (() => {
      */
     async function _searchFirestoreProducts(query, filialId) {
         if (typeof firebase === 'undefined') return [];
-        const db  = firebase.firestore();
+        const db = firebase.firestore();
         const col = `tenants/${_getTenantId()}/demanda/techbase/products`;
 
         const qUp = query.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -683,7 +736,7 @@ const DemandaSearch = (() => {
                 .where('referencia', '>=', qUp).where('referencia', '<=', end)
                 .where('ativo', '==', true).limit(15).get();
             refSnap.docs.forEach(d => addItem(d));
-        } catch (_) {}
+        } catch (_) { }
 
         // 2. Busca por referências cruzadas (similares indexados via array-contains)
         if (qNorm.length >= 3) {
@@ -692,7 +745,7 @@ const DemandaSearch = (() => {
                     .where('referenciasCruzadas', 'array-contains', qNorm)
                     .where('ativo', '==', true).limit(15).get();
                 crossSnap.docs.forEach(d => addItem(d));
-            } catch (_) {}
+            } catch (_) { }
         }
 
         // 3. Busca por código ERP exato (numérico)
@@ -702,7 +755,7 @@ const DemandaSearch = (() => {
                     .where('codigoErp', '==', query)
                     .limit(5).get();
                 codeSnap.docs.forEach(d => addItem(d));
-            } catch (_) {}
+            } catch (_) { }
         }
 
         // 4. Busca por descrição (prefix) — complementa referência
@@ -718,7 +771,7 @@ const DemandaSearch = (() => {
                         .where('descricao', '>=', query).where('descricao', '<=', query + '\uf8ff')
                         .where('ativo', '==', true).limit(10).get();
                     descSnap2.docs.forEach(d => addItem(d));
-                } catch (_2) {}
+                } catch (_2) { }
             }
         }
 
@@ -727,32 +780,32 @@ const DemandaSearch = (() => {
 
     // ── Mapeamento Firestore product → ResultadoBusca ─────────
     function _mapFirestoreProduct(d, docId, filialId, queryNorm, queryClean) {
-        const ref  = (d.referencia || '').toUpperCase();
+        const ref = (d.referencia || '').toUpperCase();
         const refClean = (d.codigoNorm || ref.replace(/[\s\-\.\/]/g, ''));
-        const desc = (d.descricao  || '').toUpperCase();
+        const desc = (d.descricao || '').toUpperCase();
         const descClean = desc.replace(/[\s\-\.\/]/g, '');
         const aplicacao = (d.aplicacao || '').toUpperCase();
         const aplicacaoClean = aplicacao.replace(/[\s\-\.\/]/g, '');
         const cross = Array.isArray(d.referenciasCruzadas) ? d.referenciasCruzadas : [];
 
         // Novos campos tecnicos
-        const equipamento    = (d.equipamento || '').trim();
+        const equipamento = (d.equipamento || '').trim();
         const similarGenuino = (d.similarGenuino || '').trim();
-        const similar1       = (d.similar1 || '').trim();
-        const similar2       = (d.similar2 || '').trim();
-        const similar3       = (d.similar3 || '').trim();
-        const similar4       = (d.similar4 || '').trim();
-        const refFornecedor  = (d.refFornecedor || '').trim();
-        const fotoProduto    = (d.fotoProduto || '').trim();
-        const fonte          = (d.fonte || '').trim();
+        const similar1 = (d.similar1 || '').trim();
+        const similar2 = (d.similar2 || '').trim();
+        const similar3 = (d.similar3 || '').trim();
+        const similar4 = (d.similar4 || '').trim();
+        const refFornecedor = (d.refFornecedor || '').trim();
+        const fotoProduto = (d.fotoProduto || '').trim();
+        const fonte = (d.fonte || '').trim();
         const statusPesquisa = (d.statusPesquisa || '').trim();
 
         const simGenuinoClean = similarGenuino.toUpperCase().replace(/[\s\-\.\/]/g, '');
-        const sim1Clean       = similar1.toUpperCase().replace(/[\s\-\.\/]/g, '');
-        const sim2Clean       = similar2.toUpperCase().replace(/[\s\-\.\/]/g, '');
-        const sim3Clean       = similar3.toUpperCase().replace(/[\s\-\.\/]/g, '');
-        const sim4Clean       = similar4.toUpperCase().replace(/[\s\-\.\/]/g, '');
-        const refFornClean    = refFornecedor.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim1Clean = similar1.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim2Clean = similar2.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim3Clean = similar3.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim4Clean = similar4.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const refFornClean = refFornecedor.toUpperCase().replace(/[\s\-\.\/]/g, '');
 
         let tipoMatch = 'descricao';
         let motivoMatch = 'Encontrado por descricao';
@@ -793,45 +846,45 @@ const DemandaSearch = (() => {
         }
 
         return {
-            _firestoreId:         docId,
-            erpProdutoId:         d.codigoErp || null,
-            erpProdutoDesc:       (d.descricao || d.descPdv || '').trim(),
-            erpCodigoFab:         (d.referencia || '').trim(),
-            erpCodigoOriginal:    (d.referencia || '').trim(),
-            erpGrupo:             (d.grupo || '').trim(),
-            erpSubGrupo:          '',
-            fabricante:           (d.fabricante || d.marca || '').trim(),
-            marca:                (d.marca || d.fabricante || '').trim(),
-            fabricanteId:         null,
-            unidade:              d.unidade || d.un || 'UN',
-            aplicacao:            (d.aplicacao || '').trim(),
-            equipamento:          equipamento,
-            similarGenuino:       similarGenuino,
-            similar1:             similar1,
-            similar2:             similar2,
-            similar3:             similar3,
-            similar4:             similar4,
-            refFornecedor:        refFornecedor,
-            fotoProduto:          fotoProduto,
-            fonte:                fonte,
-            statusPesquisa:       statusPesquisa,
-            referenciasCruzadas:  cross,
-            tipoMatch:            tipoMatch,
-            motivoMatch:          motivoMatch,
-            localizador:          '',
-            ean:                  (d.barcode || '').trim(),
-            estoqueFilial:        Number(d.estoque || 0),
+            _firestoreId: docId,
+            erpProdutoId: d.codigoErp || null,
+            erpProdutoDesc: (d.descricao || d.descPdv || '').trim(),
+            erpCodigoFab: (d.referencia || '').trim(),
+            erpCodigoOriginal: (d.referencia || '').trim(),
+            erpGrupo: (d.grupo || '').trim(),
+            erpSubGrupo: '',
+            fabricante: (d.fabricante || d.marca || '').trim(),
+            marca: (d.marca || d.fabricante || '').trim(),
+            fabricanteId: null,
+            unidade: d.unidade || d.un || 'UN',
+            aplicacao: (d.aplicacao || '').trim(),
+            equipamento: equipamento,
+            similarGenuino: similarGenuino,
+            similar1: similar1,
+            similar2: similar2,
+            similar3: similar3,
+            similar4: similar4,
+            refFornecedor: refFornecedor,
+            fotoProduto: fotoProduto,
+            fonte: fonte,
+            statusPesquisa: statusPesquisa,
+            referenciasCruzadas: cross,
+            tipoMatch: tipoMatch,
+            motivoMatch: motivoMatch,
+            localizador: '',
+            ean: (d.barcode || '').trim(),
+            estoqueFilial: Number(d.estoque || 0),
             estoqueOutrasFiliais: [],
-            estoqueTotal:         Number(d.estoque || 0),
-            preco:                Number(d.preco || 0),
-            valorAtacado:         0,
-            valorCusto:           0,
-            confidencia:          'erp',
-            parteMestreId:        null,
-            _temEstoque:          Number(d.estoque || 0) > 0,
-            _temEstoqueOutro:     false,
-            _source:              'firestore',
-            _rank:                rank,
+            estoqueTotal: Number(d.estoque || 0),
+            preco: Number(d.preco || 0),
+            valorAtacado: 0,
+            valorCusto: 0,
+            confidencia: 'erp',
+            parteMestreId: null,
+            _temEstoque: Number(d.estoque || 0) > 0,
+            _temEstoqueOutro: false,
+            _source: 'firestore',
+            _rank: rank,
         };
     }
 
@@ -853,9 +906,9 @@ const DemandaSearch = (() => {
 
         for (const url of attempts) {
             try {
-                const resp  = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
+                const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
                 if (!resp.ok) continue;
-                const data  = await resp.json();
+                const data = await resp.json();
                 const items = Array.isArray(data) ? data : (data.docs || data.data || []);
                 for (const item of items) {
                     const fab = (item.codigoFab || item.codigoOriginal || '').toUpperCase().replace(/[\s\-\.\/]/g, '');
@@ -893,10 +946,10 @@ const DemandaSearch = (() => {
     async function _searchErpByEAN(ean, filialId) {
         const adapter = _getAdapter();
         const headers = await adapter._authHeaders();
-        const url     = adapter._buildUrl(`product/ean/${ean}`);
-        const resp    = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
+        const url = adapter._buildUrl(`product/ean/${ean}`);
+        const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
         if (!resp.ok) return [];
-        const data  = await resp.json();
+        const data = await resp.json();
         const items = Array.isArray(data) ? data : [data];
         return items.filter(Boolean).map(i => _mapErpProduct(i, filialId));
     }
@@ -905,10 +958,10 @@ const DemandaSearch = (() => {
     async function _searchErpByText(query, filialId, limit = 25) {
         const adapter = _getAdapter();
         const headers = await adapter._authHeaders();
-        const url     = adapter._buildUrl('product', { descricao: query, limit, sincronizacao: true });
-        const resp    = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
+        const url = adapter._buildUrl('product', { descricao: query, limit, sincronizacao: true });
+        const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
         if (!resp.ok) return [];
-        const data  = await resp.json();
+        const data = await resp.json();
         const items = Array.isArray(data) ? data : (data.docs || data.data || []);
         return items.map(i => _mapErpProduct(i, filialId));
     }
@@ -917,12 +970,12 @@ const DemandaSearch = (() => {
     async function _searchTechbase(query, filialId) {
         if (typeof firebase === 'undefined') return [];
 
-        const db  = firebase.firestore();
+        const db = firebase.firestore();
         const ref = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase();
         const results = [];
 
         // Busca por referência normalizada na coleção references
-        const refsSnap = await db.collection(`${TECHBASE}/references`)
+        const refsSnap = await db.collection(`${_techbaseCol()}/references`)
             .where('refNorm', '==', ref)
             .limit(10)
             .get();
@@ -930,15 +983,15 @@ const DemandaSearch = (() => {
         for (const doc of refsSnap.docs) {
             const r = doc.data();
             results.push({
-                parteMestreId:   r.parteMestreId,
-                erpProdutoId:    r.erpProdutoId || null,
-                erpProdutoDesc:  r.descricao || '',
-                erpCodigoFab:    r.ref,
-                fabricante:      r.fabricante || '',
-                confidencia:     r.confidencia || 'sugerida',
-                estoqueFilial:   null, // será buscado sob demanda
-                _rank:           _rankByConfianca(r.confidencia),
-                _isTechbase:     true,
+                parteMestreId: r.parteMestreId,
+                erpProdutoId: r.erpProdutoId || null,
+                erpProdutoDesc: r.descricao || '',
+                erpCodigoFab: r.ref,
+                fabricante: r.fabricante || '',
+                confidencia: r.confidencia || 'sugerida',
+                estoqueFilial: null, // será buscado sob demanda
+                _rank: _rankByConfianca(r.confidencia),
+                _isTechbase: true,
             });
         }
 
@@ -953,7 +1006,7 @@ const DemandaSearch = (() => {
     // ── Mapeamento de produto ERP → ResultadoBusca ────────────
     function _mapErpProduct(raw, filialId, tipoMatch = 'exato', motivoMatch = 'Encontrado no ERP') {
         // Extrai estoque da filial solicitada via multiloja[]
-        const multiloja  = raw.multiloja || [];
+        const multiloja = raw.multiloja || [];
         const filialData = multiloja.find(f => f.empId === filialId) || multiloja[0] || {};
         const estoqueFilial = Number(filialData.qtde ?? filialData.estoque ?? raw.qtde ?? 0);
 
@@ -968,10 +1021,10 @@ const DemandaSearch = (() => {
         const estoqueOutrasFiliais = multiloja
             .filter(f => f.empId !== filialId)
             .map(f => ({
-                empId:   f.empId,
-                nome:    outrasFiliaisMap[f.empId] || `Filial ${f.empId}`,
+                empId: f.empId,
+                nome: outrasFiliaisMap[f.empId] || `Filial ${f.empId}`,
                 estoque: Number(f.estoque ?? 0),
-                preco:   Number(f.valorVenda ?? 0),
+                preco: Number(f.valorVenda ?? 0),
             }));
 
         // Preço: prefere preço da filial via multiloja, fallback no produto
@@ -997,32 +1050,32 @@ const DemandaSearch = (() => {
         }
 
         return {
-            erpProdutoId:         raw.id,
-            erpProdutoDesc:       (raw.descricao || raw.descPdv || '').trim(),
-            erpCodigoFab:         (raw.codigoFab  || raw.codigoOriginal || '').trim(),
-            erpCodigoOriginal:    (raw.codigoOriginal || '').trim(),
-            erpGrupo:             (raw.grupo    || '').trim(),
-            erpSubGrupo:          (raw.subGrupo || '').trim(),
-            fabricante:           (raw.fabricante || '').trim(),
-            fabricanteId:         raw.fabricanteId || null,
-            unidade:              raw.un || 'UN',
-            aplicacao:            (raw.aplicacao || '').trim(),    // equipamento compatível / referências
-            referenciasCruzadas:  Array.from(cross),
-            tipoMatch:            tipoMatch,
-            motivoMatch:          motivoMatch,
-            localizador:          (raw.localizador || raw.prateleira || '').trim(),
-            ean:                  barcodes,
+            erpProdutoId: raw.id,
+            erpProdutoDesc: (raw.descricao || raw.descPdv || '').trim(),
+            erpCodigoFab: (raw.codigoFab || raw.codigoOriginal || '').trim(),
+            erpCodigoOriginal: (raw.codigoOriginal || '').trim(),
+            erpGrupo: (raw.grupo || '').trim(),
+            erpSubGrupo: (raw.subGrupo || '').trim(),
+            fabricante: (raw.fabricante || '').trim(),
+            fabricanteId: raw.fabricanteId || null,
+            unidade: raw.un || 'UN',
+            aplicacao: (raw.aplicacao || '').trim(),    // equipamento compatível / referências
+            referenciasCruzadas: Array.from(cross),
+            tipoMatch: tipoMatch,
+            motivoMatch: motivoMatch,
+            localizador: (raw.localizador || raw.prateleira || '').trim(),
+            ean: barcodes,
             estoqueFilial,
             estoqueOutrasFiliais,
-            estoqueTotal:         Number(raw.estoque ?? 0),
+            estoqueTotal: Number(raw.estoque ?? 0),
             preco,
-            valorAtacado:         Number(raw.valorAtacado ?? 0),
-            valorCusto:           Number(raw.valorCusto ?? 0),
-            confidencia:          'erp',
-            parteMestreId:        null,
-            _temEstoque:          estoqueFilial > 0,
-            _temEstoqueOutro:     estoqueOutrasFiliais.some(f => f.estoque > 0),
-            _source:              'erp',
+            valorAtacado: Number(raw.valorAtacado ?? 0),
+            valorCusto: Number(raw.valorCusto ?? 0),
+            confidencia: 'erp',
+            parteMestreId: null,
+            _temEstoque: estoqueFilial > 0,
+            _temEstoqueOutro: estoqueOutrasFiliais.some(f => f.estoque > 0),
+            _source: 'erp',
         };
     }
 
@@ -1034,8 +1087,8 @@ const DemandaSearch = (() => {
     async function getProductDetails(erpProdutoId, filialId = 1) {
         const adapter = _getAdapter();
         const headers = await adapter._authHeaders();
-        const url     = adapter._buildUrl(`product/${erpProdutoId}`);
-        const resp    = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
+        const url = adapter._buildUrl(`product/${erpProdutoId}`);
+        const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
         if (!resp.ok) throw new Error(`Produto #${erpProdutoId}: HTTP ${resp.status}`);
         const raw = await resp.json();
         return _mapErpProduct(raw, filialId);
@@ -1055,7 +1108,7 @@ const DemandaSearch = (() => {
             try {
                 const fsClients = await DemandaClientes.buscar(q);
                 if (fsClients.length > 0) return fsClients.slice(0, 15);
-            } catch (_) {}
+            } catch (_) { }
         }
 
         // FALLBACK: sessionStorage (legado)
@@ -1063,7 +1116,7 @@ const DemandaSearch = (() => {
         try {
             const ss = sessionStorage.getItem('_erp_clients_maxdata');
             if (ss) clients = JSON.parse(ss);
-        } catch (_) {}
+        } catch (_) { }
 
         if (clients.length === 0 && typeof Utils !== 'undefined' && Utils.getStorage) {
             clients = Utils.getStorage('clients') || [];
@@ -1071,9 +1124,9 @@ const DemandaSearch = (() => {
 
         const qLow = q.toLowerCase();
         return clients.filter(c => {
-            const nome     = (c.nome || '').toLowerCase();
+            const nome = (c.nome || '').toLowerCase();
             const fantasia = (c.fantasia || c.nomeFantasia || '').toLowerCase();
-            const cnpj     = (c.cnpj || c.documento || '').replace(/\D/g, '');
+            const cnpj = (c.cnpj || c.documento || '').replace(/\D/g, '');
             return nome.includes(qLow) || fantasia.includes(qLow) || cnpj.includes(qLow);
         }).slice(0, 15);
     }

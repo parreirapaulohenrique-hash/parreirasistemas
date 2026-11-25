@@ -13,6 +13,9 @@ const DemandaImagemDemarcador = (() => {
 
     let _st = null; // { file, imgUrl, naturalW, naturalH, cortesPct: [], yTopPct: 0.15, yBottomPct: 0.85, onConfirm, toast }
     let _activeDrag = null; // { type: 'x'|'yTop'|'yBottom', index, startClientX, startClientY, startPct }
+    let _ultimoToqueCorte = null;      // { idx, t } — detecção de duplo clique/toque na alça
+    let _ignorarProximoClique = false; // evita criar corte no "click" que encerra um arrasto
+    let _bloqueioDblAte = 0;           // evita que o dblclick pós-exclusão apague uma linha vizinha
 
     const $ = (id) => document.getElementById(id);
 
@@ -63,7 +66,7 @@ const DemandaImagemDemarcador = (() => {
                         <!-- Dica de uso rápida -->
                         <span class="did-hint">
                             <span class="material-icons-round" style="font-size:.85rem;color:#38bdf8">info</span>
-                            Colunas inicial e final cobrem até as bordas da imagem · Crie linhas apenas <b>ENTRE</b> as colunas (ex: entre SEQ e ITENS)
+                            Clique na imagem para criar linha · Para excluir: <b>✕</b> vermelho, duplo-clique ou botão direito sobre a linha · Crie linhas apenas <b>ENTRE</b> as colunas
                         </span>
                     </div>
 
@@ -292,37 +295,85 @@ const DemandaImagemDemarcador = (() => {
             handle.className = 'did-vhandle';
             handle.style.left = xPx + 'px';
             handle.style.top = '20px';
-            handle.title = `Coluna ${idx + 1} / ${idx + 2} (${Math.round(pct * 100)}%)\nArraste para mover · Duplo-clique para excluir`;
+            handle.title = `Coluna ${idx + 1} / ${idx + 2} (${Math.round(pct * 100)}%)\nArraste para mover · Duplo-clique, botão direito ou ✕ para excluir`;
 
             handle.innerHTML = `
                 <span class="did-vhandle-arrow">▲</span>
                 <span class="did-vhandle-tag">${idx + 1}</span>
+                <span class="did-vhandle-del" title="Excluir esta linha de coluna"
+                      style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;
+                             background:#ef4444;color:#fff;font-size:11px;font-weight:800;line-height:16px;text-align:center;
+                             cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:auto">✕</span>
             `;
 
-            // Mousedown / Touchstart para arrastar
+            // Botão ✕: exclui imediatamente (sem iniciar arrasto)
+            const btnDel = handle.querySelector('.did-vhandle-del');
+            const excluirPeloBotao = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                _removerCorte(idx);
+            };
+            btnDel.addEventListener('mousedown', excluirPeloBotao);
+            btnDel.addEventListener('touchstart', excluirPeloBotao, { passive: false });
+
+            // Mousedown / Touchstart para arrastar (+ detecção própria de duplo clique,
+            // que não depende do elemento sobreviver a re-renderizações)
             const iniciarArrasto = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                const agora = Date.now();
+                if (_ultimoToqueCorte && _ultimoToqueCorte.idx === idx && (agora - _ultimoToqueCorte.t) < 400) {
+                    _ultimoToqueCorte = null;
+                    _activeDrag = null;
+                    _removerCorte(idx);
+                    return;
+                }
+                _ultimoToqueCorte = { idx, t: agora };
                 _activeDrag = {
                     type: 'x',
                     index: idx,
                     startClientX: e.touches ? e.touches[0].clientX : e.clientX,
-                    startPct: pct
+                    startPct: pct,
+                    moved: false
                 };
             };
             handle.addEventListener('mousedown', iniciarArrasto);
             handle.addEventListener('touchstart', iniciarArrasto, { passive: false });
 
-            // Duplo clique exclui corte
-            handle.addEventListener('dblclick', (e) => {
+            // Botão direito também exclui
+            handle.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                _st.cortesPct.splice(idx, 1);
-                _renderizar();
+                _removerCorte(idx);
             });
 
             layer.appendChild(line);
             layer.appendChild(handle);
         });
+    }
+
+    /** Remove a divisória de coluna pelo índice e re-renderiza. */
+    function _removerCorte(idx) {
+        if (!_st || idx < 0 || idx >= _st.cortesPct.length) return;
+        _st.cortesPct.splice(idx, 1);
+        _activeDrag = null;
+        // Os eventos click/dblclick que o navegador dispara logo após a exclusão
+        // não podem recriar a linha nem excluir uma vizinha
+        _ignorarProximoClique = true;
+        _bloqueioDblAte = Date.now() + 500;
+        setTimeout(() => { _ignorarProximoClique = false; }, 450);
+        _renderizar();
+        _toast('Linha de coluna excluída.', 'info');
+    }
+
+    /** Índice do corte mais próximo de uma posição (0..1) dentro da tolerância, ou -1. */
+    function _corteProximo(pct, tolerancia) {
+        let melhor = -1, dist = tolerancia;
+        _st.cortesPct.forEach((p, i) => {
+            const d = Math.abs(p - pct);
+            if (d <= dist) { dist = d; melhor = i; }
+        });
+        return melhor;
     }
 
     // ── Ajuste de Zoom ────────────────────────────────────────
@@ -395,6 +446,7 @@ const DemandaImagemDemarcador = (() => {
         const stage = $('didStage');
         stage.onclick = (e) => {
             if (_activeDrag) return;
+            if (_ignorarProximoClique) { _ignorarProximoClique = false; return; }
             if (e.target.closest('.did-vhandle') || e.target.closest('.did-hline-handle')) return;
             const rect = stage.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
@@ -405,6 +457,32 @@ const DemandaImagemDemarcador = (() => {
             if (!perto) {
                 _st.cortesPct.push(Math.round(pct * 1000) / 1000);
                 _renderizar();
+            }
+        };
+
+        // Duplo clique sobre (ou bem perto de) uma linha vertical em qualquer altura da imagem: exclui a linha
+        stage.ondblclick = (e) => {
+            if (!_st) return;
+            if (Date.now() < _bloqueioDblAte) return;
+            if (e.target.closest('.did-hline-handle')) return;
+            const rect = stage.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            const idx = _corteProximo(pct, 0.015);
+            if (idx >= 0) {
+                e.preventDefault();
+                _removerCorte(idx);
+            }
+        };
+
+        // Botão direito sobre (ou bem perto de) uma linha vertical: exclui a linha
+        stage.oncontextmenu = (e) => {
+            if (!_st) return;
+            const rect = stage.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            const idx = _corteProximo(pct, 0.015);
+            if (idx >= 0) {
+                e.preventDefault();
+                _removerCorte(idx);
             }
         };
 
@@ -436,10 +514,18 @@ const DemandaImagemDemarcador = (() => {
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
             if (_activeDrag.type === 'x') {
+                // Só move após deslocamento real (> 3px): tremidas do mouse não re-renderizam
+                // a tela, o que antes impedia o duplo clique de excluir a linha
+                if (!_activeDrag.moved && Math.abs(clientX - _activeDrag.startClientX) < 4) return;
+                _activeDrag.moved = true;
                 const xStage = clientX - stageRect.left;
                 const newPct = Math.max(0.01, Math.min(0.99, xStage / stageRect.width));
-                _st.cortesPct[_activeDrag.index] = Math.round(newPct * 1000) / 1000;
+                // Reordenação: acompanha o índice do corte arrastado após o sort da renderização
+                const novoValor = Math.round(newPct * 1000) / 1000;
+                _st.cortesPct[_activeDrag.index] = novoValor;
                 _renderizar();
+                _activeDrag.index = _st.cortesPct.indexOf(novoValor);
+                _ultimoToqueCorte = null;
             } else if (_activeDrag.type === 'yTop') {
                 const yStage = clientY - stageRect.top;
                 const newPct = Math.max(0.02, Math.min(_st.yBottomPct - 0.05, yStage / stageRect.height));
@@ -454,6 +540,11 @@ const DemandaImagemDemarcador = (() => {
         };
 
         const fimMovimento = () => {
+            // Após arrastar uma linha, o "click" que o navegador dispara no fim não deve criar outra
+            if (_activeDrag && _activeDrag.moved) {
+                _ignorarProximoClique = true;
+                setTimeout(() => { _ignorarProximoClique = false; }, 300);
+            }
             _activeDrag = null;
         };
 
@@ -508,7 +599,7 @@ const DemandaImagemDemarcador = (() => {
             // Aumenta o contraste levemente para separar caracteres de bordas e linhas da tabela
             try {
                 ctx.filter = 'contrast(120%) brightness(102%)';
-            } catch (e) {}
+            } catch (e) { }
             ctx.drawImage(imgEl, 0, yTopPx, natW, cropH, 0, 0, cv.width, cv.height);
             const croppedBase64 = cv.toDataURL('image/jpeg', 0.95);
 
@@ -574,7 +665,7 @@ const DemandaImagemDemarcador = (() => {
                     nome: nomeArq,
                     estadoDemarcador: estadoDemarcador,
                     toast: _toast,
-                    onConfirm: function(itens) {
+                    onConfirm: function (itens) {
                         if (window.DemandaApp && typeof DemandaApp._showConferencia === 'function') {
                             DemandaApp._showConferencia(itens);
                         }

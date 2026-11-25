@@ -1,9 +1,9 @@
 {
-  "version": "3.3.16",
-  "build": "20261019-v3.3.16",
+  "version": "3.5.1",
+  "build": "20261125-v3.5.1",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-19",
-  "change": "v3.3.16 - fix(demanda): recuperacao exaustiva de cotacoes locais e remotas (multi-caminho 500 limites, recuperacao de subcolecoes com mais de 200 itens e scan local)",
-  "releaseDate": "2026-10-19T18:15:00-03:00"
+  "lastUpdate": "2026-11-25",
+  "change": "v3.5.1: Exclusão das linhas de coluna corrigida no Demarcador de Colunas na Imagem (botão ✕ em cada linha, duplo-clique ou botão direito sobre a linha em qualquer altura) e na régua do Texto em Colunas — antes a tela era recriada a cada clique/tremida do mouse e o duplo-clique nunca era reconhecido. Inclui v3.5.0: correção de bugs críticos e redução do consumo de cota do Firestore.",
+  "releaseDate": "2026-11-25T11:15:00-03:00"
 }

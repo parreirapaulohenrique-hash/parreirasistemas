@@ -12,6 +12,7 @@
 const DemandaTextoColunas = (() => {
 
     let _st = null; // { text, nome, fonte, onConfirm, onVoltar, cortes: [], linhas: [], grade: [], modo: 'regua' }
+    let _ultimoCliqueMarcador = null; // { idx, t } — detecção de duplo clique independente do DOM
 
     const $ = (id) => document.getElementById(id);
     const _esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,24 +255,46 @@ const DemandaTextoColunas = (() => {
         markers.forEach(m => {
             const idx = Number(m.dataset.corteIdx);
 
-            // Duplo clique = EXCLUIR
-            m.ondblclick = (e) => {
-                e.stopPropagation();
+            const _excluirMarcador = () => {
+                _ultimoCliqueMarcador = null;
                 _st.cortes.splice(idx, 1);
                 _st.grade = fatiarTexto(_st.linhas, _st.cortes);
                 _renderRegua();
             };
 
-            // Mousedown = ARRASTAR
+            // Duplo clique = EXCLUIR (mantido; a detecção própria abaixo cobre quando o DOM é recriado)
+            m.ondblclick = (e) => {
+                e.stopPropagation();
+                if (_st.cortes[idx] !== undefined) _excluirMarcador();
+            };
+
+            // Botão direito = EXCLUIR
+            m.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                _excluirMarcador();
+            };
+
+            // Mousedown = ARRASTAR (ou excluir no segundo clique rápido)
             m.onmousedown = (e) => {
+                if (e.button === 2) return; // botão direito tratado no contextmenu
                 e.stopPropagation();
                 e.preventDefault();
+                const agora = Date.now();
+                if (_ultimoCliqueMarcador && _ultimoCliqueMarcador.idx === idx && (agora - _ultimoCliqueMarcador.t) < 400) {
+                    _excluirMarcador();
+                    return;
+                }
+                _ultimoCliqueMarcador = { idx, t: agora };
                 const startX = e.clientX;
                 const origPos = _st.cortes[idx];
+                let moveu = false;
 
                 function onMove(ev) {
                     const deltaX = ev.clientX - startX;
                     const deltaChars = Math.round(deltaX / charW);
+                    if (!moveu && deltaChars === 0) return;
+                    moveu = true;
                     const newPos = Math.max(1, origPos + deltaChars);
                     _st.cortes[idx] = newPos;
                     const px = Math.round(newPos * charW);
@@ -285,6 +308,10 @@ const DemandaTextoColunas = (() => {
                 function onUp() {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
+                    // Só recria a régua se o marcador foi realmente movido —
+                    // recriar o DOM a cada clique impedia o duplo clique de excluir
+                    if (!moveu) return;
+                    _ultimoCliqueMarcador = null;
                     _st.cortes.sort((a, b) => a - b);
                     _st.grade = fatiarTexto(_st.linhas, _st.cortes);
                     _renderRegua();
@@ -391,7 +418,7 @@ const DemandaTextoColunas = (() => {
         const pGrade = $('dtcPainelGrade');
         const tRegua = $('dtcTabRegua');
         const tGrade = $('dtcTabGrade');
-        const inst   = $('dtcInstrucao');
+        const inst = $('dtcInstrucao');
 
         if (modo === 'regua') {
             pRegua.style.display = 'flex';

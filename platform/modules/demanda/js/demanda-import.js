@@ -1087,6 +1087,13 @@ const DemandaImport = (() => {
     function textoParaGrade(text) {
         const linhas = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+$/, '')).filter(l => l.trim());
         if (!linhas.length) return [];
+
+        // v3.4.0: Se há tabulações (\t) explícitas (PDF por coordenadas ou Excel), prioriza \t
+        const tabLinhas = linhas.filter(l => l.indexOf('\t') >= 0).length;
+        if (tabLinhas >= Math.max(1, Math.round(linhas.length * 0.15))) {
+            return linhas.map(l => l.trim().split(/\t/).map(c => c.trim()));
+        }
+
         const seps = [/\t/, /;/, /\|/, /\s{2,}/, /\s+-\s+/];
         let melhor = null, melhorScore = 0;
         seps.forEach(sep => {
