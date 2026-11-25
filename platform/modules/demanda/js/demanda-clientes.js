@@ -29,15 +29,36 @@ const DemandaClientes = (() => {
             }
             const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
             if (s && s.tenantId) return String(s.tenantId);
-        } catch (_) {}
+        } catch (_) { }
         return String(localStorage.getItem('app_tenant_id') || 'centralpecas');
     }
 
     const _clientesCol = () => `tenants/${_getTenantId()}/demanda/data/clientes`;
 
-    let _cache  = [];
+    let _cache = [];
     let _cacheTs = 0;
     const CACHE_TTL = 5 * 60 * 1000;
+    // Cache persistente entre recarregamentos (evita reler até 1.000 clientes a cada abertura do módulo)
+    const LS_TTL = 30 * 60 * 1000;
+    const _lsKey = () => 'demanda_clientes_cache_' + _getTenantId();
+
+    function _lerCacheLocal() {
+        try {
+            const c = JSON.parse(localStorage.getItem(_lsKey()) || 'null');
+            if (c && Array.isArray(c.data) && (Date.now() - c.ts) < LS_TTL) return c;
+        } catch (_) { }
+        return null;
+    }
+
+    function _gravarCacheLocal(data) {
+        try { localStorage.setItem(_lsKey(), JSON.stringify({ ts: Date.now(), data })); } catch (_) { }
+    }
+
+    function _invalidarCache() {
+        _cache = [];
+        _cacheTs = 0;
+        try { localStorage.removeItem(_lsKey()); } catch (_) { }
+    }
 
     function _db() {
         if (typeof firebase === 'undefined' || !firebase.firestore)
@@ -46,82 +67,91 @@ const DemandaClientes = (() => {
     }
 
     function _normalize(str) {
-        return (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+        return (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     }
 
     function _gerarId(nome, doc) {
-        if (doc) return doc.replace(/\D/g,'').slice(0,14) || '_' + Date.now().toString(36);
-        return _normalize(nome).replace(/\s+/g,'_').slice(0,30) + '_' + Date.now().toString(36);
+        if (doc) return doc.replace(/\D/g, '').slice(0, 14) || '_' + Date.now().toString(36);
+        return _normalize(nome).replace(/\s+/g, '_').slice(0, 30) + '_' + Date.now().toString(36);
     }
 
     async function listar(forcar) {
         if (!forcar && _cache.length > 0 && Date.now() - _cacheTs < CACHE_TTL) return _cache;
-        const db   = _db();
+        if (!forcar) {
+            const loc = _lerCacheLocal();
+            if (loc && loc.data.length > 0) {
+                _cache = loc.data;
+                _cacheTs = loc.ts;
+                return _cache;
+            }
+        }
+        const db = _db();
         const snap = await db.collection(_clientesCol()).orderBy('nome').limit(1000).get();
-        _cache   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         _cacheTs = Date.now();
+        _gravarCacheLocal(_cache);
         return _cache;
     }
 
     async function buscar(termo) {
         if (!termo || termo.length < 2) return [];
         const todos = await listar();
-        const t     = _normalize(termo);
+        const t = _normalize(termo);
         return todos.filter(c =>
             _normalize(c.nome).includes(t) ||
             _normalize(c.documento || '').includes(t) ||
-            _normalize(c.codigo    || '').includes(t) ||
-            _normalize(c.cidade    || '').includes(t)
+            _normalize(c.codigo || '').includes(t) ||
+            _normalize(c.cidade || '').includes(t)
         ).slice(0, 20);
     }
 
     async function salvar(cliente) {
         if (!cliente.nome) throw new Error('Nome do cliente obrigatorio.');
-        const db  = _db();
-        const id  = cliente.id || _gerarId(cliente.nome, cliente.documento);
+        const db = _db();
+        const id = cliente.id || _gerarId(cliente.nome, cliente.documento);
         const doc = {
-            nome:      (cliente.nome      || '').trim(),
-            documento: (cliente.documento || '').replace(/\D/g,''),
-            telefone:  (cliente.telefone  || '').replace(/\D/g,''),
-            email:     (cliente.email     || '').trim().toLowerCase(),
-            cidade:    (cliente.cidade    || '').trim(),
-            estado:    (cliente.estado    || '').trim().toUpperCase(),
-            codigo:    (cliente.codigo    || '').trim(),
-            origemErp: cliente.origemErp  || false,
-            ativo:     cliente.ativo      !== false,
+            nome: (cliente.nome || '').trim(),
+            documento: (cliente.documento || '').replace(/\D/g, ''),
+            telefone: (cliente.telefone || '').replace(/\D/g, ''),
+            email: (cliente.email || '').trim().toLowerCase(),
+            cidade: (cliente.cidade || '').trim(),
+            estado: (cliente.estado || '').trim().toUpperCase(),
+            codigo: (cliente.codigo || '').trim(),
+            origemErp: cliente.origemErp || false,
+            ativo: cliente.ativo !== false,
             updatedAt: new Date().toISOString(),
         };
         if (!cliente.id) doc.createdAt = new Date().toISOString();
         await db.collection(_clientesCol()).doc(id).set(doc, { merge: true });
-        _cache = [];
+        _invalidarCache();
         return { id, ...doc };
     }
 
     async function desativar(id) {
         await _db().collection(_clientesCol()).doc(id).update({ ativo: false, updatedAt: new Date().toISOString() });
-        _cache = [];
+        _invalidarCache();
     }
 
     async function importarLote(clientes, onProgress) {
-        const db    = _db();
-        let   salvo = 0;
-        const SZ    = 499;
+        const db = _db();
+        let salvo = 0;
+        const SZ = 499;
         for (let i = 0; i < clientes.length; i += SZ) {
             const batch = db.batch();
             const slice = clientes.slice(i, i + SZ);
             for (const c of slice) {
-                const id  = _gerarId(c.nome || c.razaoSocial || '', c.cnpj || c.cpf || c.documento || '');
+                const id = _gerarId(c.nome || c.razaoSocial || '', c.cnpj || c.cpf || c.documento || '');
                 const ref = db.collection(_clientesCol()).doc(id);
                 batch.set(ref, {
-                    nome:      (c.nome || c.razaoSocial || c.nomeFantasia || '').trim(),
-                    documento: (c.cnpj || c.cpf || c.documento || '').replace(/\D/g,''),
-                    telefone:  (c.telefone || c.fone || '').replace(/\D/g,''),
-                    email:     (c.email || '').trim().toLowerCase(),
-                    cidade:    (c.cidade || c.municipio || '').trim(),
-                    estado:    (c.estado || c.uf || '').trim().toUpperCase(),
-                    codigo:    String(c.id || c.codigo || c.clienteId || ''),
+                    nome: (c.nome || c.razaoSocial || c.nomeFantasia || '').trim(),
+                    documento: (c.cnpj || c.cpf || c.documento || '').replace(/\D/g, ''),
+                    telefone: (c.telefone || c.fone || '').replace(/\D/g, ''),
+                    email: (c.email || '').trim().toLowerCase(),
+                    cidade: (c.cidade || c.municipio || '').trim(),
+                    estado: (c.estado || c.uf || '').trim().toUpperCase(),
+                    codigo: String(c.id || c.codigo || c.clienteId || ''),
                     origemErp: true,
-                    ativo:     true,
+                    ativo: true,
                     updatedAt: new Date().toISOString(),
                 }, { merge: true });
             }
@@ -129,24 +159,24 @@ const DemandaClientes = (() => {
             salvo += slice.length;
             if (onProgress) onProgress(salvo, clientes.length);
         }
-        _cache = [];
+        _invalidarCache();
         return salvo;
     }
 
     // --- Helpers HTML ---
-    function _esc(s)  { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function _doc(d)  {
+    function _esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function _doc(d) {
         if (!d) return '—';
-        const s = d.replace(/\D/g,'');
-        if (s.length===14) return s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
-        if (s.length===11) return s.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
+        const s = d.replace(/\D/g, '');
+        if (s.length === 14) return s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        if (s.length === 11) return s.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
         return d;
     }
-    function _tel(t)  {
+    function _tel(t) {
         if (!t) return '—';
-        const s = t.replace(/\D/g,'');
-        if (s.length===11) return s.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3');
-        if (s.length===10) return s.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3');
+        const s = t.replace(/\D/g, '');
+        if (s.length === 11) return s.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+        if (s.length === 10) return s.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
         return t;
     }
 
@@ -244,7 +274,7 @@ const DemandaClientes = (() => {
     }
 
     async function _atualizarTabela(filtro) {
-        const tbody  = document.getElementById('clientesTbody');
+        const tbody = document.getElementById('clientesTbody');
         const status = document.getElementById('clientesStatus');
         if (!tbody) return;
         try {
@@ -256,95 +286,114 @@ const DemandaClientes = (() => {
                 return;
             }
             tbody.innerHTML = lista.map(c => {
-                const jc = JSON.stringify({id:c.id,nome:c.nome,documento:c.documento,telefone:c.telefone,email:c.email,cidade:c.cidade,estado:c.estado}).replace(/"/g,"'");
+                const jc = JSON.stringify({ id: c.id, nome: c.nome, documento: c.documento, telefone: c.telefone, email: c.email, cidade: c.cidade, estado: c.estado }).replace(/"/g, "'");
                 return `<tr style="border-top:1px solid var(--border)" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
                     <td style="padding:.6rem 1rem;font-weight:500;color:var(--text-primary)">${_esc(c.nome)}</td>
                     <td style="padding:.6rem 1rem;color:var(--text-secondary);font-family:monospace;font-size:.8rem">${_doc(c.documento)}</td>
-                    <td style="padding:.6rem 1rem;color:var(--text-secondary)">${c.cidade?_esc(c.cidade)+(c.estado?' - '+c.estado:''):'—'}</td>
+                    <td style="padding:.6rem 1rem;color:var(--text-secondary)">${c.cidade ? _esc(c.cidade) + (c.estado ? ' - ' + c.estado : '') : '—'}</td>
                     <td style="padding:.6rem 1rem;color:var(--text-secondary);font-family:monospace;font-size:.8rem">${_tel(c.telefone)}</td>
-                    <td style="padding:.6rem 1rem">${c.origemErp?'<span style="font-size:.72rem;background:#0ea5e920;color:#0ea5e9;border-radius:4px;padding:.15rem .4rem">ERP</span>':'<span style="font-size:.72rem;background:var(--bg-secondary);color:var(--text-secondary);border-radius:4px;padding:.15rem .4rem">Manual</span>'}</td>
+                    <td style="padding:.6rem 1rem">${c.origemErp ? '<span style="font-size:.72rem;background:#0ea5e920;color:#0ea5e9;border-radius:4px;padding:.15rem .4rem">ERP</span>' : '<span style="font-size:.72rem;background:var(--bg-secondary);color:var(--text-secondary);border-radius:4px;padding:.15rem .4rem">Manual</span>'}</td>
                     <td style="padding:.6rem 1rem">
                         <button onclick="DemandaClientes._abrirForm(${jc})" style="background:none;border:none;cursor:pointer;color:var(--accent-primary);padding:.2rem .4rem" title="Editar"><span class="material-icons-round" style="font-size:1rem">edit</span></button>
                         <button onclick="DemandaClientes._excluir('${c.id}','${_esc(c.nome)}')" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:.2rem .4rem" title="Remover"><span class="material-icons-round" style="font-size:1rem">delete</span></button>
                     </td>
                 </tr>`;
             }).join('');
-        } catch(e) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444">Erro: '+_esc(e.message)+'</td></tr>';
+        } catch (e) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444">Erro: ' + _esc(e.message) + '</td></tr>';
         }
     }
 
     function _abrirForm(c) {
         const m = document.getElementById('modalClienteForm');
-        if(!m) return;
+        if (!m) return;
         m.style.display = 'flex';
         const t = document.getElementById('cfTitulo');
-        if(t) t.textContent = c ? 'Editar Cliente' : 'Novo Cliente';
-        document.getElementById('cfId').value    = c?.id    || '';
-        document.getElementById('cfNome').value  = c?.nome  || '';
-        document.getElementById('cfDoc').value   = _doc(c?.documento) || '';
-        document.getElementById('cfTel').value   = _tel(c?.telefone)  || '';
+        if (t) t.textContent = c ? 'Editar Cliente' : 'Novo Cliente';
+        document.getElementById('cfId').value = c?.id || '';
+        document.getElementById('cfNome').value = c?.nome || '';
+        document.getElementById('cfDoc').value = _doc(c?.documento) || '';
+        document.getElementById('cfTel').value = _tel(c?.telefone) || '';
         document.getElementById('cfEmail').value = c?.email || '';
-        document.getElementById('cfCidade').value= c?.cidade|| '';
-        document.getElementById('cfUF').value    = c?.estado|| '';
+        document.getElementById('cfCidade').value = c?.cidade || '';
+        document.getElementById('cfUF').value = c?.estado || '';
     }
 
     function _fecharForm() {
         const m = document.getElementById('modalClienteForm');
-        if(m) m.style.display = 'none';
+        if (m) m.style.display = 'none';
     }
 
     async function _submitForm(e) {
         e.preventDefault();
         try {
             await salvar({
-                id:        document.getElementById('cfId').value    || undefined,
-                nome:      document.getElementById('cfNome').value,
+                id: document.getElementById('cfId').value || undefined,
+                nome: document.getElementById('cfNome').value,
                 documento: document.getElementById('cfDoc').value,
-                telefone:  document.getElementById('cfTel').value,
-                email:     document.getElementById('cfEmail').value,
-                cidade:    document.getElementById('cfCidade').value,
-                estado:    document.getElementById('cfUF').value,
+                telefone: document.getElementById('cfTel').value,
+                email: document.getElementById('cfEmail').value,
+                cidade: document.getElementById('cfCidade').value,
+                estado: document.getElementById('cfUF').value,
             });
             _fecharForm();
             await _atualizarTabela();
-            if(typeof DemandaApp!=='undefined') DemandaApp._toast('Cliente salvo!','success');
-        } catch(err) { alert('Erro: '+err.message); }
+            if (typeof DemandaApp !== 'undefined') DemandaApp._toast('Cliente salvo!', 'success');
+        } catch (err) { alert('Erro: ' + err.message); }
     }
 
     async function _excluir(id, nome) {
-        if (!confirm('Remover o cliente "'+nome+'"?')) return;
+        if (!confirm('Remover o cliente "' + nome + '"?')) return;
         await desativar(id);
         await _atualizarTabela();
     }
 
     let _t;
-    function _onBusca(v) { clearTimeout(_t); _t = setTimeout(() => _atualizarTabela(v||null), 300); }
+    function _onBusca(v) { clearTimeout(_t); _t = setTimeout(() => _atualizarTabela(v || null), 300); }
 
     async function _sincErp() {
         const btn = document.getElementById('btnClientesSinc');
         const status = document.getElementById('clientesStatus');
-        if(btn) btn.disabled = true;
-        if(status) status.textContent = 'Conectando ao ERP...';
+        if (btn) btn.disabled = true;
+        if (status) status.textContent = 'Conectando ao ERP...';
         try {
-            if(typeof ErpIntegration==='undefined') throw new Error('Modulo ERP nao carregado.');
-            const adapter = await ErpIntegration.getAdapter();
-            if(!adapter) throw new Error('ERP nao configurado.');
-            if(status) status.textContent = 'Sincronizando...';
-            const clientes = await adapter.syncClients();
-            const total = await importarLote(clientes, (s,t) => { if(status) status.textContent = 'Importando '+s+'/'+t+'...'; });
+            if (typeof ErpIntegration === 'undefined' && typeof ErpRegistry === 'undefined') throw new Error('Modulo ERP nao carregado.');
+            // Resolve o adaptador pelo tenant do próprio módulo (independe da camada compartilhada)
+            let adapter = null;
+            if (typeof ErpRegistry !== 'undefined' && typeof ErpRegistry.getAdapter === 'function') {
+                adapter = await ErpRegistry.getAdapter(_getTenantId()).catch(() => null);
+            }
+            if (!adapter && typeof ErpIntegration !== 'undefined' && typeof ErpIntegration.getActive === 'function') {
+                adapter = await ErpIntegration.getActive();
+            }
+            if (!adapter) throw new Error('ERP nao configurado.');
+            if (status) status.textContent = 'Sincronizando...';
+            const res = await adapter.syncClients();
+            let clientes = [];
+            if (Array.isArray(res)) {
+                clientes = res;
+            } else if (res && Array.isArray(res.clients)) {
+                clientes = res.clients;
+            } else if (typeof adapter._getLocalClients === 'function') {
+                clientes = adapter._getLocalClients() || [];
+            }
+            const total = clientes.length > 0
+                ? await importarLote(clientes, (s, t) => { if (status) status.textContent = 'Importando ' + s + '/' + t + '...'; })
+                : Number((res && res.total) || 0);
             await _atualizarTabela();
-            if(typeof DemandaApp!=='undefined') DemandaApp._toast(total+' clientes importados!','success');
-        } catch(e) {
-            alert('Falha ao importar ERP: '+e.message);
-            if(status) status.textContent = 'Erro na importacao.';
+            if (typeof DemandaApp !== 'undefined') DemandaApp._toast(total + ' clientes importados!', 'success');
+        } catch (e) {
+            alert('Falha ao importar ERP: ' + e.message);
+            if (status) status.textContent = 'Erro na importacao.';
         } finally {
-            if(btn) { btn.disabled=false; btn.innerHTML='<span class="material-icons-round" style="font-size:1rem">sync</span> Importar do ERP'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem">sync</span> Importar do ERP'; }
         }
     }
 
-    return { listar, buscar, salvar, desativar, importarLote, renderView,
-             _abrirForm, _fecharForm, _submitForm, _excluir, _onBusca, _sincErp };
+    return {
+        listar, buscar, salvar, desativar, importarLote, renderView,
+        _abrirForm, _fecharForm, _submitForm, _excluir, _onBusca, _sincErp
+    };
 })();
 
 if (typeof window !== 'undefined') window.DemandaClientes = DemandaClientes;

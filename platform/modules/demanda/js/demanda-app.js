@@ -4,69 +4,69 @@
  */
 "use strict";
 
-const DemandaApp = (function() {
+const DemandaApp = (function () {
 
     // ── Mapeamento views → nav-item IDs ──────────────────────
     var _VIEWS = {
         // ── 1º GRUPO: COTAÇÕES ──
-        captura:       "nav-captura",
-        lista:         "nav-lista",
-        pesquisa:      "nav-pesquisa",
-        concorrente:   "nav-concorrente",
-        orcamento:     "nav-orcamento",
+        captura: "nav-captura",
+        lista: "nav-lista",
+        pesquisa: "nav-pesquisa",
+        concorrente: "nav-concorrente",
+        orcamento: "nav-orcamento",
 
         // ── 2º GRUPO: ANÁLISE ESTOQUE (MaxData) ──
-        "estoque-visao":        "nav-estoque-visao",
-        "estoque-abc":          "nav-estoque-abc",
-        "estoque-cobertura":    "nav-estoque-cobertura",
+        "estoque-visao": "nav-estoque-visao",
+        "estoque-abc": "nav-estoque-abc",
+        "estoque-cobertura": "nav-estoque-cobertura",
         "estoque-sazonalidade": "nav-estoque-sazonalidade",
-        produtosErp:            "nav-produtos-erp",
-        base:                   "nav-base",
-        "estoque-import":       "nav-estoque-import",
+        produtosErp: "nav-produtos-erp",
+        base: "nav-base",
+        "estoque-import": "nav-estoque-import",
 
         // ── 3º GRUPO: AÇÕES GERENCIAIS ──
-        "acoes-rupturas":   "nav-acoes-rupturas",
-        "acoes-excesso":    "nav-acoes-excesso",
-        "acoes-curvax":     "nav-acoes-curvax",
+        "acoes-rupturas": "nav-acoes-rupturas",
+        "acoes-excesso": "nav-acoes-excesso",
+        "acoes-curvax": "nav-acoes-curvax",
         "acoes-devolucoes": "nav-acoes-devolucoes",
 
         // ── 4º GRUPO: COMPRAS ──
-        "compras-start":        "nav-compras-start",
-        compras:                "nav-compras",
-        "compras-sugestao":     "nav-compras-sugestao",
+        "compras-start": "nav-compras-start",
+        compras: "nav-compras",
+        "compras-sugestao": "nav-compras-sugestao",
         "compras-fornecedores": "nav-compras-fornecedores",
 
         // ── 5º GRUPO: AÇÕES COMERCIAIS ──
         "comercial-positivacao": "nav-comercial-positivacao",
-        "comercial-mix":         "nav-comercial-mix",
+        "comercial-mix": "nav-comercial-mix",
         "comercial-recorrencia": "nav-comercial-recorrencia",
-        "comercial-ticket":      "nav-comercial-ticket",
-        "comercial-churn":       "nav-comercial-churn",
-        "comercial-reativacao":  "nav-comercial-reativacao",
-        "comercial-vendedores":  "nav-comercial-vendedores",
+        "comercial-ticket": "nav-comercial-ticket",
+        "comercial-churn": "nav-comercial-churn",
+        "comercial-reativacao": "nav-comercial-reativacao",
+        "comercial-vendedores": "nav-comercial-vendedores",
 
         // ── LEGADO & SISTEMA ──
-        dashboard:     "nav-dashboard",
-        clientes:      "nav-clientes",
+        dashboard: "nav-dashboard",
+        clientes: "nav-clientes",
         integracaoErp: "nav-integracaoErp"
     };
 
     // ── Estado global ─────────────────────────────────────────
-    var _itens             = [];      // Itens da demanda em andamento
-    var _clienteAtual      = null;
+    var _itens = [];      // Itens da demanda em andamento
+    var _clienteAtual = null;
     var _concClientesCache = [];
     var _concClienteSelecionado = null;    // { id, nome, cnpj } | null
-    var _sessao            = null;    // Cache ParreiraAuth.getSessao()
-    var _demandaAtual      = null;    // { id, data, itens } — demanda aberta no modal de detalhe
+    var _sessao = null;    // Cache ParreiraAuth.getSessao()
+    var _demandaAtual = null;    // { id, data, itens } — demanda aberta no modal de detalhe
     var _filtroItensDetalhe = "todos"; // filtro ativo na visualização do detalhe
-    var _buscaTextoDetalhe  = "";      // texto de busca na tabela de itens do detalhe
-    var _erpInitialized    = false;
-    var _searchTimeout     = null;
-    var _filterAtual       = "todas";
-    var _filialRelatorio   = Number(localStorage.getItem("demanda_filial_relatorio") || 0) || 0; // 0 = todas
-    var _clientesCache     = [];      // Lista de clientes para o dropdown
-    var _importItensTemp   = [];      // Itens parsed aguardando conferência
-    var _excelItensTemp    = [];      // Itens do Excel antes de confirmar
+    var _buscaTextoDetalhe = "";      // texto de busca na tabela de itens do detalhe
+    var _erpInitialized = false;
+    var _searchTimeout = null;
+    var _filterAtual = "todas";
+    var _filialRelatorio = Number(localStorage.getItem("demanda_filial_relatorio") || 0) || 0; // 0 = todas
+    var _clientesCache = [];      // Lista de clientes para o dropdown
+    var _importItensTemp = [];      // Itens parsed aguardando conferência
+    var _excelItensTemp = [];      // Itens do Excel antes de confirmar
 
     // ════════════════════════════════════════════════════════
     // NAVEGAÇÃO DE VIEWS
@@ -74,19 +74,19 @@ const DemandaApp = (function() {
 
     function switchView(v) {
         if (!_VIEWS[v]) { console.warn("[DemandaApp] View desconhecida:", v); return; }
-        document.querySelectorAll("[id^='view-']").forEach(function(el) { el.style.display = "none"; });
-        document.querySelectorAll(".nav-item").forEach(function(el) { el.classList.remove("active"); });
+        document.querySelectorAll("[id^='view-']").forEach(function (el) { el.style.display = "none"; });
+        document.querySelectorAll(".nav-item").forEach(function (el) { el.classList.remove("active"); });
         var ve = document.getElementById("view-" + v); if (ve) ve.style.display = "";
         var ne = document.getElementById(_VIEWS[v]); if (ne) ne.classList.add("active");
         if (v === "integracaoErp") _initErpUI();
-        if (v === "clientes")      _initClientes();
-        if (v === "lista")         loadDemandasLista(_filterAtual);
-        if (v === "dashboard")     loadDashboard();
-        if (v === "compras")       loadFilaCompras();
-        if (v === "orcamento")     loadOrcamento();
-        if (v === "concorrente")   loadConcorrente();
-        if (v === "produtosErp")   loadProdutosErp();
-        if (v === "base")          loadBaseTecnica();
+        if (v === "clientes") _initClientes();
+        if (v === "lista") loadDemandasLista(_filterAtual);
+        if (v === "dashboard") loadDashboard();
+        if (v === "compras") loadFilaCompras();
+        if (v === "orcamento") loadOrcamento();
+        if (v === "concorrente") loadConcorrente();
+        if (v === "produtosErp") loadProdutosErp();
+        if (v === "base") loadBaseTecnica();
 
         // ── Inicializadores Analíticos (Grupos 2, 3, 4) ──
         if (v === "estoque-visao" && typeof initEstoqueVisao === "function") initEstoqueVisao();
@@ -122,6 +122,10 @@ const DemandaApp = (function() {
             if (c) c.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--text-secondary)'><p>ErpUI nao carregado. Verifique os scripts.</p></div>";
             return;
         }
+        ErpUI.init("demanda");
+        _erpInitialized = true;
+        console.log("[DemandaApp] ErpUI inicializado.");
+    }
 
     function _initClientes() {
         if (typeof DemandaClientes === 'undefined') {
@@ -130,10 +134,6 @@ const DemandaApp = (function() {
             return;
         }
         DemandaClientes.renderView('view-clientes-content');
-    }
-        ErpUI.init("demanda");
-        _erpInitialized = true;
-        console.log("[DemandaApp] ErpUI inicializado.");
     }
 
     // ════════════════════════════════════════════════════════
@@ -159,7 +159,7 @@ const DemandaApp = (function() {
             if (ph) r.appendChild(ph);
             return;
         }
-        _searchTimeout = setTimeout(function() {
+        _searchTimeout = setTimeout(function () {
             executarBuscaManual(q);
         }, 300);
     }
@@ -190,21 +190,21 @@ const DemandaApp = (function() {
 
         var filId = (typeof window !== "undefined" && window.DemandaFilial) ? window.DemandaFilial.atual() : 1;
         DemandaSearch.search(q, { filialId: filId, limit: 40 })
-            .then(function(resultados) {
+            .then(function (resultados) {
                 if (!resultados || resultados.length === 0) {
                     r.innerHTML = "<div style='padding:2.5rem 1.5rem;text-align:center;color:var(--text-secondary)'>" +
                         "<span class='material-icons-round' style='font-size:2.8rem;opacity:.35'>search_off</span>" +
                         "<h4 style='margin-top:.6rem;font-size:1rem;font-weight:600;color:var(--text-primary)'>Nenhum produto encontrado</h4>" +
                         "<p style='font-size:.82rem;opacity:.75;margin-top:.3rem;max-width:320px;margin-left:auto;margin-right:auto;line-height:1.4'>" +
-                            "Não encontramos resultados para \"<strong>" + _esc(q) + "</strong>\" no ERP ou catálogo." +
+                        "Não encontramos resultados para \"<strong>" + _esc(q) + "</strong>\" no ERP ou catálogo." +
                         "</p>" +
                         "<div style='margin-top:1.2rem;display:flex;justify-content:center;gap:.6rem'>" +
-                            "<button type='button' class='btn btn-secondary btn-sm' onclick='DemandaApp.adicionarItemManualBusca(\"" + _esc(q) + "\")'>" +
-                                "<span class='material-icons-round' style='font-size:.9rem'>add_shopping_cart</span> " +
-                                "Adicionar \"" + _esc(q) + "\" à cotação mesmo assim" +
-                            "</button>" +
+                        "<button type='button' class='btn btn-secondary btn-sm' onclick='DemandaApp.adicionarItemManualBusca(\"" + _esc(q) + "\")'>" +
+                        "<span class='material-icons-round' style='font-size:.9rem'>add_shopping_cart</span> " +
+                        "Adicionar \"" + _esc(q) + "\" à cotação mesmo assim" +
+                        "</button>" +
                         "</div>" +
-                    "</div>";
+                        "</div>";
                     return;
                 }
 
@@ -213,9 +213,9 @@ const DemandaApp = (function() {
                 var countHtml = "<div style='display:flex;justify-content:space-between;align-items:center;padding:.4rem .65rem;margin-bottom:.65rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:6px;font-size:.78rem;color:#60a5fa'>" +
                     "<span><strong style='color:#fff'>" + resultados.length + "</strong> " + (resultados.length === 1 ? "produto encontrado" : "produtos encontrados") + "</span>" +
                     "<span style='font-size:.72rem;color:var(--text-secondary)'>Clique para adicionar à cotação</span>" +
-                "</div>";
+                    "</div>";
 
-                var cardsHtml = resultados.map(function(p, idx) {
+                var cardsHtml = resultados.map(function (p, idx) {
                     var estq = Number(p.estoqueFilial != null ? p.estoqueFilial : (p.estoque != null ? p.estoque : (p.saldoEstoque || 0)));
                     var prc = Number(p.precoUnitario != null ? p.precoUnitario : (p.preco || p.valorVenda || 0));
                     var prcAtacado = Number(p.valorAtacado || 0);
@@ -240,34 +240,34 @@ const DemandaApp = (function() {
                     return "<div class='product-card' onclick='DemandaApp.adicionarProdutoDoErp(" + idx + ")' title='Clique para adicionar à cotação'>" +
                         "<div class='product-thumb'><span class='material-icons-round'>build_circle</span></div>" +
                         "<div class='product-info'>" +
-                            "<div class='product-desc' title='" + _esc(descP) + "'>" + _esc(descP) + "</div>" +
-                            "<div class='product-meta'>" +
-                                "<span class='product-ref'>" + _esc(refP) + "</span>" +
-                                (p.codigoErp ? "<span style='font-size:.7rem;color:var(--text-secondary)'>Cód: <strong>" + _esc(p.codigoErp) + "</strong></span>" : "") +
-                                (marcaP ? "<span class='product-maker'>" + _esc(marcaP) + "</span>" : "") +
-                            "</div>" +
-                            "<div class='product-badges'>" + badgeEstq + badgeMatch + "</div>" +
+                        "<div class='product-desc' title='" + _esc(descP) + "'>" + _esc(descP) + "</div>" +
+                        "<div class='product-meta'>" +
+                        "<span class='product-ref'>" + _esc(refP) + "</span>" +
+                        (p.codigoErp ? "<span style='font-size:.7rem;color:var(--text-secondary)'>Cód: <strong>" + _esc(p.codigoErp) + "</strong></span>" : "") +
+                        (marcaP ? "<span class='product-maker'>" + _esc(marcaP) + "</span>" : "") +
+                        "</div>" +
+                        "<div class='product-badges'>" + badgeEstq + badgeMatch + "</div>" +
                         "</div>" +
                         "<div style='display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;flex-shrink:0'>" +
-                            (precoStr ? "<span class='product-price'>" + precoStr + "</span>" + atacadoStr : "") +
-                            "<button type='button' class='btn-add-item' onclick='event.stopPropagation(); DemandaApp.adicionarProdutoDoErp(" + idx + ")'>" +
-                                "<span class='material-icons-round'>add</span> Adicionar" +
-                            "</button>" +
+                        (precoStr ? "<span class='product-price'>" + precoStr + "</span>" + atacadoStr : "") +
+                        "<button type='button' class='btn-add-item' onclick='event.stopPropagation(); DemandaApp.adicionarProdutoDoErp(" + idx + ")'>" +
+                        "<span class='material-icons-round'>add</span> Adicionar" +
+                        "</button>" +
                         "</div>" +
-                    "</div>";
+                        "</div>";
                 }).join("");
 
                 r.innerHTML = countHtml + cardsHtml;
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 console.error("[DemandaApp] Erro na busca manual:", err);
                 r.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
                     "<span class='material-icons-round' style='font-size:2rem'>error_outline</span>" +
                     "<p style='margin-top:.5rem;font-size:.85rem'>Erro ao consultar produtos: " + _esc(err.message || String(err)) + "</p>" +
                     "<button type='button' class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick='DemandaApp.adicionarItemManualBusca(\"" + _esc(q) + "\")'>" +
-                        "Adicionar \"" + _esc(q) + "\" manualmente" +
+                    "Adicionar \"" + _esc(q) + "\" manualmente" +
                     "</button>" +
-                "</div>";
+                    "</div>";
             });
     }
 
@@ -305,9 +305,9 @@ const DemandaApp = (function() {
             status: estq > 0 ? "estoque_disponivel" : "sem_estoque"
         };
 
-        var existente = _itens.find(function(it) {
+        var existente = _itens.find(function (it) {
             return (novoItem.erpProdutoId && it.erpProdutoId === novoItem.erpProdutoId) ||
-                   (novoItem.refOriginal && it.refOriginal && it.refOriginal.toUpperCase() === novoItem.refOriginal.toUpperCase());
+                (novoItem.refOriginal && it.refOriginal && it.refOriginal.toUpperCase() === novoItem.refOriginal.toUpperCase());
         });
 
         if (existente) {
@@ -335,7 +335,7 @@ const DemandaApp = (function() {
 
     function selectSearchResult(id) {
         if (!_ultimosResultadosBusca) return;
-        var idx = _ultimosResultadosBusca.findIndex(function(p){ return p.erpProdutoId === id || p.codigoErp === id || p.referencia === id; });
+        var idx = _ultimosResultadosBusca.findIndex(function (p) { return p.erpProdutoId === id || p.codigoErp === id || p.referencia === id; });
         if (idx >= 0) adicionarProdutoDoErp(idx);
     }
 
@@ -344,11 +344,11 @@ const DemandaApp = (function() {
     // ════════════════════════════════════════════════════════
 
     function addItemGrade() {
-        var refEl  = document.getElementById("gradeRef");
+        var refEl = document.getElementById("gradeRef");
         var qtdeEl = document.getElementById("gradeQtde");
         if (!refEl || !refEl.value.trim()) { if (refEl) refEl.focus(); return; }
 
-        var ref  = refEl.value.trim();
+        var ref = refEl.value.trim();
         var qtde = Math.max(1, parseInt((qtdeEl && qtdeEl.value) || "1", 10) || 1);
 
         _itens.push({ refOriginal: ref, descOriginal: "", qtdeSolicitada: qtde });
@@ -371,12 +371,12 @@ const DemandaApp = (function() {
     }
 
     function renderItens() {
-        var tbody   = document.getElementById("itensTbody");
+        var tbody = document.getElementById("itensTbody");
         var trEmpty = document.getElementById("trEmptyState");
-        var thConc  = document.getElementById("thPrecoConc");
+        var thConc = document.getElementById("thPrecoConc");
         if (!tbody) return;
 
-        var temPrecoConc = !!_concorrenteAtual || _itens.some(function(it) { return it.precoConcorrente != null && it.precoConcorrente > 0; });
+        var temPrecoConc = !!_concorrenteAtual || _itens.some(function (it) { return it.precoConcorrente != null && it.precoConcorrente > 0; });
         if (thConc) thConc.style.display = temPrecoConc ? "" : "none";
 
         if (_itens.length === 0) {
@@ -386,28 +386,28 @@ const DemandaApp = (function() {
             return;
         }
 
-        var html = _itens.map(function(item, i) {
+        var html = _itens.map(function (item, i) {
             var colConc = temPrecoConc
                 ? "<td style='text-align:right'>" +
-                    "<input type='number' step='0.01' min='0' value='" + (item.precoConcorrente != null ? item.precoConcorrente : "") + "' placeholder='0,00' " +
-                    "style='background:transparent;border:none;border-bottom:1px dashed rgba(245,158,11,.5);color:#f59e0b;font-weight:700;width:75px;text-align:right;font-size:.82rem;padding:0 2px' " +
-                    "onchange=\"DemandaApp.updateItemPrecoConc(" + i + ", this.value)\" title='Preço Concorrente'>" +
-                  "</td>"
+                "<input type='number' step='0.01' min='0' value='" + (item.precoConcorrente != null ? item.precoConcorrente : "") + "' placeholder='0,00' " +
+                "style='background:transparent;border:none;border-bottom:1px dashed rgba(245,158,11,.5);color:#f59e0b;font-weight:700;width:75px;text-align:right;font-size:.82rem;padding:0 2px' " +
+                "onchange=\"DemandaApp.updateItemPrecoConc(" + i + ", this.value)\" title='Preço Concorrente'>" +
+                "</td>"
                 : "";
 
             // v3.4.0: Vínculo e Desvinculação rápida direto na tabela de Cotação
             var refHtml = item.erpCodigoFab
                 ? "<div style='display:flex;align-items:center;flex-wrap:wrap;gap:4px;'>" +
-                  "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
-                  "<button type='button' onclick='DemandaApp.desvincularItemCotacao(" + i + ")' title='Desvincular produto ERP' style='background:rgba(239,68,68,.12);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;font-size:.68rem;font-weight:700;display:inline-flex;align-items:center;'>✕</button>" +
-                  "</div>" +
-                  (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
+                "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
+                "<button type='button' onclick='DemandaApp.desvincularItemCotacao(" + i + ")' title='Desvincular produto ERP' style='background:rgba(239,68,68,.12);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;font-size:.68rem;font-weight:700;display:inline-flex;align-items:center;'>✕</button>" +
+                "</div>" +
+                (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
                 : "<div><span style='font-weight:600'>" + _esc(item.refOriginal || "—") + "</span></div>" +
-                  "<button type='button' onclick='DemandaApp.buscarErpItemCotacao(" + i + ")' style='background:rgba(59,130,246,.12);border:1px dashed rgba(59,130,246,.4);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.68rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-top:2px;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular ERP</button>";
+                "<button type='button' onclick='DemandaApp.buscarErpItemCotacao(" + i + ")' style='background:rgba(59,130,246,.12);border:1px dashed rgba(59,130,246,.4);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.68rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-top:2px;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular ERP</button>";
 
             var descHtml = item.erpProdutoDesc
                 ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(item.erpProdutoDesc) + "</span>" +
-                  (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
+                (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
                 : (_esc(item.descOriginal) || "—");
 
             var badgeStatus = "";
@@ -427,8 +427,8 @@ const DemandaApp = (function() {
                 colConc +
                 "<td>" + badgeStatus + "</td>" +
                 "<td><button onclick='DemandaApp.removeItem(" + i + ")' title='Remover' " +
-                    "style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem'>" +
-                    "<span class='material-icons-round' style='font-size:1rem'>close</span></button></td>" +
+                "style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem'>" +
+                "<span class='material-icons-round' style='font-size:1rem'>close</span></button></td>" +
                 "</tr>";
         }).join("");
         tbody.innerHTML = html;
@@ -453,8 +453,8 @@ const DemandaApp = (function() {
         var cl = document.getElementById("clienteLabel"); if (cl) cl.innerHTML = "Selecionar cliente <span style='color:var(--accent-danger);font-weight:bold;'>*</span>";
         var bxc = document.getElementById("btnClearCliente"); if (bxc) bxc.style.display = "none";
         var si = document.getElementById("selectOrigem"); if (si) si.value = "whatsapp";
-        try { if (window.DemandaFilial) DemandaFilial.resetarAtual(); _renderSeletorFilial(); } catch (_) {}
-        try { _limparRascunho(); } catch (_) {}
+        try { if (window.DemandaFilial) DemandaFilial.resetarAtual(); _renderSeletorFilial(); } catch (_) { }
+        try { _limparRascunho(); } catch (_) { }
         renderItens();
     }
 
@@ -467,7 +467,7 @@ const DemandaApp = (function() {
         if (!sel || !window.DemandaFilial) return;
         var escolhida = DemandaFilial.selecionada();
         sel.innerHTML = "<option value=''" + (!escolhida ? " selected" : "") + " disabled>Filial *</option>" +
-            DemandaFilial.listar().map(function(f) {
+            DemandaFilial.listar().map(function (f) {
                 return "<option style='color:var(--text-primary)' value='" + f.empId + "'" + (f.empId === escolhida ? " selected" : "") + ">" + _esc(f.nome) + "</option>";
             }).join("");
         sel.style.borderColor = destacar ? "var(--accent-danger)" : (escolhida ? "rgba(16,185,129,.4)" : "rgba(239,68,68,.45)");
@@ -494,7 +494,7 @@ const DemandaApp = (function() {
     function _atualizarPrecosItensFilial() {
         if (!window.DemandaFilial || !DemandaFilial.temDadosPorFilial()) return;
         var mudou = false;
-        _itens.forEach(function(it) {
+        _itens.forEach(function (it) {
             if (!it.erpProdutoId) return;
             var pf = DemandaFilial.preco(it.erpProdutoId);
             if (pf.exato && pf.v > 0 && it.precoUnitario !== pf.v) { it.precoUnitario = pf.v; mudou = true; }
@@ -527,8 +527,8 @@ const DemandaApp = (function() {
     // SELEÇÃO E GERENCIAMENTO DE CLIENTES
     // ════════════════════════════════════════════════════════
 
-    var _todosClientesCache      = null;   // Cache global normalizado em memória
-    var _carregandoClientes      = false;  // Flag de requisição assíncrona
+    var _todosClientesCache = null;   // Cache global normalizado em memória
+    var _carregandoClientes = false;  // Flag de requisição assíncrona
 
     function _extrairClientesLocais() {
         var lista = [];
@@ -550,7 +550,7 @@ const DemandaApp = (function() {
                         break;
                     }
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
 
         // 2. Se não achou em sessionStorage, tenta localStorage
@@ -565,7 +565,7 @@ const DemandaApp = (function() {
                             break;
                         }
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
         }
 
@@ -574,7 +574,7 @@ const DemandaApp = (function() {
             try {
                 var u = Utils.getStorage("clients");
                 if (Array.isArray(u) && u.length > 0) lista = u;
-            } catch(e) {}
+            } catch (e) { }
         }
 
         return _normalizarListaClientes(lista || []);
@@ -637,7 +637,7 @@ const DemandaApp = (function() {
                     if (Array.isArray(dc) && dc.length > 0) {
                         carregados = dc;
                     }
-                } catch(e) { console.warn("[DemandaApp] DemandaClientes.listar:", e); }
+                } catch (e) { console.warn("[DemandaApp] DemandaClientes.listar:", e); }
             }
 
             // B) Tenta Firestore tenants/{tenant}/demanda/data/clientes
@@ -646,13 +646,13 @@ const DemandaApp = (function() {
                     var db = firebase.firestore();
                     var snap = await db.collection("tenants/" + tenant + "/demanda/data/clientes").limit(1000).get();
                     if (!snap.empty) {
-                        carregados = snap.docs.map(function(d) {
+                        carregados = snap.docs.map(function (d) {
                             var dt = d.data();
                             dt.id = d.id;
                             return dt;
                         });
                     }
-                } catch(e) { console.warn("[DemandaApp] Firestore demanda/clientes:", e); }
+                } catch (e) { console.warn("[DemandaApp] Firestore demanda/clientes:", e); }
             }
 
             // C) Tenta Firestore tenants/{tenant}/data/clients (chunks salvos pelo Maxdata)
@@ -666,7 +666,7 @@ const DemandaApp = (function() {
                             carregados = dt2.items;
                         }
                     }
-                } catch(e) { console.warn("[DemandaApp] Firestore data/clients:", e); }
+                } catch (e) { console.warn("[DemandaApp] Firestore data/clients:", e); }
             }
 
             if (carregados.length > 0) {
@@ -676,10 +676,10 @@ const DemandaApp = (function() {
                     try {
                         sessionStorage.setItem("_erp_clients_maxdata", JSON.stringify(normalizados.slice(0, 1500)));
                         localStorage.setItem("centralpecas_clients", JSON.stringify(normalizados.slice(0, 500)));
-                    } catch(e) {}
+                    } catch (e) { }
                 }
             }
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao sincronizar clientes:", err);
         } finally {
             _carregandoClientes = false;
@@ -696,7 +696,7 @@ const DemandaApp = (function() {
     }
 
     function toggleClienteDropdown() {
-        var dd  = document.getElementById("clienteDropdown");
+        var dd = document.getElementById("clienteDropdown");
         if (!dd) return;
         var open = dd.style.display === "block";
         dd.style.display = open ? "none" : "block";
@@ -729,10 +729,10 @@ const DemandaApp = (function() {
 
         var qTerm = (q || "").trim().toLowerCase();
         var filtrados = qTerm.length > 0
-            ? todos.filter(function(c) {
+            ? todos.filter(function (c) {
                 var hay = (c.nome + " " + (c.cnpj || "") + " " + (c.codigo || "") + " " + (c.cidade || "")).toLowerCase();
                 return hay.indexOf(qTerm) >= 0;
-              }).slice(0, 35)
+            }).slice(0, 35)
             : todos.slice(0, 25);
 
         _clientesCache = filtrados;
@@ -744,13 +744,13 @@ const DemandaApp = (function() {
                 : "Nenhum resultado para \"" + _esc(qTerm) + "\".";
             htmlItens = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem'>" + msgVazio + "</div>";
         } else {
-            htmlItens = filtrados.map(function(c, i) {
-                var nome = c.nome || "Cliente " + (i+1);
+            htmlItens = filtrados.map(function (c, i) {
+                var nome = c.nome || "Cliente " + (i + 1);
                 var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
                 return "<div class='client-dropdown-item' onclick='DemandaApp.selectClienteIdx(" + i + ")'>" +
-                       "<strong>" + _esc(nome) + "</strong>" +
-                       (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
-                       "</div>";
+                    "<strong>" + _esc(nome) + "</strong>" +
+                    (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
+                    "</div>";
             }).join("");
         }
 
@@ -774,7 +774,7 @@ const DemandaApp = (function() {
         if (lbl) lbl.textContent = _clienteAtual.nome;
         if (btn) { btn.classList.add("selected"); btn.style.borderColor = ""; }
         if (btnClear) btnClear.style.display = "inline-flex";
-        var dd  = document.getElementById("clienteDropdown");
+        var dd = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
         _aplicarFilialCliente(_clienteAtual);
     }
@@ -789,7 +789,7 @@ const DemandaApp = (function() {
         if (lbl) lbl.textContent = n;
         if (btn) { btn.classList.add("selected"); btn.style.borderColor = ""; }
         if (btnClear) btnClear.style.display = "inline-flex";
-        var dd  = document.getElementById("clienteDropdown");
+        var dd = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
     }
 
@@ -817,7 +817,7 @@ const DemandaApp = (function() {
         if (lbl) lbl.innerHTML = "Selecionar cliente <span style='color:var(--accent-danger);font-weight:bold;'>*</span>";
         if (btn) { btn.classList.remove("selected"); btn.style.borderColor = ""; }
         if (btnClear) btnClear.style.display = "none";
-        var dd  = document.getElementById("clienteDropdown");
+        var dd = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
     }
 
@@ -845,8 +845,8 @@ const DemandaApp = (function() {
             _openModal("modalTexto");
         } else if (type === "excel") {
             var prev = document.getElementById("excelPreviewArea"); if (prev) prev.style.display = "none";
-            var btn  = document.getElementById("btnConfirmExcel");  if (btn) btn.style.display = "none";
-            var up   = document.getElementById("excelUploadArea");  if (up)  up.style.display = "";
+            var btn = document.getElementById("btnConfirmExcel"); if (btn) btn.style.display = "none";
+            var up = document.getElementById("excelUploadArea"); if (up) up.style.display = "";
             _openModal("modalExcel");
         } else if (type === "pdf") {
             _abrirImportPDF();
@@ -867,7 +867,7 @@ const DemandaApp = (function() {
 
             // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
             _toast("Renderizando página do PDF para demarcação visual...", "info");
-            (async function() {
+            (async function () {
                 try {
                     if (window.DemandaImagemDemarcador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.renderizarPaginaComoImagem === 'function') {
                         var rend = await DemandaPDF.renderizarPaginaComoImagem(file, 1);
@@ -877,7 +877,7 @@ const DemandaApp = (function() {
                                 dataUrl: rend.dataUrl,
                                 nome: file.name || "Cotação PDF",
                                 toast: _toast,
-                                onConfirm: function(grade, estadoDemarcador) {
+                                onConfirm: function (grade, estadoDemarcador) {
                                     if (window.DemandaMapeador) {
                                         DemandaMapeador.abrir({
                                             rows: grade,
@@ -885,7 +885,7 @@ const DemandaApp = (function() {
                                             nome: file.name || "Cotação PDF",
                                             estadoDemarcador: estadoDemarcador,
                                             toast: _toast,
-                                            onConfirm: function(itens) {
+                                            onConfirm: function (itens) {
                                                 _showConferencia(DemandaImport.validateItens(itens));
                                             }
                                         });
@@ -909,10 +909,10 @@ const DemandaApp = (function() {
                                 fonte: "pdf",
                                 nome: file.name || "Cotação PDF",
                                 toast: _toast,
-                                onConfirm: function(itens) {
+                                onConfirm: function (itens) {
                                     _showConferencia(DemandaImport.validateItens(itens));
                                 },
-                                onAutomatico: async function() {
+                                onAutomatico: async function () {
                                     try {
                                         var itens = await DemandaPDF.parseCotacaoPDF(file);
                                         if (Array.isArray(itens) && itens.length > 0) {
@@ -920,7 +920,7 @@ const DemandaApp = (function() {
                                         } else {
                                             _toast("Não foi possível extrair itens automaticamente.", "warning");
                                         }
-                                    } catch(e) { _toast("Erro na extração: " + (e.message || e), "error"); }
+                                    } catch (e) { _toast("Erro na extração: " + (e.message || e), "error"); }
                                 }
                             });
                             return;
@@ -941,15 +941,15 @@ const DemandaApp = (function() {
                 }
 
                 // Fallback para PDFs escaneados / sem camada de texto selecionável
-                if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
+                if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch (_) { } }
                 _pdfBlobUrl = URL.createObjectURL(file);
                 var modal = document.getElementById("modalImportPDF");
                 var fname = document.getElementById("pdfFileName");
-                var ta    = document.getElementById("pdfTextoColar");
-                var btn   = document.getElementById("btnAbrirPdfNovaAba");
+                var ta = document.getElementById("pdfTextoColar");
+                var btn = document.getElementById("btnAbrirPdfNovaAba");
                 if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
                 if (fname) fname.textContent = file.name;
-                if (ta)    ta.value = "";
+                if (ta) ta.value = "";
                 if (btn) { btn.href = _pdfBlobUrl; }
                 modal.style.display = "flex";
             })();
@@ -965,7 +965,7 @@ const DemandaApp = (function() {
         inp.accept = ".pdf,application/pdf";
         inp.style.display = "none";
         document.body.appendChild(inp);
-        inp.onchange = function() {
+        inp.onchange = function () {
             var file = inp.files[0];
             document.body.removeChild(inp);
             _processarPDF(file);
@@ -991,17 +991,17 @@ const DemandaApp = (function() {
                 nome: "Texto extraído do PDF",
                 fonte: "pdf",
                 toast: _toast,
-                onConfirm: function(grade) {
+                onConfirm: function (grade) {
                     DemandaMapeador.abrir({
                         rows: grade,
                         rawText: texto,
                         fonte: "pdf",
                         nome: "Texto extraído do PDF",
                         toast: _toast,
-                        onConfirm: function(itens) {
+                        onConfirm: function (itens) {
                             _showConferencia(DemandaImport.validateItens(itens));
                         },
-                        onAutomatico: function() {
+                        onAutomatico: function () {
                             var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
                                 ? DemandaImport.parseText(texto) : [];
                             if (itens && itens.length) _showConferencia(DemandaImport.validateItens(itens));
@@ -1021,10 +1021,10 @@ const DemandaApp = (function() {
                     fonte: "pdf",
                     nome: "Texto extraído do PDF",
                     toast: _toast,
-                    onConfirm: function(itens) {
+                    onConfirm: function (itens) {
                         _showConferencia(DemandaImport.validateItens(itens));
                     },
-                    onAutomatico: function() {
+                    onAutomatico: function () {
                         var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
                             ? DemandaImport.parseText(texto) : [];
                         if (itens && itens.length) _showConferencia(DemandaImport.validateItens(itens));
@@ -1067,14 +1067,14 @@ const DemandaApp = (function() {
                     file: file,
                     nome: file.name || "Foto / Print",
                     toast: _toast,
-                    onConfirm: function(grade, estadoDemarcador) {
+                    onConfirm: function (grade, estadoDemarcador) {
                         DemandaMapeador.abrir({
                             rows: grade,
                             fonte: "foto",
                             nome: file.name || "Foto / Print",
                             estadoDemarcador: estadoDemarcador,
                             toast: _toast,
-                            onConfirm: function(itens) {
+                            onConfirm: function (itens) {
                                 _showConferencia(DemandaImport.validateItens(itens));
                             }
                         });
@@ -1083,12 +1083,12 @@ const DemandaApp = (function() {
                 return;
             }
 
-            var modal  = document.getElementById("modalImportFoto");
-            var imgEl  = document.getElementById("fotoPreview");
-            var ta     = document.getElementById("fotoTranscricao");
+            var modal = document.getElementById("modalImportFoto");
+            var imgEl = document.getElementById("fotoPreview");
+            var ta = document.getElementById("fotoTranscricao");
             var status = document.getElementById("fotoOcrStatus");
-            var msg    = document.getElementById("fotoOcrMsg");
-            var pct    = document.getElementById("fotoOcrPct");
+            var msg = document.getElementById("fotoOcrMsg");
+            var pct = document.getElementById("fotoOcrPct");
             if (!modal || !imgEl) { _toast("Modal Foto nao encontrado.", "error"); return; }
             if (ta) { ta.value = ""; ta.placeholder = "Aguardando leitura OCR..."; }
             modal.style.display = "flex";
@@ -1098,30 +1098,30 @@ const DemandaApp = (function() {
 
             // Comprime imagem via Canvas (max 1600px / 0.85) para caber no limite da API OCR sem perder nitidez
             var reader = new FileReader();
-            reader.onerror = function() { _toast("Erro ao ler arquivo.", "error"); };
-            reader.onload = function(ev) {
+            reader.onerror = function () { _toast("Erro ao ler arquivo.", "error"); };
+            reader.onload = function (ev) {
                 var dataUrl = ev.target.result;
 
-                var iniciarOcr = function() {
+                var iniciarOcr = function () {
                     var maxDim = 1600;
                     var w = imgEl.naturalWidth || 1200, h = imgEl.naturalHeight || 800;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
-                    cv.width  = Math.round(w * ratio);
+                    cv.width = Math.round(w * ratio);
                     cv.height = Math.round(h * ratio);
-                    var ctx   = cv.getContext("2d");
+                    var ctx = cv.getContext("2d");
                     ctx.drawImage(imgEl, 0, 0, cv.width, cv.height);
                     var base64 = cv.toDataURL("image/jpeg", 0.85);
 
                     function tentarReconhecimento(engineTentativa) {
                         return fetch("/api/ocr", {
-                            method:  "POST",
+                            method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body:    JSON.stringify({ base64: base64, engine: engineTentativa })
-                        }).then(function(r) { return r.json(); });
+                            body: JSON.stringify({ base64: base64, engine: engineTentativa })
+                        }).then(function (r) { return r.json(); });
                     }
 
-                    tentarReconhecimento("1").then(async function(data) {
+                    tentarReconhecimento("1").then(async function (data) {
                         var texto = (data && data.text ? data.text : "").trim();
                         var textoBruto = (data && data.rawText ? data.rawText : "").trim();
                         // Se retornou pouco texto no Engine 1, tenta automaticamente Engine 2
@@ -1133,7 +1133,7 @@ const DemandaApp = (function() {
                                 if (texto2.length > texto.length) {
                                     texto = texto2;
                                 }
-                            } catch (_) {}
+                            } catch (_) { }
                         }
 
                         if (status) status.style.display = "none";
@@ -1148,17 +1148,17 @@ const DemandaApp = (function() {
                                     nome: "Foto / Print (OCR)",
                                     fonte: "foto",
                                     toast: _toast,
-                                    onConfirm: function(grade) {
+                                    onConfirm: function (grade) {
                                         DemandaMapeador.abrir({
                                             rows: grade,
                                             rawText: texto,
                                             fonte: "foto",
                                             nome: "Foto / Print (OCR)",
                                             toast: _toast,
-                                            onConfirm: function(itens) {
+                                            onConfirm: function (itens) {
                                                 _showConferencia(DemandaImport.validateItens(itens));
                                             },
-                                            onAutomatico: function() {
+                                            onAutomatico: function () {
                                                 var parsed = DemandaImport.parseText(texto);
                                                 var validados = DemandaImport.validateItens(parsed);
                                                 if (validados.length === 0 && textoBruto && textoBruto !== texto) {
@@ -1187,10 +1187,10 @@ const DemandaApp = (function() {
                                         fonte: "foto",
                                         nome: "Foto / Print (OCR)",
                                         toast: _toast,
-                                        onConfirm: function(itens) {
+                                        onConfirm: function (itens) {
                                             _showConferencia(DemandaImport.validateItens(itens));
                                         },
-                                        onAutomatico: function() {
+                                        onAutomatico: function () {
                                             var parsed = DemandaImport.parseText(texto);
                                             var validados = DemandaImport.validateItens(parsed);
                                             if (validados.length === 0 && textoBruto && textoBruto !== texto) {
@@ -1212,7 +1212,7 @@ const DemandaApp = (function() {
 
                             // Fallback clássico
                             if (typeof DemandaImport !== "undefined") {
-                                var parsed    = DemandaImport.parseText(texto);
+                                var parsed = DemandaImport.parseText(texto);
                                 var validados = DemandaImport.validateItens(parsed);
                                 if (validados.length === 0 && textoBruto && textoBruto !== texto) {
                                     validados = DemandaImport.validateItens(DemandaImport.parseText(textoBruto));
@@ -1234,7 +1234,7 @@ const DemandaApp = (function() {
                             if (ta) { ta.placeholder = "OCR não encontrou texto nesta imagem. Cole ou digite manualmente acima."; }
                             _toast("Pouco texto detectado. Você pode colar ou digitar o texto no campo ao lado.", "warning");
                         }
-                    }).catch(function(err) {
+                    }).catch(function (err) {
                         console.error("[OCR]", err);
                         if (status) status.style.display = "none";
                         if (ta) { ta.placeholder = "Falha no OCR. Cole ou digite o texto manualmente."; }
@@ -1243,7 +1243,7 @@ const DemandaApp = (function() {
                 };
 
                 imgEl.onload = iniciarOcr;
-                imgEl.onerror = function() { _toast("Imagem invalida.", "error"); };
+                imgEl.onerror = function () { _toast("Imagem invalida.", "error"); };
                 imgEl.src = dataUrl;
                 if (imgEl.complete && imgEl.naturalWidth) {
                     iniciarOcr();
@@ -1262,7 +1262,7 @@ const DemandaApp = (function() {
         inp.accept = "image/*";
         inp.style.display = "none";
         document.body.appendChild(inp);
-        inp.onchange = function() {
+        inp.onchange = function () {
             var file = inp.files[0];
             document.body.removeChild(inp);
             _processarFoto(file);
@@ -1270,13 +1270,13 @@ const DemandaApp = (function() {
         inp.click();
     }
     function _fecharImportFoto() {
-        var modal  = document.getElementById("modalImportFoto");
-        var img    = document.getElementById("fotoPreview");
+        var modal = document.getElementById("modalImportFoto");
+        var img = document.getElementById("fotoPreview");
         var status = document.getElementById("fotoOcrStatus");
         // Limpa onerror ANTES de apagar src — evita toast falso "Imagem invalida"
-        if (img)    { img.onerror = null; img.onload = null; try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
+        if (img) { img.onerror = null; img.onload = null; try { URL.revokeObjectURL(img.src); } catch (_) { } img.src = ""; }
         if (status) status.style.display = "none";
-        if (modal)  modal.style.display = "none";
+        if (modal) modal.style.display = "none";
     }
 
     function _processarFotoTranscricao() {
@@ -1292,18 +1292,18 @@ const DemandaApp = (function() {
                 nome: "Foto / Print (OCR)",
                 fonte: "foto",
                 toast: _toast,
-                onConfirm: function(grade) {
+                onConfirm: function (grade) {
                     DemandaMapeador.abrir({
                         rows: grade,
                         rawText: texto,
                         fonte: "foto",
                         nome: "Foto / Print (OCR)",
                         toast: _toast,
-                        onConfirm: function(itens) {
+                        onConfirm: function (itens) {
                             _showConferencia(DemandaImport.validateItens(itens));
                         },
-                        onAutomatico: function() {
-                            var parsed    = DemandaImport.parseText(texto);
+                        onAutomatico: function () {
+                            var parsed = DemandaImport.parseText(texto);
                             var validados = DemandaImport.validateItens(parsed);
                             if (validados.length > 0) _showConferencia(validados);
                         }
@@ -1322,11 +1322,11 @@ const DemandaApp = (function() {
                     fonte: "foto",
                     nome: "Foto / Print (OCR)",
                     toast: _toast,
-                    onConfirm: function(itens) {
+                    onConfirm: function (itens) {
                         _showConferencia(DemandaImport.validateItens(itens));
                     },
-                    onAutomatico: function() {
-                        var parsed    = DemandaImport.parseText(texto);
+                    onAutomatico: function () {
+                        var parsed = DemandaImport.parseText(texto);
                         var validados = DemandaImport.validateItens(parsed);
                         if (validados.length > 0) _showConferencia(validados);
                     }
@@ -1336,7 +1336,7 @@ const DemandaApp = (function() {
         }
 
         if (typeof DemandaImport !== "undefined") {
-            var parsed    = DemandaImport.parseText(texto);
+            var parsed = DemandaImport.parseText(texto);
             var validados = DemandaImport.validateItens(parsed);
             if (validados.length > 0) {
                 _showConferencia(validados);
@@ -1373,8 +1373,8 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Cole um texto antes de processar.", "error"); return; }
         if (typeof DemandaImport === "undefined") { _toast("DemandaImport não disponível.", "error"); return; }
         var texto = ta.value;
-        var leituraAutomatica = function() {
-            var parsed    = DemandaImport.parseText(texto);
+        var leituraAutomatica = function () {
+            var parsed = DemandaImport.parseText(texto);
             var validados = DemandaImport.validateItens(parsed);
             if (validados.length === 0) { _toast("Nenhum item encontrado no texto.", "error"); return false; }
             closeModal("modalTexto");
@@ -1389,15 +1389,15 @@ const DemandaApp = (function() {
                 fonte: "texto",
                 nome: "Texto colado",
                 toast: _toast,
-                onConfirm: function(grade) {
+                onConfirm: function (grade) {
                     DemandaMapeador.abrir({
                         rows: grade,
                         rawText: texto,
                         fonte: "texto",
                         nome: "Texto colado",
                         toast: _toast,
-                        onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
-                        onAutomatico: function() { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
+                        onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                        onAutomatico: function () { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
                     });
                 }
             });
@@ -1406,13 +1406,13 @@ const DemandaApp = (function() {
 
         if (window.DemandaMapeador && typeof DemandaImport.textoParaGrade === "function") {
             var grade = DemandaImport.textoParaGrade(texto);
-            var multi = grade.filter(function(r) { return r.length >= 2; }).length;
+            var multi = grade.filter(function (r) { return r.length >= 2; }).length;
             if (grade.length && multi >= grade.length * 0.4) {
                 closeModal("modalTexto");
                 DemandaMapeador.abrir({
                     rows: grade, rawText: texto, fonte: "texto", nome: "Texto colado", toast: _toast,
-                    onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
-                    onAutomatico: function() { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
+                    onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                    onAutomatico: function () { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
                 });
                 return;
             }
@@ -1433,15 +1433,11 @@ const DemandaApp = (function() {
 
     function onExcelFileSelected(file) {
         if (!file) return;
-        if (typeof DemandaImport === "undefined" || typeof XLSX === "undefined") {
-            _toast("SheetJS não carregado. Importe via texto por enquanto.", "error"); return;
-        }
-        var area = document.getElementById("excelUploadArea"); if (area) area.style.display = "none";
+        var area = document.getElementById("excelUploadArea");
         var prev = document.getElementById("excelPreviewArea");
-
         var nomeArq = (file.name || "").toLowerCase();
 
-        // Se for PDF selecionado no modal geral, abre direto no Demarcador Visual de Colunas
+        // Se for PDF selecionado no modal geral, abre direto no Demarcador Visual de Colunas (independe do SheetJS)
         if (/\.pdf$/i.test(nomeArq)) {
             closeModal("modalExcel");
             if (area) area.style.display = "";
@@ -1450,7 +1446,7 @@ const DemandaApp = (function() {
             return;
         }
 
-        // Se for imagem selecionada no modal geral, abre direto no Demarcador Visual
+        // Se for imagem selecionada no modal geral, abre direto no Demarcador Visual (independe do SheetJS)
         if (/\.(png|jpe?g|webp|bmp)$/i.test(nomeArq)) {
             closeModal("modalExcel");
             if (area) area.style.display = "";
@@ -1459,24 +1455,29 @@ const DemandaApp = (function() {
             return;
         }
 
+        if (typeof DemandaImport === "undefined" || typeof XLSX === "undefined") {
+            _toast("SheetJS não carregado. Importe via texto por enquanto.", "error"); return;
+        }
+        if (area) area.style.display = "none";
+
         // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
         if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
-            DemandaImport.lerGradeArquivo(file).then(function(rows) {
+            DemandaImport.lerGradeArquivo(file).then(function (rows) {
                 closeModal("modalExcel");
                 if (area) area.style.display = "";
                 if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
                 DemandaMapeador.abrir({
                     rows: rows, fonte: "excel", nome: file.name, toast: _toast,
-                    onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
-                    onAutomatico: function() {
-                        DemandaImport.parseExcel(file).then(function(r) {
+                    onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                    onAutomatico: function () {
+                        DemandaImport.parseExcel(file).then(function (r) {
                             var its = (r && r.itens) || [];
                             if (!its.length) { _toast("Leitura automática não encontrou itens.", "warning"); return; }
                             _showConferencia(DemandaImport.validateItens(its));
-                        }).catch(function(e) { _toast("Erro: " + (e.message || e), "error"); });
+                        }).catch(function (e) { _toast("Erro: " + (e.message || e), "error"); });
                     }
                 });
-            }).catch(function(err) {
+            }).catch(function (err) {
                 if (prev) { prev.style.display = ""; prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro ao ler arquivo: " + _esc(err.message || err) + "</div>"; }
                 if (area) area.style.display = "";
             });
@@ -1492,12 +1493,12 @@ const DemandaApp = (function() {
 
         var processPromise = (typeof DemandaImport.parseFile === "function")
             ? DemandaImport.parseFile(file)
-            : DemandaImport.parseExcel(file).then(function(r) { return r.itens || []; });
+            : DemandaImport.parseExcel(file).then(function (r) { return r.itens || []; });
 
-        processPromise.then(function(itensExtraidos) {
+        processPromise.then(function (itensExtraidos) {
             _excelItensTemp = Array.isArray(itensExtraidos) ? itensExtraidos : (itensExtraidos.itens || []);
             var validados = DemandaImport.validateItens(_excelItensTemp);
-            var ok  = validados.filter(function(i) { return !i._erros || i._erros.length === 0; }).length;
+            var ok = validados.filter(function (i) { return !i._erros || i._erros.length === 0; }).length;
             var err = validados.length - ok;
             if (prev) prev.innerHTML =
                 "<div style='padding:.75rem 1rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;display:flex;gap:.75rem;align-items:center'>" +
@@ -1506,7 +1507,7 @@ const DemandaApp = (function() {
                 (err > 0 ? " <span style='color:var(--accent-danger)'>(" + err + " requerem atenção)</span>" : "") +
                 "<div style='font-size:.78rem;color:var(--text-secondary);margin-top:.15rem'>" + _esc(file.name) + "</div></div></div>";
             var btn = document.getElementById("btnConfirmExcel"); if (btn) btn.style.display = "";
-        }).catch(function(err) {
+        }).catch(function (err) {
             if (prev) prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro ao extrair: " + _esc(err.message || err) + "</div>";
             var area2 = document.getElementById("excelUploadArea"); if (area2) area2.style.display = "";
         });
@@ -1524,15 +1525,15 @@ const DemandaApp = (function() {
 
     function _showConferencia(itens) {
         _importItensTemp = itens;
-        var tbody  = document.getElementById("conferenciaTbody");
-        var stats  = document.getElementById("conferenciaStats");
+        var tbody = document.getElementById("conferenciaTbody");
+        var stats = document.getElementById("conferenciaStats");
         var chkAll = document.getElementById("chkAllConf");
         if (!tbody) return;
 
         // Detecta se algum item veio com metadados de concorrente, cliente ou orçamento
         var concDetectado = "";
-        var cliDetectado  = "";
-        var orcDetectado  = "";
+        var cliDetectado = "";
+        var orcDetectado = "";
         for (var k = 0; k < itens.length; k++) {
             if (itens[k]._metaConcorrente && !concDetectado) concDetectado = itens[k]._metaConcorrente;
             if (itens[k]._metaCliente && !cliDetectado) cliDetectado = itens[k]._metaCliente;
@@ -1543,13 +1544,13 @@ const DemandaApp = (function() {
         if (selConf) {
             _popularSelectsConcorrentes();
             if (concDetectado) {
-                var exist = (_concorrentesCadastrados || []).find(function(c) {
+                var exist = (_concorrentesCadastrados || []).find(function (c) {
                     var n1 = (c.nome || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                     var n2 = concDetectado.toLowerCase().replace(/[^a-z0-9]/g, '');
                     return n1 === n2 || n1.indexOf(n2) >= 0 || n2.indexOf(n1) >= 0;
                 });
                 var concFinal = exist ? exist.nome : concDetectado;
-                var optJaExiste = Array.from(selConf.options).some(function(o) { return o.value === concFinal; });
+                var optJaExiste = Array.from(selConf.options).some(function (o) { return o.value === concFinal; });
                 if (!optJaExiste) {
                     var newOpt = document.createElement("option");
                     newOpt.value = concFinal;
@@ -1583,9 +1584,9 @@ const DemandaApp = (function() {
         // Se detectou cliente do cabeçalho do orçamento do concorrente e a cotação atual ainda não tem cliente selecionado
         if (cliDetectado && (!_clienteAtual || !_clienteAtual.nome)) {
             var todos = _getClientesLocalCache();
-            var matchCli = todos.find(function(c) {
+            var matchCli = todos.find(function (c) {
                 return c.nome.toLowerCase().indexOf(cliDetectado.toLowerCase()) >= 0 ||
-                       cliDetectado.toLowerCase().indexOf(c.nome.toLowerCase()) >= 0;
+                    cliDetectado.toLowerCase().indexOf(c.nome.toLowerCase()) >= 0;
             });
             if (matchCli) {
                 _clienteAtual = matchCli;
@@ -1602,7 +1603,7 @@ const DemandaApp = (function() {
 
         // Auto-match prévio para conferência contra base de 10.896 SKUs da Central Peças
         var matchCount = 0;
-        itens.forEach(function(item) {
+        itens.forEach(function (item) {
             if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
                 var m = DemandaSearch.smartMatch({
                     refOriginal: item.refOriginal,
@@ -1617,7 +1618,7 @@ const DemandaApp = (function() {
             }
         });
 
-        var ok  = itens.filter(function(i) { return !i._erros || i._erros.length === 0; }).length;
+        var ok = itens.filter(function (i) { return !i._erros || i._erros.length === 0; }).length;
         var err = itens.length - ok;
         if (stats) stats.innerHTML =
             (matchCount > 0 ? "<span style='color:var(--accent-success);font-weight:700'>⚡ " + matchCount + "/" + itens.length + " identificados na Central Peças</span> &nbsp;·&nbsp; " : "") +
@@ -1630,7 +1631,7 @@ const DemandaApp = (function() {
             "</div>";
         if (chkAll) chkAll.checked = true;
 
-        tbody.innerHTML = itens.map(function(item, i) {
+        tbody.innerHTML = itens.map(function (item, i) {
             var hasErr = item._erros && item._erros.length > 0;
             var incert = item.incerteza;
             var rowStyle = hasErr ? "opacity:.75" : "";
@@ -1655,22 +1656,22 @@ const DemandaApp = (function() {
 
             var matchPill = m
                 ? "<div id='conf-match-" + i + "' style='margin-top:.25rem;display:flex;align-items:center;gap:.35rem;font-size:.72rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:4px;padding:.15rem .4rem;color:#10b981'>" +
-                    "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
-                    "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong>" + matchBadgeTipo + " — " + _esc(m.erpProdutoDesc) + "</span>" +
-                    "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
-                    (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
-                    (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") +
-                    "</span>" +
-                    "<button type='button' onclick='event.stopPropagation(); DemandaApp.desvincularConferenciaItem(" + i + ")' title='Desvincular produto deste item' style='background:rgba(239,68,68,.15);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;margin-left:6px;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;'>✕</button>" +
-                    "</div>"
+                "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
+                "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong>" + matchBadgeTipo + " — " + _esc(m.erpProdutoDesc) + "</span>" +
+                "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
+                (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
+                (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") +
+                "</span>" +
+                "<button type='button' onclick='event.stopPropagation(); DemandaApp.desvincularConferenciaItem(" + i + ")' title='Desvincular produto deste item' style='background:rgba(239,68,68,.15);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;margin-left:6px;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;'>✕</button>" +
+                "</div>"
                 : "<div id='conf-match-" + i + "' style='margin-top:.25rem;display:flex;align-items:center;'>" +
-                    "<button type='button' onclick='event.stopPropagation(); DemandaApp.buscarErpConferenciaItem(" + i + ")' style='background:rgba(59,130,246,.1);border:1px dashed rgba(59,130,246,.35);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.69rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular Manualmente</button>" +
-                    "</div>";
+                "<button type='button' onclick='event.stopPropagation(); DemandaApp.buscarErpConferenciaItem(" + i + ")' style='background:rgba(59,130,246,.1);border:1px dashed rgba(59,130,246,.35);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.69rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular Manualmente</button>" +
+                "</div>";
 
             var statusHtml = m
                 ? "<span id='conf-status-" + i + "' style='color:" + (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b") + ";font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:.2rem'>" +
-                  "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span>" +
-                  (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque") + "</span>"
+                "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span>" +
+                (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque") + "</span>"
                 : (hasErr
                     ? "<span id='conf-status-" + i + "' style='color:var(--accent-danger);font-size:.72rem' title='" + _esc((item._erros || []).join(", ")) + "'>&#9888; Alerta</span>"
                     : incert
@@ -1681,17 +1682,17 @@ const DemandaApp = (function() {
                 "<td><input type='checkbox' class='conf-chk' data-idx='" + i + "' " + (!hasErr ? "checked" : "") + "></td>" +
                 "<td style='color:var(--text-secondary);font-size:.78rem'>" + (i + 1) + "</td>" +
                 "<td><input type='text' value='" + _esc(item.refOriginal) + "' " +
-                    "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'ref',this.value)\">" + matchPill + "</td>" +
+                "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
+                "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'ref',this.value)\">" + matchPill + "</td>" +
                 "<td><input type='text' value='" + _esc(item.descOriginal) + "' " +
-                    "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'desc',this.value)\"></td>" +
+                "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
+                "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'desc',this.value)\"></td>" +
                 "<td style='text-align:center'><input type='number' value='" + (item.qtdeSolicitada || 1) + "' min='1' " +
-                    "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .4rem;color:var(--text-primary);width:54px;text-align:center;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'qtde',+this.value)\"></td>" +
+                "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .4rem;color:var(--text-primary);width:54px;text-align:center;font-size:.82rem' " +
+                "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'qtde',+this.value)\"></td>" +
                 "<td style='text-align:right'><input type='number' step='0.01' min='0' value='" + (item.precoConcorrente != null ? item.precoConcorrente : "") + "' placeholder='0,00' " +
-                    "style='background:transparent;border:1px solid rgba(245,158,11,.4);border-radius:4px;padding:.2rem .4rem;color:#f59e0b;font-weight:700;width:82px;text-align:right;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'precoConcorrente',this.value)\"></td>" +
+                "style='background:transparent;border:1px solid rgba(245,158,11,.4);border-radius:4px;padding:.2rem .4rem;color:#f59e0b;font-weight:700;width:82px;text-align:right;font-size:.82rem' " +
+                "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'precoConcorrente',this.value)\"></td>" +
                 "<td style='font-size:.78rem;color:var(--text-secondary)'>" + _esc(item.obs || "") + "</td>" +
                 "<td>" + statusHtml + "</td></tr>";
         }).join("");
@@ -1730,7 +1731,7 @@ const DemandaApp = (function() {
         var count = 0;
         var concSel = document.getElementById("confSelectConcorrente");
         var concNome = concSel ? (concSel.value || "").trim() : (_concorrenteAtual ? _concorrenteAtual.nome : "");
-        _importItensTemp.forEach(function(it) {
+        _importItensTemp.forEach(function (it) {
             if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
                 var m = DemandaSearch.smartMatch({
                     refOriginal: it.refOriginal,
@@ -1751,7 +1752,7 @@ const DemandaApp = (function() {
 
     function desvincularTodosConferencia() {
         if (!_importItensTemp || !_importItensTemp.length) return;
-        _importItensTemp.forEach(function(it) {
+        _importItensTemp.forEach(function (it) {
             it._match = null;
             it._manualUnlinked = true;
         });
@@ -1785,8 +1786,8 @@ const DemandaApp = (function() {
 
     function updateConferenciaItem(idx, field, value) {
         if (!_importItensTemp[idx]) return;
-        if (field === "ref")  _importItensTemp[idx].refOriginal    = value;
-        if (field === "desc") _importItensTemp[idx].descOriginal   = value;
+        if (field === "ref") _importItensTemp[idx].refOriginal = value;
+        if (field === "desc") _importItensTemp[idx].descOriginal = value;
         if (field === "qtde") _importItensTemp[idx].qtdeSolicitada = Math.max(1, value || 1);
         if (field === "precoConcorrente") {
             var valP = parseFloat(String(value).replace(',', '.'));
@@ -1858,17 +1859,17 @@ const DemandaApp = (function() {
     }
 
     function selectAllConferencia() {
-        document.querySelectorAll(".conf-chk").forEach(function(c) { c.checked = true; });
+        document.querySelectorAll(".conf-chk").forEach(function (c) { c.checked = true; });
         var chkAll = document.getElementById("chkAllConf"); if (chkAll) chkAll.checked = true;
     }
 
     function toggleAllConferencia(checked) {
-        document.querySelectorAll(".conf-chk").forEach(function(c) { c.checked = checked; });
+        document.querySelectorAll(".conf-chk").forEach(function (c) { c.checked = checked; });
     }
 
     function desmarcarIncertosConferencia() {
         var count = 0;
-        document.querySelectorAll(".conf-chk").forEach(function(chk) {
+        document.querySelectorAll(".conf-chk").forEach(function (chk) {
             var idx = parseInt(chk.getAttribute("data-idx"), 10);
             if (_importItensTemp[idx] && _importItensTemp[idx].incerteza && !_importItensTemp[idx]._match) {
                 chk.checked = false;
@@ -1883,7 +1884,7 @@ const DemandaApp = (function() {
 
     function confirmConferencia() {
         var selecionados = [];
-        document.querySelectorAll(".conf-chk").forEach(function(chk) {
+        document.querySelectorAll(".conf-chk").forEach(function (chk) {
             if (chk.checked) {
                 var idx = parseInt(chk.getAttribute("data-idx"), 10);
                 if (_importItensTemp[idx]) selecionados.push(_importItensTemp[idx]);
@@ -1897,7 +1898,7 @@ const DemandaApp = (function() {
             onConcorrenteChange(concValor);
             var selPrincipal = document.getElementById("selectConcorrente");
             if (selPrincipal) {
-                var optJa = Array.from(selPrincipal.options).some(function(o) { return o.value === concValor; });
+                var optJa = Array.from(selPrincipal.options).some(function (o) { return o.value === concValor; });
                 if (!optJa) {
                     var opt = document.createElement("option");
                     opt.value = concValor;
@@ -1909,21 +1910,21 @@ const DemandaApp = (function() {
         }
 
         // Evita importar o mesmo orçamento duas vezes: compara com os itens já na cotação
-        var _chaveItem = function(it) {
+        var _chaveItem = function (it) {
             var r = String(it.refOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
             return r ? "R:" + r : "D:" + String(it.descOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
         };
         var chavesExistentes = {};
-        _itens.forEach(function(it) { chavesExistentes[_chaveItem(it)] = true; });
+        _itens.forEach(function (it) { chavesExistentes[_chaveItem(it)] = true; });
         var novos = [], repetidos = [];
-        selecionados.forEach(function(it) {
+        selecionados.forEach(function (it) {
             var ch = _chaveItem(it);
             if (chavesExistentes[ch]) repetidos.push(it);
             else novos.push(it);
         });
         if (repetidos.length > 0) {
-            var listaRep = repetidos.slice(0, 8).map(function(it) { return "• " + (it.refOriginal || it.descOriginal); }).join("\n") +
-                           (repetidos.length > 8 ? "\n• ... e mais " + (repetidos.length - 8) : "");
+            var listaRep = repetidos.slice(0, 8).map(function (it) { return "• " + (it.refOriginal || it.descOriginal); }).join("\n") +
+                (repetidos.length > 8 ? "\n• ... e mais " + (repetidos.length - 8) : "");
             if (novos.length === 0) {
                 closeModal("modalConferencia");
                 _importItensTemp = [];
@@ -1941,9 +1942,9 @@ const DemandaApp = (function() {
             selecionados = novos;
         }
 
-        selecionados.forEach(function(item) {
-            var m = item._match;
-            if (!m && typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+        selecionados.forEach(function (item) {
+            var m = item._manualUnlinked ? null : item._match;
+            if (!m && !item._manualUnlinked && typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
                 m = DemandaSearch.smartMatch({
                     refOriginal: item.refOriginal,
                     descOriginal: item.descOriginal,
@@ -1951,19 +1952,21 @@ const DemandaApp = (function() {
                     concorrenteNome: concValor
                 });
             }
+            var prc = m ? (m.precoUnitario || m.preco || null) : null;
             _itens.push({
-                refOriginal:      item.refOriginal,
-                descOriginal:     item.descOriginal,
-                qtdeSolicitada:   item.qtdeSolicitada || 1,
+                refOriginal: item.refOriginal,
+                descOriginal: item.descOriginal,
+                qtdeSolicitada: item.qtdeSolicitada || 1,
                 precoConcorrente: item.precoConcorrente || null,
                 _metaConcorrente: item._metaConcorrente || concValor || null,
-                erpProdutoId:     m ? m.erpProdutoId : null,
-                erpCodigoFab:     m ? (m.erpCodigoFab || m.referencia) : '',
-                erpProdutoDesc:   m ? (m.erpProdutoDesc || m.descricao) : '',
-                fabricante:       m ? (m.fabricante || m.marca) : '',
-                estoqueFilial:    m ? m.estoqueFilial : null,
-                precoUnitario:    m ? (m.precoUnitario || m.preco) : null,
-                status:           m ? (Number(m.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida'
+                erpProdutoId: m ? m.erpProdutoId : null,
+                erpCodigoFab: m ? (m.erpCodigoFab || m.referencia) : '',
+                erpProdutoDesc: m ? (m.erpProdutoDesc || m.descricao) : '',
+                fabricante: m ? (m.fabricante || m.marca) : '',
+                estoqueFilial: m ? m.estoqueFilial : null,
+                precoUnitario: prc,
+                preco: prc,
+                status: m ? (Number(m.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida'
             });
         });
         renderItens();
@@ -1986,7 +1989,7 @@ const DemandaApp = (function() {
             if (btnCli) {
                 btnCli.style.borderColor = "var(--accent-danger)";
                 btnCli.style.animation = "shake 0.4s ease";
-                setTimeout(function() { if (btnCli) btnCli.style.animation = ""; }, 500);
+                setTimeout(function () { if (btnCli) btnCli.style.animation = ""; }, 500);
             }
             toggleClienteDropdown();
             return;
@@ -1997,8 +2000,8 @@ const DemandaApp = (function() {
             var selF = document.getElementById("selFilialCotacao");
             if (selF) {
                 selF.style.animation = "shake 0.4s ease";
-                setTimeout(function() { if (selF) selF.style.animation = ""; }, 500);
-                try { selF.focus(); } catch (_) {}
+                setTimeout(function () { if (selF) selF.style.animation = ""; }, 500);
+                try { selF.focus(); } catch (_) { }
             }
             return;
         }
@@ -2019,30 +2022,30 @@ const DemandaApp = (function() {
                 }
             }
         }
-        if (!concNome && _itens.some(function(it) { return it.precoConcorrente != null && it.precoConcorrente > 0; })) {
+        if (!concNome && _itens.some(function (it) { return it.precoConcorrente != null && it.precoConcorrente > 0; })) {
             concNome = (_concorrentesCadastrados && _concorrentesCadastrados.length > 0) ? _concorrentesCadastrados[0].nome : "J.A. Agrícola";
         }
 
         var data = {
-            origem:          origemEl ? origemEl.value : "manual",
-            canalOrigem:     origemEl ? origemEl.value : "manual",
+            origem: origemEl ? origemEl.value : "manual",
+            canalOrigem: origemEl ? origemEl.value : "manual",
             concorrenteNome: concNome || null,
-            isConcorrente:   !!concNome,
-            clienteId:       _clienteAtual ? _clienteAtual.id    : null,
-            clienteNome:     _clienteAtual ? _clienteAtual.nome  : "",
-            clienteCnpj:     _clienteAtual ? _clienteAtual.cnpj  : "",
-            vendedorId:      s ? (s.login || s.email || null)     : null,
-            vendedorNome:    s ? (s.nome  || s.name  || "")       : "",
-            filialId:        (window.DemandaFilial ? DemandaFilial.atual() : (s ? (s.filialId || 1) : 1)),
-            filialNome:      (window.DemandaFilial ? DemandaFilial.nome(DemandaFilial.atual()) : (s ? (s.filial || s.tenantNome || "") : "")),
-            criadoPor:       s ? (s.login || s.email || "sistema"): "sistema"
+            isConcorrente: !!concNome,
+            clienteId: _clienteAtual ? _clienteAtual.id : null,
+            clienteNome: _clienteAtual ? _clienteAtual.nome : "",
+            clienteCnpj: _clienteAtual ? _clienteAtual.cnpj : "",
+            vendedorId: s ? (s.login || s.email || null) : null,
+            vendedorNome: s ? (s.nome || s.name || "") : "",
+            filialId: (window.DemandaFilial ? DemandaFilial.atual() : (s ? (s.filialId || 1) : 1)),
+            filialNome: (window.DemandaFilial ? DemandaFilial.nome(DemandaFilial.atual()) : (s ? (s.filial || s.tenantNome || "") : "")),
+            criadoPor: s ? (s.login || s.email || "sistema") : "sistema"
         };
 
         // Feedback visual: desabilita ambos os botões salvar
-        var btnSalvar  = document.getElementById("btnSalvarDemanda");
+        var btnSalvar = document.getElementById("btnSalvarDemanda");
         var btnSalvar2 = document.getElementById("btnSalvarDemandaPanel");
         function _setBtnSaving(saving) {
-            [btnSalvar, btnSalvar2].forEach(function(b) {
+            [btnSalvar, btnSalvar2].forEach(function (b) {
                 if (!b) return;
                 b.disabled = saving;
                 if (saving) { b.textContent = "Salvando..."; }
@@ -2052,35 +2055,37 @@ const DemandaApp = (function() {
         _setBtnSaving(true);
 
         // Verifica se já existe cotação salva deste cliente com os mesmos itens (orçamento importado 2x)
-        var _chaveIt = function(it) {
+        var _chaveIt = function (it) {
             var r = String(it.refOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
             return r ? "R:" + r : "D:" + String(it.descOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
         };
-        var _normCli = function(n) { return String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); };
+        var _normCli = function (n) { return String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); };
         var chavesNovas = _itens.map(_chaveIt);
         var verificarDuplicada = DemandaDB.listDemandas({})
-            .then(async function(lista) {
+            .then(async function (lista) {
                 var cliN = _normCli(data.clienteNome);
-                var candidatas = (lista || []).filter(function(d) {
+                var candidatas = (lista || []).filter(function (d) {
                     return d && d.status !== "cancelada" && cliN && _normCli(d.clienteNome) === cliN;
                 }).slice(0, 10);
                 for (var ci = 0; ci < candidatas.length; ci++) {
-                    var its = await DemandaDB.getItens(candidatas[ci].id).catch(function() { return []; });
+                    var its = await (typeof DemandaDB.getItensFor === "function"
+                        ? DemandaDB.getItensFor(candidatas[ci])
+                        : DemandaDB.getItens(candidatas[ci].id)).catch(function () { return []; });
                     if (!its || its.length === 0) continue;
                     var setExist = {};
-                    its.forEach(function(x) { setExist[_chaveIt(x)] = true; });
-                    var iguais = chavesNovas.filter(function(k) { return setExist[k]; }).length;
+                    its.forEach(function (x) { setExist[_chaveIt(x)] = true; });
+                    var iguais = chavesNovas.filter(function (k) { return setExist[k]; }).length;
                     if (iguais >= Math.max(2, Math.ceil(chavesNovas.length * 0.8))) {
                         return { demanda: candidatas[ci], iguais: iguais };
                     }
                 }
                 return null;
             })
-            .catch(function() { return null; });
+            .catch(function () { return null; });
 
-        verificarDuplicada.then(function(dup) {
+        verificarDuplicada.then(function (dup) {
             if (dup && !confirm("Já existe a cotação " + (dup.demanda.codigo || dup.demanda.id) + " deste cliente com " + dup.iguais + " dos " + chavesNovas.length +
-                                " itens iguais (orçamento já importado).\n\nOK = salvar mesmo assim como NOVA cotação\nCancelar = descartar e limpar a cotação atual")) {
+                " itens iguais (orçamento já importado).\n\nOK = salvar mesmo assim como NOVA cotação\nCancelar = descartar e limpar a cotação atual")) {
                 _setBtnSaving(false);
                 limparDemanda(true);
                 _toast("Lançamento duplicado descartado. Cotação atual limpa.", "info");
@@ -2090,21 +2095,21 @@ const DemandaApp = (function() {
         });
 
         function _criarDemandaConfirmada() {
-        DemandaDB.createDemanda(data, _itens.slice())
-            .then(function(demandaId) {
-                console.log("[DemandaApp] Demanda criada:", demandaId);
-                if (concNome) {
-                    _salvarVinculoConcorrenteAutomatico(concNome, _clienteAtual, _itens.slice(), demandaId);
-                }
-                _toast(concNome ? "Cotação vinculada ao concorrente e salva com sucesso!" : "Cotação salva com sucesso!", "success");
-                limparDemanda(true);
-                setTimeout(function() { switchView("lista"); }, 800);
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao salvar:", err);
-                _toast("Erro ao salvar: " + (err.message || err), "error");
-            })
-            .finally(function() { _setBtnSaving(false); });
+            DemandaDB.createDemanda(data, _itens.slice())
+                .then(function (demandaId) {
+                    console.log("[DemandaApp] Demanda criada:", demandaId);
+                    if (concNome) {
+                        _salvarVinculoConcorrenteAutomatico(concNome, _clienteAtual, _itens.slice(), demandaId);
+                    }
+                    _toast(concNome ? "Cotação vinculada ao concorrente e salva com sucesso!" : "Cotação salva com sucesso!", "success");
+                    limparDemanda(true);
+                    setTimeout(function () { switchView("lista"); }, 800);
+                })
+                .catch(function (err) {
+                    console.error("[DemandaApp] Erro ao salvar:", err);
+                    _toast("Erro ao salvar: " + (err.message || err), "error");
+                })
+                .finally(function () { _setBtnSaving(false); });
         }
     }
 
@@ -2114,7 +2119,7 @@ const DemandaApp = (function() {
 
     function filterDemandas(filtro, el) {
         _filterAtual = filtro;
-        document.querySelectorAll(".filter-chip").forEach(function(c) { c.classList.remove("active"); });
+        document.querySelectorAll(".filter-chip").forEach(function (c) { c.classList.remove("active"); });
         if (el) el.classList.add("active");
         loadDemandasLista(filtro);
     }
@@ -2124,7 +2129,7 @@ const DemandaApp = (function() {
         var sel = document.getElementById(selId);
         if (!sel) return;
         var filiais = window.DemandaFilial ? DemandaFilial.listar() : [];
-        sel.innerHTML = "<option value='0'>Todas as filiais</option>" + filiais.map(function(f) {
+        sel.innerHTML = "<option value='0'>Todas as filiais</option>" + filiais.map(function (f) {
             return "<option value='" + f.empId + "'" + (f.empId === _filialRelatorio ? " selected" : "") + ">" + _esc(f.nome) + "</option>";
         }).join("");
         sel.value = String(_filialRelatorio || 0);
@@ -2132,7 +2137,7 @@ const DemandaApp = (function() {
 
     function filtrarFilialRelatorio(v, origem) {
         _filialRelatorio = Number(v) || 0;
-        try { localStorage.setItem("demanda_filial_relatorio", String(_filialRelatorio)); } catch (_) {}
+        try { localStorage.setItem("demanda_filial_relatorio", String(_filialRelatorio)); } catch (_) { }
         if (origem === "dashboard") loadDashboard(); else loadDemandasLista(_filterAtual);
     }
 
@@ -2143,15 +2148,15 @@ const DemandaApp = (function() {
         // 1. Renderização Instantânea (0ms) a partir do cache local para que nenhuma cotação fique invisível
         try {
             var rawC = localStorage.getItem("demanda_cache_demandas_" + (window.DemandaDB ? DemandaDB.TENANT_ID : "centralpecas")) ||
-                       localStorage.getItem("demanda_cache_demandas_centralpecas");
+                localStorage.getItem("demanda_cache_demandas_centralpecas");
             if (rawC) {
                 var cachedArr = JSON.parse(rawC);
                 if (Array.isArray(cachedArr) && cachedArr.length > 0) {
                     var fil = (_filialRelatorio && _filialRelatorio > 0)
-                        ? cachedArr.filter(function(x) { return Number(x.filialId || 1) === _filialRelatorio; })
+                        ? cachedArr.filter(function (x) { return Number(x.filialId || 1) === _filialRelatorio; })
                         : cachedArr;
                     if (filtro && filtro !== "todas") {
-                        fil = fil.filter(function(x) { return x.status === filtro; });
+                        fil = fil.filter(function (x) { return x.status === filtro; });
                     }
                     if (fil.length > 0) {
                         container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
@@ -2159,7 +2164,7 @@ const DemandaApp = (function() {
                     }
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
 
         if (!container.innerHTML || container.innerHTML.indexOf("_renderDemandaCard") >= 0 || container.innerHTML.trim() === "") {
             container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
@@ -2173,14 +2178,14 @@ const DemandaApp = (function() {
         }
 
         var filters = {};
-        if (filtro === "aberta")         filters.status = "aberta";
+        if (filtro === "aberta") filters.status = "aberta";
         if (filtro === "em_atendimento") filters.status = "em_atendimento";
-        if (filtro === "encerrada")      filters.status = "encerrada";
+        if (filtro === "encerrada") filters.status = "encerrada";
         _popularSelFilialRelatorio("selFilialLista");
         if (_filialRelatorio) filters.filialId = _filialRelatorio;
 
         DemandaDB.listDemandas(filters)
-            .then(function(demandas) {
+            .then(function (demandas) {
                 if (demandas.length === 0) {
                     container.innerHTML =
                         "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
@@ -2194,7 +2199,7 @@ const DemandaApp = (function() {
                 container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
                     demandas.map(_renderDemandaCard).join("") + "</div>";
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 console.error("[DemandaApp] Erro ao listar:", err);
                 if (!container.querySelector("[role='button']")) {
                     container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
@@ -2211,14 +2216,14 @@ const DemandaApp = (function() {
         var dt = "—";
         if (d.criadoEm) {
             if (d.criadoEm.toDate && typeof d.criadoEm.toDate === "function") {
-                dt = d.criadoEm.toDate().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+                dt = d.criadoEm.toDate().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
             } else {
                 try {
                     var dObj = new Date(d.criadoEm);
                     if (!isNaN(dObj.getTime())) {
-                        dt = dObj.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+                        dt = dObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
                     }
-                } catch(_) {}
+                } catch (_) { }
             }
         }
 
@@ -2241,7 +2246,7 @@ const DemandaApp = (function() {
             "<span style='font-weight:700;font-size:.9rem'>" + _esc(d.codigo || "—") + "</span>" +
             "<span style='font-size:.7rem;padding:.1rem .5rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:600'>" + lbl + "</span>" +
             "<span title='Filial da cotação' style='font-size:.68rem;padding:.1rem .45rem;border-radius:8px;background:rgba(16,185,129,.12);color:#34d399;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;border:1px solid rgba(16,185,129,.3)'><span class='material-icons-round' style='font-size:.75rem'>storefront</span> " +
-                _esc(window.DemandaFilial ? DemandaFilial.nome(Number(d.filialId || 1)) : (d.filialNome || ("Filial " + (d.filialId || 1)))) + "</span>" +
+            _esc(window.DemandaFilial ? DemandaFilial.nome(Number(d.filialId || 1)) : (d.filialNome || ("Filial " + (d.filialId || 1)))) + "</span>" +
             (d.concorrenteNome ? "<span style='font-size:.68rem;padding:.1rem .45rem;border-radius:8px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;border:1px solid rgba(245,158,11,.3)'><span class='material-icons-round' style='font-size:.75rem'>store</span> " + _esc(d.concorrenteNome) + "</span>" : "") +
             "</div>" +
             "<div style='font-size:.78rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
@@ -2252,10 +2257,10 @@ const DemandaApp = (function() {
             "</div>" +
             // Contadores / Totais
             "<div id='card-totais-" + _esc(d.id) + "' style='display:flex;gap:.85rem;text-align:center;flex-shrink:0;align-items:center'>" +
-            _miniStat("Itens",        totalItens, "var(--text-primary)") +
+            _miniStat("Itens", totalItens, "var(--text-primary)") +
             _miniStat("Não Encontr.", totalNaoEncontrados, totalNaoEncontrados > 0 ? "#f59e0b" : "var(--text-secondary)") +
-            _miniStat("Sem Estoque",  totalSemEstoque, totalSemEstoque > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
-            _miniStat("Estoque",      totalComEstoque, "var(--accent-success)") +
+            _miniStat("Sem Estoque", totalSemEstoque, totalSemEstoque > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+            _miniStat("Estoque", totalComEstoque, "var(--accent-success)") +
             "</div>" +
             // Botão Chevron
             "<div style='display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);color:var(--text-secondary);flex-shrink:0' title='Abrir cotação'>" +
@@ -2292,15 +2297,15 @@ const DemandaApp = (function() {
 
         // 2. Consulta Firestore com timeout protetivo e fallback automático
         Promise.all([
-            DemandaDB.getDemanda(id).catch(function(e) {
+            DemandaDB.getDemanda(id).catch(function (e) {
                 console.warn("[abrirDemanda] getDemanda fallback para cache:", e);
                 return dLocal;
             }),
-            DemandaDB.getItens(id).catch(function(e) {
+            DemandaDB.getItens(id).catch(function (e) {
                 console.warn("[abrirDemanda] getItens fallback para cache:", e);
                 return itensLocal || [];
             })
-        ]).then(function(res) {
+        ]).then(function (res) {
             var d = res[0] || dLocal;
             var itens = res[1] || itensLocal || [];
 
@@ -2322,24 +2327,24 @@ const DemandaApp = (function() {
             _renderDemandaDetalheBody();
 
             // 3. Sincronização em background assíncrona (não atrasa abertura da modal)
-            setTimeout(async function() {
+            setTimeout(async function () {
                 try {
                     // Se d.totalItens está zerado mas temos itens carregados
                     if ((!d.totalItens || d.totalItens === 0) && itens.length > 0) {
-                        DemandaDB.recalcTotals(id).then(function(t) {
+                        DemandaDB.recalcTotals(id).then(function (t) {
                             if (t) Object.assign(d, t);
-                        }).catch(function(){});
+                        }).catch(function () { });
                     }
 
                     // Sincronização inteligente com cotacoes_concorrente
                     var precisaConcorrente = !d.concorrenteNome;
-                    var precisaPrecoItens = itens.some(function(it) { return it.precoConcorrente == null || it.precoConcorrente <= 0; });
+                    var precisaPrecoItens = itens.some(function (it) { return it.precoConcorrente == null || it.precoConcorrente <= 0; });
 
                     if (precisaConcorrente || precisaPrecoItens) {
-                        var dbConc = _concDB();
+                        var dbConc = _concColRaw();
                         if (dbConc) {
-                            var snapConc = await dbConc.limit(100).get().catch(function() { return { docs: [] }; });
-                            var docsConc = (snapConc.docs || []).map(function(docSnap) {
+                            var snapConc = await _getConcSnapCached();
+                            var docsConc = (snapConc.docs || []).map(function (docSnap) {
                                 var dt = docSnap.data();
                                 dt.id = docSnap.id;
                                 return dt;
@@ -2348,7 +2353,7 @@ const DemandaApp = (function() {
                             var codDemanda = (d.codigo || "").toUpperCase().trim();
                             var cliDemanda = (d.clienteNome || "").toLowerCase().trim();
 
-                            var concDoc = docsConc.find(function(c) {
+                            var concDoc = docsConc.find(function (c) {
                                 if (c.status === "cancelada") return false;
                                 if (c.demandaOrigemId && (c.demandaOrigemId === id || (codDemanda && String(c.demandaOrigemId).toUpperCase() === codDemanda))) return true;
                                 if (c.obs && (c.obs.indexOf(id) >= 0 || (codDemanda && c.obs.toUpperCase().indexOf(codDemanda) >= 0))) return true;
@@ -2356,13 +2361,13 @@ const DemandaApp = (function() {
                             });
 
                             if (!concDoc && cliDemanda) {
-                                concDoc = docsConc.find(function(c) {
+                                concDoc = docsConc.find(function (c) {
                                     if (c.status === "cancelada") return false;
                                     var cCli = (c.clienteRef || "").toLowerCase().trim();
                                     if (cCli && (cCli === cliDemanda || cCli.indexOf(cliDemanda) >= 0 || cliDemanda.indexOf(cCli) >= 0)) {
-                                        var refsC = (c.itens || []).map(function(it) { return (it.ref || "").toUpperCase().trim(); }).filter(Boolean);
-                                        var refsD = itens.map(function(it) { return (it.refOriginal || "").toUpperCase().trim(); }).filter(Boolean);
-                                        var emComum = refsD.filter(function(r) { return refsC.indexOf(r) >= 0; }).length;
+                                        var refsC = (c.itens || []).map(function (it) { return (it.ref || "").toUpperCase().trim(); }).filter(Boolean);
+                                        var refsD = itens.map(function (it) { return (it.refOriginal || "").toUpperCase().trim(); }).filter(Boolean);
+                                        var emComum = refsD.filter(function (r) { return refsC.indexOf(r) >= 0; }).length;
                                         return (emComum > 0 && emComum >= Math.min(refsD.length, refsC.length) * 0.4);
                                     }
                                     return false;
@@ -2378,15 +2383,16 @@ const DemandaApp = (function() {
                                 }
 
                                 if (!concDoc.demandaOrigemId || concDoc.demandaOrigemId !== id) {
-                                    dbConc.doc(concDoc.id).set({ demandaOrigemId: id }, { merge: true }).catch(function(){});
+                                    _invalidarConcCache();
+                                    dbConc.doc(concDoc.id).set({ demandaOrigemId: id }, { merge: true }).catch(function () { });
                                 }
 
                                 var itensModificados = [];
-                                itens.forEach(function(it, idx) {
+                                itens.forEach(function (it, idx) {
                                     var pcAtual = parseFloat(it.precoConcorrente) || 0;
                                     if (pcAtual <= 0) {
                                         var refUpper = (it.refOriginal || "").toUpperCase().trim();
-                                        var matchConcIt = (concDoc.itens || []).find(function(ci) {
+                                        var matchConcIt = (concDoc.itens || []).find(function (ci) {
                                             return (ci.ref || "").toUpperCase().trim() === refUpper;
                                         });
                                         if (!matchConcIt && concDoc.itens && concDoc.itens[idx] && concDoc.itens.length === itens.length) {
@@ -2403,23 +2409,23 @@ const DemandaApp = (function() {
                                     DemandaDB.updateDemanda(id, {
                                         concorrenteNome: d.concorrenteNome,
                                         isConcorrente: true
-                                    }).catch(function(e) { console.warn("[DemandaApp] Falha ao persistir concorrente sincronizado:", e); });
+                                    }).catch(function (e) { console.warn("[DemandaApp] Falha ao persistir concorrente sincronizado:", e); });
                                 }
 
                                 if (itensModificados.length > 0 && typeof DemandaDB !== "undefined" && typeof DemandaDB.updateItem === "function") {
-                                    itensModificados.forEach(function(itMod) {
+                                    itensModificados.forEach(function (itMod) {
                                         DemandaDB.updateItem(id, itMod.id, { precoConcorrente: itMod.precoConcorrente })
-                                            .catch(function(e) { console.warn("[DemandaApp] Falha ao persistir precoConcorrente:", e); });
+                                            .catch(function (e) { console.warn("[DemandaApp] Falha ao persistir precoConcorrente:", e); });
                                     });
                                 }
                             }
                         }
                     }
-                } catch(eAsync) {
+                } catch (eAsync) {
                     console.warn("[abrirDemanda] Sincronização em background falhou:", eAsync);
                 }
             }, 60);
-        }).catch(function(err) {
+        }).catch(function (err) {
             console.error("[abrirDemanda] Erro:", err);
             if (!dLocal && body) {
                 body.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
@@ -2446,13 +2452,13 @@ const DemandaApp = (function() {
         var body = document.getElementById("modalDemandaDetalheBody");
         if (!body) return;
 
-        var d     = _demandaAtual.data;
+        var d = _demandaAtual.data;
         var itens = _demandaAtual.itens || [];
-        var SC = { aberta:"#6366f1", em_atendimento:"#f59e0b", encerrada:"#10b981", cancelada:"#6b7280" };
-        var SL = { aberta:"Aberta", em_atendimento:"Em Atendimento", encerrada:"Encerrada", cancelada:"Cancelada" };
+        var SC = { aberta: "#6366f1", em_atendimento: "#f59e0b", encerrada: "#10b981", cancelada: "#6b7280" };
+        var SL = { aberta: "Aberta", em_atendimento: "Em Atendimento", encerrada: "Encerrada", cancelada: "Cancelada" };
         var cor = SC[d.status] || "#6366f1";
         var lbl = SL[d.status] || d.status;
-        var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
+        var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
 
         // Contadores por Status
         var contadores = {
@@ -2468,7 +2474,7 @@ const DemandaApp = (function() {
             perdida: 0
         };
 
-        itens.forEach(function(i) {
+        itens.forEach(function (i) {
             var st = i.status || "nao_cadastrado";
             if (st === "nao_cadastrado") {
                 contadores.nao_cadastrado++;
@@ -2501,7 +2507,7 @@ const DemandaApp = (function() {
             contadores.nao_encontrado = d.totalNaoEncontrados || 0;
         }
 
-        var terminal = itens.filter(function(i) {
+        var terminal = itens.filter(function (i) {
             var s = i.status;
             return s === "faturado" || s === "venda_perdida" || s === "cancelado";
         }).length;
@@ -2541,7 +2547,7 @@ const DemandaApp = (function() {
         }
 
         var chipsHtml = "<div class='no-scrollbar' style='display:flex;gap:.3rem;overflow-x:auto;padding:.1rem 0;scrollbar-width:none;-ms-overflow-style:none;align-items:center'>" +
-            chipsList.map(function(c) {
+            chipsList.map(function (c) {
                 var isActive = (_filtroItensDetalhe === c.key);
                 var activeStyle = isActive
                     ? "background:" + (c.color.startsWith("#") ? c.color + "22" : "rgba(255,255,255,.12)") + ";border-color:" + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";box-shadow:0 0 0 1px " + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";color:var(--text-primary);"
@@ -2631,7 +2637,7 @@ const DemandaApp = (function() {
         }
 
         // Identifica se a cotação possui concorrente vinculado ou itens com preço de concorrente
-        var temPrecoConc = !!d.concorrenteNome || itens.some(function(it) {
+        var temPrecoConc = !!d.concorrenteNome || itens.some(function (it) {
             return (it.precoConcorrente != null && it.precoConcorrente > 0) || (it.obsCliente && /(?:preço|preco|concorrente|r\$|\$)/i.test(it.obsCliente));
         });
 
@@ -2653,7 +2659,7 @@ const DemandaApp = (function() {
                     "</td></tr>";
             }
         } else {
-            itensHtml = itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
+            itensHtml = itensFiltrados.map(function (item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
         }
 
         // Badge de Concorrente e Ação de Vincular
@@ -2667,9 +2673,9 @@ const DemandaApp = (function() {
                 "<span class='material-icons-round' style='font-size:.85rem'>add_business</span> Vincular Concorrente</button>";
         }
 
-        var colunasTabela = ["#","Referência","Descrição","Qtd"];
+        var colunasTabela = ["#", "Referência", "Descrição", "Qtd"];
         if (temPrecoConc) colunasTabela.push("Preço Conc.");
-        colunasTabela.push("Status","Ações Cabíveis");
+        colunasTabela.push("Status", "Ações Cabíveis");
 
         var fId = (d.filialId !== undefined && d.filialId !== null && d.filialId !== "") ? Number(d.filialId) : null;
         var filiaisLista = (window.DemandaFilial && typeof DemandaFilial.listar === "function") ? DemandaFilial.listar() : [
@@ -2697,7 +2703,7 @@ const DemandaApp = (function() {
                 "<span>Informar Filial:</span>" +
                 "<select onchange=\"DemandaApp.alterarFilialDemanda('" + _esc(d.id) + "', this.value)\" style='background:#1e293b;color:#fbbf24;border:1px solid rgba(245,158,11,.5);border-radius:5px;padding:.1rem .35rem;font-size:.72rem;font-weight:700;cursor:pointer;outline:none'>" +
                 "<option value='' selected disabled>⚠️ Selecione a Filial...</option>" +
-                filiaisLista.map(function(fl) {
+                filiaisLista.map(function (fl) {
                     return "<option value='" + fl.empId + "' style='background:#0f172a;color:#fff'>" + _esc(fl.nome) + "</option>";
                 }).join("") +
                 "</select></div>";
@@ -2707,7 +2713,7 @@ const DemandaApp = (function() {
                 "<span class='material-icons-round' style='font-size:.85rem;color:#60a5fa'>store</span>" +
                 "<span>Filial:</span>" +
                 "<select onchange=\"DemandaApp.alterarFilialDemanda('" + _esc(d.id) + "', this.value)\" style='background:transparent;color:#93c5fd;border:none;border-bottom:1px dashed rgba(147,197,253,.6);padding:.1rem .2rem;font-size:.72rem;font-weight:700;cursor:pointer;outline:none'>" +
-                filiaisLista.map(function(fl) {
+                filiaisLista.map(function (fl) {
                     var isSel = (Number(fl.empId) === fId) ? " selected" : "";
                     return "<option value='" + fl.empId + "'" + isSel + " style='background:#0f172a;color:#fff'>" + _esc(fl.nome) + "</option>";
                 }).join("") +
@@ -2765,7 +2771,7 @@ const DemandaApp = (function() {
             "<div style='max-height:calc(92vh - 225px);min-height:280px;overflow-y:auto;overflow-x:auto;border:1px solid var(--border-color);border-radius:8px' class='no-scrollbar-thumb'>" +
             "<table style='width:100%;border-collapse:collapse;font-size:.78rem'>" +
             "<thead style='position:sticky;top:0;background:#131823;z-index:3;box-shadow:0 1px 0 var(--border-color)'><tr style='border-bottom:1px solid var(--border-color)'>" +
-            colunasTabela.map(function(h) {
+            colunasTabela.map(function (h) {
                 var align = (h === "#" || h === "Qtd") ? "center" : (h === "Preço Conc." || h === "Ações Cabíveis" ? "right" : "left");
                 return "<th style='padding:.35rem .55rem;text-align:" + align + ";color:var(--text-secondary);font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap'>" + h + "</th>";
             }).join("") +
@@ -2773,7 +2779,7 @@ const DemandaApp = (function() {
     }
 
     function _getItensFiltrados(itens) {
-        return (itens || []).filter(function(item) {
+        return (itens || []).filter(function (item) {
             var st = item.status || "nao_cadastrado";
             var matchStatus = true;
             if (_filtroItensDetalhe === "nao_cadastrado") {
@@ -2812,16 +2818,16 @@ const DemandaApp = (function() {
         var tbody = document.getElementById("detalheItemsTbody");
         if (!tbody || !_demandaAtual || !_demandaAtual.itens) return;
         var d = _demandaAtual.data || {};
-        var temPrecoConc = !!d.concorrenteNome || _demandaAtual.itens.some(function(it) {
+        var temPrecoConc = !!d.concorrenteNome || _demandaAtual.itens.some(function (it) {
             return (it.precoConcorrente != null && it.precoConcorrente > 0) || (it.obsCliente && /(?:preço|preco|concorrente|r\$|\$)/i.test(it.obsCliente));
         });
         var itensFiltrados = _getItensFiltrados(_demandaAtual.itens);
         if (itensFiltrados.length === 0) {
             tbody.innerHTML = "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
-              "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
-              "Nenhum item encontrado para o status ou busca selecionada.</td></tr>";
+                "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
+                "Nenhum item encontrado para o status ou busca selecionada.</td></tr>";
         } else {
-            tbody.innerHTML = itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
+            tbody.innerHTML = itensFiltrados.map(function (item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
         }
     }
 
@@ -2886,7 +2892,7 @@ const DemandaApp = (function() {
                 "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:4px;padding:.1rem .25rem;" +
                 "color:var(--text-secondary);font-size:.68rem;cursor:pointer;height:22px;line-height:20px;max-width:85px'>" +
                 "<option value=''>Mais...</option>" +
-                nexts.map(function(n) { return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>"; }).join("") +
+                nexts.map(function (n) { return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>"; }).join("") +
                 "</select>";
         }
 
@@ -2915,25 +2921,25 @@ const DemandaApp = (function() {
 
         var refColHtml = item.erpCodigoFab
             ? "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
-              (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
+            (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
             : _esc(item.refOriginal || item.erpProdutoId || "—");
 
         var descColHtml = item.erpProdutoDesc
             ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(item.erpProdutoDesc) + "</span>" +
-              (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
+            (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
             : _esc(item.descOriginal || "—");
 
         var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s' onmouseover=\"this.style.background='rgba(255,255,255,.025)'\" onmouseout=\"this.style.background='transparent'\">" +
             "<td style='color:var(--text-secondary);font-size:.72rem;padding:.28rem .45rem;text-align:center;white-space:nowrap'>" + (i + 1) + " " + tlBtn + "</td>" +
             "<td style='font-weight:700;font-family:monospace;font-size:.79rem;color:var(--text-primary);padding:.28rem .5rem;white-space:nowrap'>" + refColHtml + "</td>" +
             "<td style='font-size:.78rem;color:var(--text-secondary);padding:.28rem .5rem;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.erpProdutoDesc || item.descOriginal || "") + "'>" +
-                descColHtml + "</td>" +
+            descColHtml + "</td>" +
             "<td style='text-align:center;padding:.28rem .45rem;font-weight:700;font-size:.79rem'>" + (item.qtdeSolicitada || 1) + "</td>" +
             precoConcTd +
             "<td style='padding:.28rem .5rem;white-space:nowrap'><span style='font-size:.68rem;padding:.12rem .45rem;border-radius:8px;background:" +
-                sc.color + "22;color:" + sc.color + ";font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:.25rem'>" +
-                (sc.icon ? "<span class='material-icons-round' style='font-size:.8rem'>" + sc.icon + "</span>" : "") +
-                _esc(sc.label) + "</span></td>" +
+            sc.color + "22;color:" + sc.color + ";font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:.25rem'>" +
+            (sc.icon ? "<span class='material-icons-round' style='font-size:.8rem'>" + sc.icon + "</span>" : "") +
+            _esc(sc.label) + "</span></td>" +
             "<td style='padding:.28rem .5rem;text-align:right;white-space:nowrap'>" + acaoHtml + "</td>" +
             "</tr>";
 
@@ -2944,7 +2950,7 @@ const DemandaApp = (function() {
     async function vincularConcorrenteDemanda(demandaId) {
         var did = demandaId || (_demandaAtual ? _demandaAtual.id : null);
         if (!did) return;
-        var concs = (_concorrentesCadastrados || []).map(function(c) { return c.nome; });
+        var concs = (_concorrentesCadastrados || []).map(function (c) { return c.nome; });
         var padrao = (_demandaAtual && _demandaAtual.data && _demandaAtual.data.concorrenteNome) ? _demandaAtual.data.concorrenteNome : (concs[0] || "J.A. Agrícola");
         var msg = "Informe o nome do Concorrente para vincular a esta cotação:\n" + (concs.length > 0 ? "(Sugestões: " + concs.join(", ") + ")" : "");
         var nome = prompt(msg, padrao);
@@ -2974,7 +2980,7 @@ const DemandaApp = (function() {
                 _renderDemandaDetalheBody();
             }
             _toast("Cotação vinculada ao concorrente '" + nome + "' com sucesso!", "success");
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao vincular concorrente:", err);
             _toast("Erro ao vincular concorrente: " + (err.message || err), "error");
         }
@@ -3002,13 +3008,13 @@ const DemandaApp = (function() {
                 if (m) {
                     var newSt = (Number(m.estoqueFilial || 0) > 0) ? 'estoque_disponivel' : 'sem_estoque';
                     var upFields = {
-                        erpProdutoId:   m.erpProdutoId,
-                        erpCodigoFab:   m.erpCodigoFab,
+                        erpProdutoId: m.erpProdutoId,
+                        erpCodigoFab: m.erpCodigoFab,
                         erpProdutoDesc: m.erpProdutoDesc,
-                        fabricante:     m.fabricante,
-                        estoqueFilial:  m.estoqueFilial,
-                        precoUnitario:  m.precoUnitario,
-                        status:         newSt,
+                        fabricante: m.fabricante,
+                        estoqueFilial: m.estoqueFilial,
+                        precoUnitario: m.precoUnitario,
+                        status: newSt,
                         confidenciaIdentificacao: 'alta',
                         identificadoPor: 'automatch'
                     };
@@ -3025,7 +3031,7 @@ const DemandaApp = (function() {
         }
 
         try {
-            await Promise.all(modificados.map(function(m) {
+            await Promise.all(modificados.map(function (m) {
                 return DemandaDB.updateItem(did, m.id, m.fields);
             }));
             _toast("⚡ " + total + " peças identificadas e vinculadas automaticamente com sucesso!", "success");
@@ -3066,33 +3072,41 @@ const DemandaApp = (function() {
                 var t = _currentTenant() || "centralpecas";
                 var db = firebase.firestore().collection("tenants").doc(t).collection("demandas");
                 var snapItens = await db.doc(did).collection("items").get();
-                var batch = firebase.firestore().batch();
-                snapItens.docs.forEach(function(d) { batch.delete(d.ref); });
-                batch.delete(db.doc(did));
-                await batch.commit();
+                var refsToDel = snapItens.docs.map(function (d) { return d.ref; });
+                refsToDel.push(db.doc(did));
+                for (var bi = 0; bi < refsToDel.length; bi += 450) {
+                    var batch = firebase.firestore().batch();
+                    refsToDel.slice(bi, bi + 450).forEach(function (r) { batch.delete(r); });
+                    await batch.commit();
+                }
             }
 
             // Exclui também da coleção cotacoes_concorrente para não deixar registros na concorrência
             try {
                 var cdb = _concDB();
                 if (cdb) {
+                    var refsConcMap = {};
                     var cSnap1 = await cdb.where("demandaOrigemId", "==", did).get();
-                    var batchC = firebase.firestore().batch();
-                    cSnap1.docs.forEach(function(docC) { batchC.delete(docC.ref); });
+                    cSnap1.docs.forEach(function (docC) { refsConcMap[docC.id] = docC.ref; });
                     if (cod) {
                         var cSnap2 = await cdb.where("demandaOrigemId", "==", cod).get();
-                        cSnap2.docs.forEach(function(docC) { batchC.delete(docC.ref); });
+                        cSnap2.docs.forEach(function (docC) { refsConcMap[docC.id] = docC.ref; });
                     }
                     var cAll = await cdb.limit(100).get();
-                    cAll.docs.forEach(function(docC) {
+                    cAll.docs.forEach(function (docC) {
                         var cd = docC.data();
                         if (cd.obs && (cd.obs.indexOf(did) >= 0 || (cod && cd.obs.indexOf(cod) >= 0))) {
-                            batchC.delete(docC.ref);
+                            refsConcMap[docC.id] = docC.ref;
                         }
                     });
-                    await batchC.commit();
+                    var refsConc = Object.keys(refsConcMap).map(function (k) { return refsConcMap[k]; });
+                    for (var ci = 0; ci < refsConc.length; ci += 450) {
+                        var batchC = firebase.firestore().batch();
+                        refsConc.slice(ci, ci + 450).forEach(function (r) { batchC.delete(r); });
+                        await batchC.commit();
+                    }
                 }
-            } catch(eC) {
+            } catch (eC) {
                 console.warn("[DemandaApp] Aviso ao limpar cotacoes_concorrente vinculadas:", eC);
             }
 
@@ -3104,7 +3118,7 @@ const DemandaApp = (function() {
             if (typeof loadDashboard === "function") {
                 loadDashboard();
             }
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao excluir demanda:", err);
             _toast("Erro ao excluir cotação: " + (err.message || err), "error");
         }
@@ -3132,12 +3146,12 @@ const DemandaApp = (function() {
                 if (cdb2) {
                     var cSnapCanc = await cdb2.where("demandaOrigemId", "==", did).get();
                     var bCanc = firebase.firestore().batch();
-                    cSnapCanc.docs.forEach(function(docC) {
+                    cSnapCanc.docs.forEach(function (docC) {
                         bCanc.update(docC.ref, { status: "cancelada" });
                     });
                     await bCanc.commit();
                 }
-            } catch(_) {}
+            } catch (_) { }
 
             if (_demandaAtual && _demandaAtual.id === did) {
                 _demandaAtual.data.status = "cancelada";
@@ -3149,7 +3163,7 @@ const DemandaApp = (function() {
             if (typeof loadDemandasLista === "function") {
                 loadDemandasLista(_filterAtual);
             }
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao estornar demanda:", err);
             _toast("Erro ao estornar: " + (err.message || err), "error");
         }
@@ -3180,7 +3194,7 @@ const DemandaApp = (function() {
             if (typeof loadDemandasLista === "function") {
                 loadDemandasLista(_filterAtual);
             }
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao reabrir demanda:", err);
             _toast("Erro ao reabrir: " + (err.message || err), "error");
         }
@@ -3208,7 +3222,7 @@ const DemandaApp = (function() {
             _toast("Filial da cotação informada/atualizada: " + fNome, "success");
             if (typeof loadDemandasLista === "function") loadDemandasLista(_filterAtual);
             if (typeof loadOrcamento === "function") loadOrcamento();
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao alterar filial da demanda:", err);
             _toast("Erro ao alterar filial: " + (err.message || err), "error");
         }
@@ -3219,17 +3233,17 @@ const DemandaApp = (function() {
         if (!_demandaAtual || !_demandaAtual.itens) return;
         var itensAlvo = [];
         if (tipo === "nao_cadastrado") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "nao_cadastrado"; });
+            itensAlvo = _demandaAtual.itens.filter(function (i) { return i.status === "nao_cadastrado"; });
         } else if (tipo === "catalogado") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "catalogado"; });
+            itensAlvo = _demandaAtual.itens.filter(function (i) { return i.status === "catalogado"; });
         } else if (tipo === "nao_encontrado") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) {
+            itensAlvo = _demandaAtual.itens.filter(function (i) {
                 return i.status === "demanda_recebida" || i.status === "nao_encontrado" || i.status === "em_identificacao" || i.status === "identificado";
             });
         } else if (tipo === "sem_estoque") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "sem_estoque"; });
+            itensAlvo = _demandaAtual.itens.filter(function (i) { return i.status === "sem_estoque"; });
         } else if (tipo === "todos_faltantes") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) {
+            itensAlvo = _demandaAtual.itens.filter(function (i) {
                 return i.status === "nao_cadastrado" || i.status === "catalogado" || i.status === "demanda_recebida" || i.status === "nao_encontrado" || i.status === "sem_estoque";
             });
         }
@@ -3242,19 +3256,19 @@ const DemandaApp = (function() {
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
         var tl = { evento: "status_changed", de: "lote", para: "encaminhado_compras", por: por, obs: "Encaminhado em lote para Fila de Compras" };
-        var itemIds = itensAlvo.map(function(i) { return i.id; });
+        var itemIds = itensAlvo.map(function (i) { return i.id; });
 
-        itensAlvo.forEach(function(i) { i.status = "encaminhado_compras"; });
+        itensAlvo.forEach(function (i) { i.status = "encaminhado_compras"; });
         _renderDemandaDetalheBody();
         _toast("Encaminhando " + itemIds.length + " item(ns) para compras...", "info");
 
         if (typeof DemandaDB !== "undefined" && DemandaDB.updateItensBatch) {
             DemandaDB.updateItensBatch(_demandaAtual.id, itemIds, { status: "encaminhado_compras" }, tl)
-                .then(function() {
+                .then(function () {
                     _toast(itemIds.length + " item(ns) encaminhado(s) para a Fila de Compras com sucesso!", "success");
                     loadDemandasLista(_filterAtual);
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     console.error("Erro ao atualizar lote:", err);
                     _toast("Erro ao enviar lote: " + (err.message || err), "error");
                 });
@@ -3263,7 +3277,7 @@ const DemandaApp = (function() {
 
     function enviarItensParaOrcamentoLote() {
         if (!_demandaAtual || !_demandaAtual.itens) return;
-        var itensAlvo = _demandaAtual.itens.filter(function(i) {
+        var itensAlvo = _demandaAtual.itens.filter(function (i) {
             return i.status === "estoque_disponivel" || i.status === "estoque_parcial";
         });
         if (itensAlvo.length === 0) {
@@ -3275,19 +3289,19 @@ const DemandaApp = (function() {
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
         var tl = { evento: "status_changed", de: "estoque", para: "proposta_enviada", por: por, obs: "Itens avançados em lote para proposta" };
-        var itemIds = itensAlvo.map(function(i) { return i.id; });
+        var itemIds = itensAlvo.map(function (i) { return i.id; });
 
-        itensAlvo.forEach(function(i) { i.status = "proposta_enviada"; });
+        itensAlvo.forEach(function (i) { i.status = "proposta_enviada"; });
         _renderDemandaDetalheBody();
         _toast("Avançando " + itemIds.length + " item(ns) para proposta...", "info");
 
         if (typeof DemandaDB !== "undefined" && DemandaDB.updateItensBatch) {
             DemandaDB.updateItensBatch(_demandaAtual.id, itemIds, { status: "proposta_enviada" }, tl)
-                .then(function() {
+                .then(function () {
                     _toast(itemIds.length + " item(ns) avançados para Proposta com sucesso!", "success");
                     loadDemandasLista(_filterAtual);
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     _toast("Erro ao avançar lote: " + (err.message || err), "error");
                 });
         }
@@ -3295,7 +3309,7 @@ const DemandaApp = (function() {
 
     function consultarFiliaisLote() {
         if (!_demandaAtual || !_demandaAtual.itens) return;
-        var itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "sem_estoque"; });
+        var itensAlvo = _demandaAtual.itens.filter(function (i) { return i.status === "sem_estoque"; });
         if (itensAlvo.length === 0) {
             _toast("Nenhum item sem estoque para consultar filiais.", "warning");
             return;
@@ -3303,18 +3317,18 @@ const DemandaApp = (function() {
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
         var tl = { evento: "status_changed", de: "sem_estoque", para: "consulta_outras_filiais", por: por, obs: "Consulta de filiais em lote" };
-        var itemIds = itensAlvo.map(function(i) { return i.id; });
+        var itemIds = itensAlvo.map(function (i) { return i.id; });
 
-        itensAlvo.forEach(function(i) { i.status = "consulta_outras_filiais"; });
+        itensAlvo.forEach(function (i) { i.status = "consulta_outras_filiais"; });
         _renderDemandaDetalheBody();
 
         if (typeof DemandaDB !== "undefined" && DemandaDB.updateItensBatch) {
             DemandaDB.updateItensBatch(_demandaAtual.id, itemIds, { status: "consulta_outras_filiais" }, tl)
-                .then(function() {
+                .then(function () {
                     _toast(itemIds.length + " item(ns) enviados para Consulta de Outras Filiais!", "success");
                     loadDemandasLista(_filterAtual);
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     _toast("Erro: " + (err.message || err), "error");
                 });
         }
@@ -3393,7 +3407,7 @@ const DemandaApp = (function() {
                 // 2. Fallback: Lista em memória de produtos ERP
                 if (!produtoEncontrado && _produtosErpList && _produtosErpList.length > 0) {
                     var refUpper = refBusca.toUpperCase();
-                    produtoEncontrado = _produtosErpList.find(function(p) {
+                    produtoEncontrado = _produtosErpList.find(function (p) {
                         if (codErp && String(p.codigoErp) === codErp) return true;
                         if (refUpper && (p.codigoFab || "").toUpperCase() === refUpper) return true;
                         if (refUpper && (p.codigoOriginal || "").toUpperCase() === refUpper) return true;
@@ -3405,11 +3419,11 @@ const DemandaApp = (function() {
                 var pecaMestre = null;
                 if (!produtoEncontrado && _baseTecnicaPecas && _baseTecnicaPecas.length > 0) {
                     var refNorm = refBusca.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                    pecaMestre = _baseTecnicaPecas.find(function(pm) {
+                    pecaMestre = _baseTecnicaPecas.find(function (pm) {
                         var oemNorm = (pm.refOem || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
                         if (oemNorm && oemNorm === refNorm) return true;
                         if (pm.equivalentes) {
-                            return pm.equivalentes.some(function(eq) {
+                            return pm.equivalentes.some(function (eq) {
                                 var eqNorm = (eq.ref || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
                                 return eqNorm && eqNorm === refNorm;
                             });
@@ -3470,17 +3484,18 @@ const DemandaApp = (function() {
 
                 if (novoStatus !== item.status || fieldsToUpdate.estoqueFilial !== undefined) {
                     atualizados++;
+                    var statusAnterior = item.status;
                     Object.assign(item, fieldsToUpdate);
                     if (typeof DemandaDB !== "undefined" && DemandaDB.updateItem) {
                         var tl = {
                             evento: "estoque_reavaliado",
-                            de: item.status,
+                            de: statusAnterior,
                             para: novoStatus,
                             por: (_sessao && _sessao.nome) || "sistema",
                             obs: "Reavaliação automática de estoque",
                             em: new Date().toISOString()
                         };
-                        await DemandaDB.updateItem(id, item.id, fieldsToUpdate, tl).catch(function(err) {
+                        await DemandaDB.updateItem(id, item.id, fieldsToUpdate, tl).catch(function (err) {
                             console.warn("[DemandaApp] Falha ao atualizar item no Firestore:", item.id, err);
                         });
                     }
@@ -3488,11 +3503,11 @@ const DemandaApp = (function() {
             }
 
             if (typeof DemandaDB !== "undefined" && DemandaDB.recalcTotals) {
-                await DemandaDB.recalcTotals(id).catch(function() {});
+                await DemandaDB.recalcTotals(id).catch(function () { });
             }
 
             if (typeof DemandaDB !== "undefined" && DemandaDB.getDemanda && DemandaDB.getItens) {
-                var res = await Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ]);
+                var res = await Promise.all([DemandaDB.getDemanda(id), DemandaDB.getItens(id)]);
                 _demandaAtual = { id: id, data: res[0], itens: res[1] };
             }
 
@@ -3554,7 +3569,7 @@ const DemandaApp = (function() {
         var timelineEntry = { evento: "status_changed", de: deStatus, para: paraStatus, por: por, obs: obs };
 
         DemandaDB.updateItem(_demandaAtual.id, itemId, { status: paraStatus }, timelineEntry)
-            .then(function() {
+            .then(function () {
                 // Atualiza memória local
                 for (var i = 0; i < _demandaAtual.itens.length; i++) {
                     if (_demandaAtual.itens[i].id === itemId) {
@@ -3562,13 +3577,17 @@ const DemandaApp = (function() {
                         break;
                     }
                 }
-                var sc  = (typeof DemandaStates !== "undefined") ? DemandaStates.get(paraStatus) : { label: paraStatus };
+                var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(paraStatus) : { label: paraStatus };
                 _toast("Status avançado para: " + sc.label, "success");
-                _renderDemandaDetalheBody();
+                if (_demandaAtual && _demandaAtual._fromOrcamento) {
+                    loadOrcamento();
+                } else {
+                    _renderDemandaDetalheBody();
+                }
                 // Atualiza a lista de demandas em background
                 loadDemandasLista(_filterAtual);
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 _toast("Erro ao avançar: " + (err.message || err), "error");
             });
     }
@@ -3576,7 +3595,7 @@ const DemandaApp = (function() {
     function _confirmarVendaPerdida(itemId, deStatus) {
         if (typeof DemandaStates === "undefined") { _persistirTransicao(itemId, deStatus, "venda_perdida", ""); return; }
         var motivos = DemandaStates.MOTIVOS_PERDA;
-        var opts = motivos.map(function(m) { return "<option value='" + m.key + "'>" + m.label + "</option>"; }).join("");
+        var opts = motivos.map(function (m) { return "<option value='" + m.key + "'>" + m.label + "</option>"; }).join("");
 
         // Pequeno modal inline via confirm-like approach usando div overlay temporário
         var overlay = document.createElement("div");
@@ -3599,9 +3618,9 @@ const DemandaApp = (function() {
             "</div></div>";
         document.body.appendChild(overlay);
 
-        document.getElementById("_btnConfirmarPerda").onclick = function() {
+        document.getElementById("_btnConfirmarPerda").onclick = function () {
             var motivo = document.getElementById("_motivoPerdaSelect").value;
-            var obs    = (document.getElementById("_motivoPerdaObs").value || "").trim();
+            var obs = (document.getElementById("_motivoPerdaObs").value || "").trim();
             var obsStr = "Motivo: " + motivo + (obs ? " — " + obs : "");
             overlay.remove();
             _registrarPerdaDMD(itemId, motivo, obs);
@@ -3627,22 +3646,22 @@ const DemandaApp = (function() {
 
         _popularSelFilialRelatorio("selFilialDashboard");
         DemandaDB.getDashboardStats(_filialRelatorio || null)
-            .then(function(s) {
+            .then(function (s) {
                 var SL = { aberta: "Abertas", em_atendimento: "Em Atendimento", encerrada: "Encerradas", cancelada: "Canceladas" };
                 var SC = { aberta: "#6366f1", em_atendimento: "#f59e0b", encerrada: "#10b981", cancelada: "#6b7280" };
 
                 // KPI cards
                 var kpis = [
-                    { icon: "receipt_long",  label: "Total Cotações",    val: s.totalDemandas,      color: "#6366f1" },
-                    { icon: "inventory",     label: "Itens Recebidos",   val: s.totalItens,         color: "#3b82f6" },
-                    { icon: "manage_search", label: "Identificados",     val: s.totalIdentificados, color: "#f59e0b" },
-                    { icon: "check_circle",  label: "Com Estoque",       val: s.totalComEstoque,    color: "#10b981" },
-                    { icon: "inventory_2",   label: "Sem Estoque",       val: s.totalSemEstoque,    color: "#ef4444" },
-                    { icon: "cancel",        label: "Venda Perdida",     val: s.totalPerdidos,      color: "#6b7280" },
+                    { icon: "receipt_long", label: "Total Cotações", val: s.totalDemandas, color: "#6366f1" },
+                    { icon: "inventory", label: "Itens Recebidos", val: s.totalItens, color: "#3b82f6" },
+                    { icon: "manage_search", label: "Identificados", val: s.totalIdentificados, color: "#f59e0b" },
+                    { icon: "check_circle", label: "Com Estoque", val: s.totalComEstoque, color: "#10b981" },
+                    { icon: "inventory_2", label: "Sem Estoque", val: s.totalSemEstoque, color: "#ef4444" },
+                    { icon: "cancel", label: "Venda Perdida", val: s.totalPerdidos, color: "#6b7280" },
                 ];
 
                 var kpiHtml = "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:2rem'>" +
-                    kpis.map(function(k) {
+                    kpis.map(function (k) {
                         return "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.4rem'>" +
                             "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem'>" +
                             "<span class='material-icons-round' style='font-size:1.1rem;color:" + k.color + "'>" + k.icon + "</span>" +
@@ -3655,13 +3674,13 @@ const DemandaApp = (function() {
                 // Taxas como barras de progresso
                 var taxas = [
                     { label: "Taxa de Identificação", val: s.taxaIdentificacao, color: "#f59e0b", desc: s.totalIdentificados + " de " + s.totalItens + " itens identificados" },
-                    { label: "Taxa de Estoque",       val: s.taxaEstoque,       color: "#10b981", desc: s.totalComEstoque + " de " + s.totalIdentificados + " têm estoque disponível" },
-                    { label: "Taxa de Venda Perdida", val: s.taxaPerda,         color: "#ef4444", desc: s.totalPerdidos + " de " + s.totalItens + " itens perdidos" },
+                    { label: "Taxa de Estoque", val: s.taxaEstoque, color: "#10b981", desc: s.totalComEstoque + " de " + s.totalIdentificados + " têm estoque disponível" },
+                    { label: "Taxa de Venda Perdida", val: s.taxaPerda, color: "#ef4444", desc: s.totalPerdidos + " de " + s.totalItens + " itens perdidos" },
                 ];
 
                 var taxasHtml = "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:2rem'>" +
                     "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Indicadores de Performance</h4>" +
-                    taxas.map(function(t) {
+                    taxas.map(function (t) {
                         return "<div style='margin-bottom:1.1rem'>" +
                             "<div style='display:flex;justify-content:space-between;margin-bottom:.3rem'>" +
                             "<span style='font-size:.82rem;color:var(--text-secondary)'>" + t.label + "</span>" +
@@ -3679,7 +3698,7 @@ const DemandaApp = (function() {
                     "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
                     "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Cotações por Status</h4>" +
                     "<div style='display:flex;flex-direction:column;gap:.5rem'>" +
-                    statusKeys.map(function(sk) {
+                    statusKeys.map(function (sk) {
                         var cnt = s.porStatus[sk] || 0;
                         var pct = s.totalDemandas > 0 ? Math.round((cnt / s.totalDemandas) * 100) : 0;
                         var cor = SC[sk] || "#6b7280";
@@ -3694,39 +3713,39 @@ const DemandaApp = (function() {
                     }).join("") + "</div></div>";
 
                 // Carrega radar de itens pendentes de compras e demandas reprimidas
-                DemandaDB.listItensFila(80).then(function(itensFila) {
+                DemandaDB.listItensFila(80).then(function (itensFila) {
                     var semCadastro = [];
                     var semEstoqueRecorrente = [];
                     var marcasCount = {};
 
-                    (itensFila || []).forEach(function(it) {
-                        var st = it.status || "novo";
+                    (itensFila || []).forEach(function (it) {
+                        var st = it.status || "peca_nao_cadastrada";
                         var ref = (it.refOriginal || it.erpCodigoFab || "?").toUpperCase();
                         var desc = (it.descOriginal || it.erpProdutoDesc || "Item sem descrição").toUpperCase();
-                        var qtde = Number(it.qtde || 1);
+                        var qtde = Number(it.qtdeSolicitada || it.qtde || 1);
 
                         // Mapeia marcas para distribuição
                         var fullText = ref + " " + desc + " " + (it.fabricante || "");
-                        ["JOHN DEERE", "CASE", "NEW HOLLAND", "VALTRA", "MASSEY", "KUHN", "STARA", "JACTO", "TATU", "BALDAN", "JAN", "VENCE TUDO", "JUMIL", "SEMEATO", "PICCIN", "ZF"].forEach(function(m) {
+                        ["JOHN DEERE", "CASE", "NEW HOLLAND", "VALTRA", "MASSEY", "KUHN", "STARA", "JACTO", "TATU", "BALDAN", "JAN", "VENCE TUDO", "JUMIL", "SEMEATO", "PICCIN", "ZF"].forEach(function (m) {
                             if (fullText.indexOf(m) !== -1) {
                                 marcasCount[m] = (marcasCount[m] || 0) + qtde;
                             }
                         });
 
-                        if (st === "novo" || st === "catalogado") {
-                            var achou = semCadastro.find(function(x){ return x.ref === ref; });
+                        if (st === "peca_nao_cadastrada" || st === "peca_nao_encontrada" || st === "demanda_recebida" || st === "demanda_registrada" || st === "novo" || st === "catalogado") {
+                            var achou = semCadastro.find(function (x) { return x.ref === ref; });
                             if (achou) { achou.qtde += qtde; achou.pedidos++; }
                             else { semCadastro.push({ ref: ref, desc: desc, qtde: qtde, pedidos: 1, status: st }); }
                         } else if (st === "sem_estoque") {
-                            var achouEst = semEstoqueRecorrente.find(function(x){ return x.ref === ref; });
-                            var precoEst = Number(it.precoUnitario || 0);
+                            var achouEst = semEstoqueRecorrente.find(function (x) { return x.ref === ref; });
+                            var precoEst = Number(it.precoUnitario || it.preco || 0);
                             if (achouEst) { achouEst.qtde += qtde; achouEst.pedidos++; }
                             else { semEstoqueRecorrente.push({ ref: ref, desc: desc, qtde: qtde, pedidos: 1, preco: precoEst }); }
                         }
                     });
 
-                    semCadastro.sort(function(a,b){ return b.qtde - a.qtde; });
-                    semEstoqueRecorrente.sort(function(a,b){ return b.qtde - a.qtde; });
+                    semCadastro.sort(function (a, b) { return b.qtde - a.qtde; });
+                    semEstoqueRecorrente.sort(function (a, b) { return b.qtde - a.qtde; });
 
                     var radarHtml = "<div style='display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:2rem'>" +
                         "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
@@ -3737,7 +3756,7 @@ const DemandaApp = (function() {
                         "</div>" +
                         (semCadastro.length === 0 ? "<p style='font-size:.8rem;color:var(--text-secondary);padding:1rem 0'>Nenhuma peça pendente de cadastro.</p>" :
                             "<div style='display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto'>" +
-                            semCadastro.slice(0, 10).map(function(sc) {
+                            semCadastro.slice(0, 10).map(function (sc) {
                                 return "<div style='display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid #ef4444'>" +
                                     "<div style='overflow:hidden;padding-right:.5rem'>" +
                                     "<strong style='font-size:.8rem;color:var(--text-primary)'>" + _esc(sc.ref) + "</strong>" +
@@ -3759,7 +3778,7 @@ const DemandaApp = (function() {
                         "</div>" +
                         (semEstoqueRecorrente.length === 0 ? "<p style='font-size:.8rem;color:var(--text-secondary);padding:1rem 0'>Sem itens em ruptura no momento.</p>" :
                             "<div style='display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto'>" +
-                            semEstoqueRecorrente.slice(0, 10).map(function(se) {
+                            semEstoqueRecorrente.slice(0, 10).map(function (se) {
                                 return "<div style='display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid #f59e0b'>" +
                                     "<div style='overflow:hidden;padding-right:.5rem'>" +
                                     "<strong style='font-size:.8rem;color:var(--text-primary)'>" + _esc(se.ref) + "</strong>" +
@@ -3767,7 +3786,7 @@ const DemandaApp = (function() {
                                     "</div>" +
                                     "<div style='text-align:right;flex-shrink:0'>" +
                                     "<span style='font-size:.78rem;font-weight:700;color:#f59e0b'>" + se.qtde + " UN</span>" +
-                                    (se.preco ? "<div style='font-size:.65rem;color:var(--text-secondary)'>R$ " + (se.preco * se.qtde).toFixed(2).replace(".",",") + " est.</div>" : "") +
+                                    (se.preco ? "<div style='font-size:.65rem;color:var(--text-secondary)'>R$ " + (se.preco * se.qtde).toFixed(2).replace(".", ",") + " est.</div>" : "") +
                                     "</div>" +
                                     "</div>";
                             }).join("") + "</div>") +
@@ -3775,11 +3794,11 @@ const DemandaApp = (function() {
                         "</div>";
 
                     container.innerHTML = kpiHtml + taxasHtml + statusHtml + radarHtml;
-                }).catch(function() {
+                }).catch(function () {
                     container.innerHTML = kpiHtml + taxasHtml + statusHtml;
                 });
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro ao carregar: " + _esc(err.message || err) + "</p>";
             });
     }
@@ -3800,7 +3819,7 @@ const DemandaApp = (function() {
         }
 
         DemandaDB.listItensFila(80)
-            .then(function(itens) {
+            .then(function (itens) {
                 if (itens.length === 0) {
                     container.innerHTML =
                         "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
@@ -3810,12 +3829,12 @@ const DemandaApp = (function() {
                     return;
                 }
 
-                var SLBL = { sem_estoque:"Sem Estoque", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra Possível" };
-                var SCOR = { sem_estoque:"#ef4444", encaminhado_compras:"#8b5cf6", cotacao_fornecedor:"#f97316", compra_possivel:"#10b981" };
+                var SLBL = { sem_estoque: "Sem Estoque", encaminhado_compras: "Em Compras", cotacao_fornecedor: "Cotando", compra_possivel: "Compra Possível" };
+                var SCOR = { sem_estoque: "#ef4444", encaminhado_compras: "#8b5cf6", cotacao_fornecedor: "#f97316", compra_possivel: "#10b981" };
 
                 // Agrupa por status
                 var grupos = {};
-                itens.forEach(function(item) {
+                itens.forEach(function (item) {
                     if (!grupos[item.status]) grupos[item.status] = [];
                     grupos[item.status].push(item);
                 });
@@ -3827,7 +3846,7 @@ const DemandaApp = (function() {
                     "<span class='material-icons-round'>refresh</span> Atualizar</button>" +
                     "</div>";
 
-                Object.keys(grupos).forEach(function(status) {
+                Object.keys(grupos).forEach(function (status) {
                     var grpItens = grupos[status];
                     var cor = SCOR[status] || "#6366f1";
                     var lbl = SLBL[status] || status;
@@ -3839,16 +3858,16 @@ const DemandaApp = (function() {
                         "<span style='font-size:.75rem;color:var(--text-secondary);margin-left:.25rem'>(" + grpItens.length + ")</span></div>" +
                         "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
                         "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                        ["Referência","Descrição","Qtd Solicitada","Demanda","Ação"].map(function(h) {
+                        ["Referência", "Descrição", "Qtd Solicitada", "Demanda", "Ação"].map(function (h) {
                             return "<th style='padding:.35rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                         }).join("") + "</tr></thead><tbody>" +
-                        grpItens.map(function(item) {
+                        grpItens.map(function (item) {
                             var nexts = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
                             var acaoHtml = nexts.length === 0 ? "—" :
                                 "<select onchange=\"DemandaApp.avancarItemFilaCompras('" + _esc(item.id) + "','" + _esc(item.demandaId) + "',this.value,this)\" " +
                                 "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:5px;padding:.2rem .4rem;color:var(--text-primary);font-size:.73rem;cursor:pointer'>" +
                                 "<option value=''>Avançar...</option>" +
-                                nexts.map(function(n) { return "<option value='" + n.key + "'>" + n.label + "</option>"; }).join("") +
+                                nexts.map(function (n) { return "<option value='" + n.key + "'>" + n.label + "</option>"; }).join("") +
                                 "</select>";
                             return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
                                 "<td style='padding:.4rem .6rem;font-weight:600'>" + _esc(item.refOriginal || "—") + "</td>" +
@@ -3865,7 +3884,7 @@ const DemandaApp = (function() {
                 html += "</div>";
                 container.innerHTML = html;
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || err) + "</p>";
             });
     }
@@ -3878,12 +3897,12 @@ const DemandaApp = (function() {
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
         DemandaDB.updateItem(demandaId, itemId, { status: novoStatus }, { evento: "status_changed", por: por, obs: "" })
-            .then(function() {
+            .then(function () {
                 var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(novoStatus) : { label: novoStatus };
                 _toast("Status avançado: " + sc.label, "success");
-                setTimeout(function() { loadFilaCompras(); }, 300);
+                setTimeout(function () { loadFilaCompras(); }, 300);
             })
-            .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
+            .catch(function (err) { _toast("Erro: " + (err.message || err), "error"); });
     }
 
     // ════════════════════════════════════════════════════════
@@ -3898,7 +3917,7 @@ const DemandaApp = (function() {
             sessionStorage.setItem(_RASCUNHO_KEY + "_" + tid, JSON.stringify({
                 itens: _itens, cliente: _clienteAtual, ts: Date.now()
             }));
-        } catch(e) {}
+        } catch (e) { }
     }
 
     function _restoreRascunho() {
@@ -3919,14 +3938,14 @@ const DemandaApp = (function() {
                 renderItens();
                 _toast("Rascunho restaurado com " + _itens.length + " item(s).", "success");
             }
-        } catch(e) {}
+        } catch (e) { }
     }
 
     function _limparRascunho() {
         try {
             var tid = _sessao ? (_sessao.tenantId || "default") : "default";
             sessionStorage.removeItem(_RASCUNHO_KEY + "_" + tid);
-        } catch(e) {}
+        } catch (e) { }
     }
 
     // ════════════════════════════════════════════════════════
@@ -3937,9 +3956,9 @@ const DemandaApp = (function() {
         var tl = item.timeline || [];
         if (tl.length === 0) return "<p style='color:var(--text-secondary);font-size:.8rem;padding:.3rem 0'>Nenhum evento registrado.</p>";
         var html = "<div style='position:relative;padding-left:1.1rem;border-left:2px solid var(--border-color)'>";
-        tl.slice().reverse().forEach(function(e) {
+        tl.slice().reverse().forEach(function (e) {
             var sc = (typeof DemandaStates !== "undefined" && e.para) ? DemandaStates.get(e.para) : { label: e.para || "?", color: "#6366f1" };
-            var dt = e.em ? new Date(e.em).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : "";
+            var dt = e.em ? new Date(e.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
             html += "<div style='position:relative;margin-bottom:.65rem'>" +
                 "<div style='position:absolute;left:-1.32rem;top:.3rem;width:.55rem;height:.55rem;border-radius:50%;background:" + sc.color + "'></div>" +
                 "<div style='font-size:.72rem;color:var(--text-secondary)'>" + _esc(dt) + (e.por ? " \u00b7 " + _esc(e.por) : "") + "</div>" +
@@ -3951,7 +3970,7 @@ const DemandaApp = (function() {
     }
 
     function toggleItemTimeline(itemId) {
-        var el  = document.getElementById("timeline_" + itemId);
+        var el = document.getElementById("timeline_" + itemId);
         if (!el) return;
         var open = el.style.display !== "none";
         el.style.display = open ? "none" : "";
@@ -3996,7 +4015,7 @@ const DemandaApp = (function() {
         var termoInicial = (refOriginal || descOriginal || "").trim();
         if (inp) {
             inp.value = termoInicial;
-            setTimeout(function(){ inp.focus(); inp.select(); }, 100);
+            setTimeout(function () { inp.focus(); inp.select(); }, 100);
         }
         var res = document.getElementById("buscaERPResultados");
         if (res) {
@@ -4020,7 +4039,7 @@ const DemandaApp = (function() {
 
     function _executarBuscaERP() {
         var inp = document.getElementById("inpBuscaERP");
-        var q   = inp ? inp.value.trim() : "";
+        var q = inp ? inp.value.trim() : "";
         if (q.length < 2) { _toast("Digite ao menos 2 caracteres.", "warning"); return; }
         var res = document.getElementById("buscaERPResultados");
         if (res) res.innerHTML = "<div style='padding:1.5rem;text-align:center;color:var(--text-secondary)'>" +
@@ -4033,7 +4052,7 @@ const DemandaApp = (function() {
         }
 
         DemandaSearch.search(q, { limit: 30 })
-            .then(function(resultados) {
+            .then(function (resultados) {
                 if (!resultados || resultados.length === 0) {
                     if (res) res.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
                         "<span class='material-icons-round' style='font-size:2rem;opacity:.4'>search_off</span>" +
@@ -4050,7 +4069,7 @@ const DemandaApp = (function() {
                 // 4º: Similares sem estoque
                 // 5º: Demais opções
                 var qClean = q.toUpperCase().replace(/[\s\-\.\/]/g, "");
-                resultados.sort(function(a, b) {
+                resultados.sort(function (a, b) {
                     var aEstoque = Number(a.estoqueFilial || a.estoque || 0);
                     var bEstoque = Number(b.estoqueFilial || b.estoque || 0);
                     var aScore = (a.tipoMatch === "exato" ? 200 : (a.tipoMatch === "similar" ? 150 : 100)) + (aEstoque > 0 ? 50 : 0);
@@ -4066,7 +4085,7 @@ const DemandaApp = (function() {
                     "<div style='font-size:.72rem;color:var(--text-secondary)'>Selecione ou adicione como alternativa</div>" +
                     "</div>";
 
-                var html = resultados.map(function(p, idx) {
+                var html = resultados.map(function (p, idx) {
                     var estoque = p.estoqueFilial !== undefined ? p.estoqueFilial : (p.estoque !== undefined ? p.estoque : 0);
                     estoque = Number(estoque || 0);
                     var temEstoque = estoque > 0;
@@ -4090,7 +4109,7 @@ const DemandaApp = (function() {
                     if (crossList.length > 0) {
                         crossHtml = "<div style='margin-top:.35rem;font-size:.7rem;color:var(--text-secondary);display:flex;align-items:center;flex-wrap:wrap;gap:.25rem'>" +
                             "<span style='font-weight:600;color:var(--text-primary)'>Ref. Cruzadas:</span> " +
-                            crossList.slice(0, 8).map(function(c){
+                            crossList.slice(0, 8).map(function (c) {
                                 var isMatch = (c === qClean || c.indexOf(qClean) !== -1);
                                 return "<span style='padding:.05rem .3rem;border-radius:3px;background:" + (isMatch ? "rgba(59,130,246,.3)" : "rgba(255,255,255,.06)") + ";color:" + (isMatch ? "#93c5fd" : "var(--text-secondary)") + ";font-weight:" + (isMatch ? "700" : "400") + "'>" + _esc(c) + "</span>";
                             }).join("") +
@@ -4129,7 +4148,7 @@ const DemandaApp = (function() {
                         "</div>" +
                         "<div style='text-align:right;flex-shrink:0'>" +
                         "<div style='font-size:.72rem;padding:.15rem .45rem;border-radius:5px;background:" + badgeCor + "22;color:" + badgeCor + ";font-weight:700;display:inline-block'>" + estoqTxt + "</div>" +
-                        (p.preco || p.valorVenda ? "<div style='font-size:.85rem;font-weight:700;color:var(--text-primary);margin-top:.3rem'>R$ " + Number(p.preco || p.valorVenda).toFixed(2).replace(".",",") + "</div>" : "") +
+                        (p.preco || p.valorVenda ? "<div style='font-size:.85rem;font-weight:700;color:var(--text-primary);margin-top:.3rem'>R$ " + Number(p.preco || p.valorVenda).toFixed(2).replace(".", ",") + "</div>" : "") +
                         "</div>" +
                         "</div>" +
                         "<div style='display:flex;gap:.5rem;margin-top:.7rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.6rem'>" +
@@ -4146,13 +4165,13 @@ const DemandaApp = (function() {
 
                 if (res) res.innerHTML = headerHtml + html;
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem;padding:.5rem'>Erro ao pesquisar: " + _esc(err.message || String(err)) + "</p>";
             });
     }
 
     function _vincularProduto(produto) {
-        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch (e) { _toast("Erro ao processar produto.", "error"); return; } }
 
         // Caso 1.5: Vinculação direta a partir da Tabela de Cotação (Nova Cotação)
         if (_buscaErpCotacaoIdx !== null && _buscaErpCotacaoIdx !== undefined && _itens && _itens[_buscaErpCotacaoIdx]) {
@@ -4162,14 +4181,14 @@ const DemandaApp = (function() {
             var prcCot = Number(produto.preco || 0);
             var refP = produto.referencia || produto.erpId || "";
 
-            itemCot.erpProdutoId   = String(produto.erpId || "");
-            itemCot.erpCodigoFab   = refP;
+            itemCot.erpProdutoId = String(produto.erpId || "");
+            itemCot.erpCodigoFab = refP;
             itemCot.erpProdutoDesc = produto.desc || "";
-            itemCot.fabricante     = produto.fabricante || "";
-            itemCot.estoqueFilial  = estqCot;
-            itemCot.precoUnitario  = prcCot;
-            itemCot.preco          = prcCot;
-            itemCot.status         = estqCot > 0 ? "estoque_disponivel" : "sem_estoque";
+            itemCot.fabricante = produto.fabricante || "";
+            itemCot.estoqueFilial = estqCot;
+            itemCot.precoUnitario = prcCot;
+            itemCot.preco = prcCot;
+            itemCot.status = estqCot > 0 ? "estoque_disponivel" : "sem_estoque";
 
             if (itemCot.refOriginal && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
                 DemandaSearch.addConcorrenteMapping(itemCot.refOriginal, refP);
@@ -4191,21 +4210,21 @@ const DemandaApp = (function() {
             var refP = produto.referencia || produto.erpId || "";
 
             var m = {
-                erpProdutoId:   String(produto.erpId || ""),
-                codigoErp:      String(produto.erpId || ""),
-                referencia:     refP,
-                erpCodigoFab:   refP,
-                codigoFab:      refP,
-                descricao:      produto.desc || "",
+                erpProdutoId: String(produto.erpId || ""),
+                codigoErp: String(produto.erpId || ""),
+                referencia: refP,
+                erpCodigoFab: refP,
+                codigoFab: refP,
+                descricao: produto.desc || "",
                 erpProdutoDesc: produto.desc || "",
-                fabricante:     produto.fabricante || "",
-                estoqueFilial:  estqConf,
-                saldoEstoque:   estqConf,
-                preco:          prcConf,
-                precoUnitario:  prcConf,
-                status:         estqConf > 0 ? "estoque_disponivel" : "sem_estoque",
-                score:          100,
-                tipoMatch:      "manual_conferencia"
+                fabricante: produto.fabricante || "",
+                estoqueFilial: estqConf,
+                saldoEstoque: estqConf,
+                preco: prcConf,
+                precoUnitario: prcConf,
+                status: estqConf > 0 ? "estoque_disponivel" : "sem_estoque",
+                score: 100,
+                tipoMatch: "manual_conferencia"
             };
             itemConf._match = m;
             itemConf._manualUnlinked = false;
@@ -4239,27 +4258,27 @@ const DemandaApp = (function() {
         // Caso 2: Vinculação a item já gravado na demanda
         if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a cotação.", "error"); return; }
         var itemId = _buscaErpItemId;
-        var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
 
         var estoque = Number(produto.estoque || 0);
         var novoStatus = estoque > 0 ? "estoque_disponivel" : "sem_estoque";
 
         var fields = {
-            erpProdutoId:   String(produto.erpId || ""),
+            erpProdutoId: String(produto.erpId || ""),
             erpProdutoDesc: produto.desc || "",
-            erpCodigoFab:   produto.referencia || "",
-            fabricante:     produto.fabricante || "",
-            estoqueFilial:  estoque,
-            preco:          Number(produto.preco || 0),
-            precoUnitario:  Number(produto.preco || 0),
-            status:         novoStatus,
+            erpCodigoFab: produto.referencia || "",
+            fabricante: produto.fabricante || "",
+            estoqueFilial: estoque,
+            preco: Number(produto.preco || 0),
+            precoUnitario: Number(produto.preco || 0),
+            status: novoStatus,
             confidenciaIdentificacao: "alta",
             identificadoPor: por
         };
 
         // Se a demanda tem concorrente informado, registra o de-para automaticamente
         if (_demandaAtual && _demandaAtual.data && _demandaAtual.data.concorrenteNome) {
-            var itemBase = _demandaAtual.itens ? _demandaAtual.itens.find(function(it){ return it.id === itemId; }) : null;
+            var itemBase = _demandaAtual.itens ? _demandaAtual.itens.find(function (it) { return it.id === itemId; }) : null;
             if (itemBase && itemBase.refOriginal && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
                 DemandaSearch.addConcorrenteMapping(itemBase.refOriginal, produto.referencia || produto.erpId);
             }
@@ -4273,7 +4292,7 @@ const DemandaApp = (function() {
         };
 
         DemandaDB.updateItem(_demandaAtual.id, itemId, fields, tl)
-            .then(function() {
+            .then(function () {
                 for (var i = 0; i < _demandaAtual.itens.length; i++) {
                     if (_demandaAtual.itens[i].id === itemId) {
                         Object.assign(_demandaAtual.itens[i], fields);
@@ -4285,21 +4304,22 @@ const DemandaApp = (function() {
                 loadDemandasLista(_filterAtual);
                 _toast("Peça " + (produto.referencia || produto.erpId) + " vinculada com sucesso (" + (estoque > 0 ? "Em Estoque" : "Sem Estoque") + ")!", "success");
             })
-            .catch(function(err) { _toast("Erro ao vincular: " + (err.message || err), "error"); });
+            .catch(function (err) { _toast("Erro ao vincular: " + (err.message || err), "error"); });
     }
 
     function _adicionarProdutoAlternativo(produto) {
         if (!_demandaAtual) { _toast("Abra uma demanda primeiro.", "error"); return; }
-        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch (e) { _toast("Erro ao processar produto.", "error"); return; } }
 
         var itemBase = null;
         if (_buscaErpItemId && _demandaAtual.itens) {
-            itemBase = _demandaAtual.itens.find(function(it){ return it.id === _buscaErpItemId; });
+            itemBase = _demandaAtual.itens.find(function (it) { return it.id === _buscaErpItemId; });
         }
 
         var estoque = Number(produto.estoque || 0);
-        var novoStatus = estoque > 0 ? "em_estoque" : "sem_estoque";
+        var novoStatus = estoque > 0 ? "estoque_disponivel" : "sem_estoque";
         var novoId = "item_alt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        var precoAlt = Number(produto.precoUnitario || produto.preco || 0);
 
         var novoItem = {
             id: novoId,
@@ -4316,7 +4336,8 @@ const DemandaApp = (function() {
             erpCodigoFab: produto.referencia || "",
             fabricante: produto.fabricante || "",
             estoqueFilial: estoque,
-            preco: Number(produto.preco || 0),
+            preco: precoAlt,
+            precoUnitario: precoAlt,
             confidenciaIdentificacao: "confirmada"
         };
 
@@ -4332,13 +4353,13 @@ const DemandaApp = (function() {
         };
 
         DemandaDB.updateItens(_demandaAtual.id, _demandaAtual.itens, tl)
-            .then(function() {
+            .then(function () {
                 _fecharBuscaERP();
                 _renderDemandaDetalheBody();
                 loadDemandasLista(_filterAtual);
                 _toast("Peça alternativa " + (produto.referencia || "") + " incluída na cotação!", "success");
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 _toast("Erro ao incluir alternativa: " + (err.message || err), "error");
             });
     }
@@ -4369,18 +4390,18 @@ const DemandaApp = (function() {
             "<button id='_btnConfirmarQtde' style='background:var(--accent-success);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar</button>" +
             "</div></div>";
         document.body.appendChild(overlay);
-        document.getElementById("_btnConfirmarQtde").onclick = function() {
+        document.getElementById("_btnConfirmarQtde").onclick = function () {
             var qtdeAtendida = parseInt(document.getElementById("_qtdeAtendidaInp").value, 10) || qtdeSol;
             overlay.remove();
             _persistirTransicao(itemId, deStatus, paraStatus, "");
             if (qtdeAtendida < qtdeSol && typeof DemandaDB !== "undefined" && DemandaDB.splitItem) {
                 var faltante = qtdeSol - qtdeAtendida;
                 DemandaDB.splitItem(_demandaAtual.id, itemId, qtdeAtendida, faltante)
-                    .then(function() {
+                    .then(function () {
                         _toast(qtdeAtendida + " atendidos; " + faltante + " retornam como nova demanda.", "info");
                         abrirDemanda(_demandaAtual.id);
                     })
-                    .catch(function(e) { _toast("Erro no split: " + e.message, "error"); });
+                    .catch(function (e) { _toast("Erro no split: " + e.message, "error"); });
             }
         };
     }
@@ -4394,7 +4415,7 @@ const DemandaApp = (function() {
         var overlay = document.createElement("div");
         overlay.id = "overlayDevolutiva";
         overlay.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
-        var fi = function(lbl, id, type, ph) {
+        var fi = function (lbl, id, type, ph) {
             return "<div><label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem'>" + lbl + "</label>" +
                 "<input id='" + id + "' type='" + type + "' placeholder='" + ph + "' " +
                 "style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .65rem;color:var(--text-primary);box-sizing:border-box'></div>";
@@ -4421,26 +4442,28 @@ const DemandaApp = (function() {
     }
 
     function _confirmarDevolutiva(itemId, demandaId) {
-        var g = function(id) { return (document.getElementById(id) || {}).value || ""; };
+        var g = function (id) { return (document.getElementById(id) || {}).value || ""; };
         var fornecedor = g("_devFornecedor");
         if (!fornecedor) { _toast("Informe o fornecedor.", "warning"); return; }
         var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
         var fields = {
             compraFornecedor: fornecedor, compraMarca: g("_devMarca"),
             compraCusto: parseFloat(g("_devCusto")) || 0,
-            compraQtde:  parseInt(g("_devQtde"), 10) || 1,
+            compraQtde: parseInt(g("_devQtde"), 10) || 1,
             compraPrazo: parseInt(g("_devPrazo"), 10) || 0,
             status: "cotacao_fornecedor"
         };
-        var tl = { evento: "devolutiva_compras", para: "cotacao_fornecedor", por: por,
-            obs: "Forn.: " + fornecedor + (g("_devObs") ? " — " + g("_devObs") : "") };
+        var tl = {
+            evento: "devolutiva_compras", para: "cotacao_fornecedor", por: por,
+            obs: "Forn.: " + fornecedor + (g("_devObs") ? " — " + g("_devObs") : "")
+        };
         DemandaDB.updateItem(demandaId, itemId, fields, tl)
-            .then(function() {
+            .then(function () {
                 var el = document.getElementById("overlayDevolutiva"); if (el) el.remove();
                 _toast("Devolutiva registrada: " + fornecedor, "success");
                 loadFilaCompras();
             })
-            .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
+            .catch(function (err) { _toast("Erro: " + (err.message || err), "error"); });
     }
 
     // ========================================================
@@ -4459,7 +4482,7 @@ const DemandaApp = (function() {
         if (!sel || !window.DemandaFilial) return;
         var valorAtual = _filtroFilialOrcamento !== "" ? String(_filtroFilialOrcamento) : "";
         sel.innerHTML = "<option value=''" + (!valorAtual ? " selected" : "") + " style='background:#0f172a;color:#fff'>Todas as Filiais</option>" +
-            DemandaFilial.listar().map(function(f) {
+            DemandaFilial.listar().map(function (f) {
                 return "<option style='background:#0f172a;color:#fff' value='" + f.empId + "'" + (String(f.empId) === valorAtual ? " selected" : "") + ">" + _esc(f.nome) + "</option>";
             }).join("");
     }
@@ -4475,15 +4498,18 @@ const DemandaApp = (function() {
         if (typeof DemandaDB === "undefined") { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return; }
         var STATUS_ORC = ["proposta_enviada", "aguardando_cliente", "venda_aprovada"];
         DemandaDB.listDemandas({ status: "todas", limit: 200 })
-            .then(function(demandas) {
-                return Promise.all(demandas.map(function(d) {
-                    return DemandaDB.getItens(d.id).then(function(itens) { return { demanda: d, itens: itens }; });
+            .then(function (demandas) {
+                var ativas = (demandas || []).filter(function (d) { return d && d.status !== "cancelada"; });
+                // Cache versionado: só relê os itens das cotações que mudaram desde a última carga
+                if (typeof DemandaDB.getItensMany === "function") return DemandaDB.getItensMany(ativas, 6);
+                return Promise.all(ativas.map(function (d) {
+                    return DemandaDB.getItens(d.id).then(function (itens) { return { demanda: d, itens: itens }; });
                 }));
             })
-            .then(function(todos) {
+            .then(function (todos) {
                 // Filtra as demandas com ao menos 1 item em status de orçamento
-                var comItensOrcamento = todos.filter(function(t) {
-                    return t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                var comItensOrcamento = todos.filter(function (t) {
+                    return t.itens.some(function (i) { return STATUS_ORC.indexOf(i.status) >= 0; });
                 });
 
                 // Calcula contadores por filial para os pills
@@ -4494,8 +4520,8 @@ const DemandaApp = (function() {
                     { empId: 5, nome: "5.CTR REDENÇÃO" }
                 ];
                 var contagemPorFilial = { "": comItensOrcamento.length };
-                filiaisLista.forEach(function(fl) { contagemPorFilial[fl.empId] = 0; });
-                comItensOrcamento.forEach(function(t) {
+                filiaisLista.forEach(function (fl) { contagemPorFilial[fl.empId] = 0; });
+                comItensOrcamento.forEach(function (t) {
                     var fid = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
                     if (contagemPorFilial[fid] !== undefined) contagemPorFilial[fid]++;
                     else contagemPorFilial[fid] = 1;
@@ -4507,10 +4533,10 @@ const DemandaApp = (function() {
                     var pillsData = [
                         { id: "", label: "Todas as Filiais", count: comItensOrcamento.length }
                     ];
-                    filiaisLista.forEach(function(fl) {
+                    filiaisLista.forEach(function (fl) {
                         pillsData.push({ id: fl.empId, label: fl.nome, count: contagemPorFilial[fl.empId] || 0 });
                     });
-                    pillsEl.innerHTML = pillsData.map(function(p) {
+                    pillsEl.innerHTML = pillsData.map(function (p) {
                         var isAct = String(_filtroFilialOrcamento) === String(p.id);
                         var actStyle = isAct
                             ? "background:rgba(59,130,246,.25);border-color:#3b82f6;color:#fff;font-weight:700;box-shadow:0 0 0 1px #3b82f6"
@@ -4525,7 +4551,7 @@ const DemandaApp = (function() {
                 }
 
                 // Aplica o filtro de filial atual
-                var comItens = comItensOrcamento.filter(function(t) {
+                var comItens = comItensOrcamento.filter(function (t) {
                     if (_filtroFilialOrcamento === "") return true;
                     var dFilial = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
                     return (dFilial === _filtroFilialOrcamento);
@@ -4543,18 +4569,19 @@ const DemandaApp = (function() {
 
                 function _renderCardOrcamento(t) {
                     var d = t.demanda;
-                    var itensOrc = t.itens.filter(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
-                    var total = itensOrc.reduce(function(acc, i) { return acc + ((i.preco || 0) * (i.qtdeSolicitada || 1)); }, 0);
+                    var itensOrc = t.itens.filter(function (i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                    var total = itensOrc.reduce(function (acc, i) { return acc + ((Number(i.precoUnitario || i.preco) || 0) * (i.qtdeSolicitada || 1)); }, 0);
                     var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
                     var dFId = (d.filialId !== undefined && d.filialId !== null && d.filialId !== "") ? Number(d.filialId) : 1;
                     var dFNome = d.filialNome || (window.DemandaFilial ? DemandaFilial.nome(dFId) : ("Filial " + dFId));
                     var fBadge = "<span style='display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .55rem;border-radius:6px;background:rgba(59,130,246,.15);color:#93c5fd;font-size:.72rem;font-weight:700;border:1px solid rgba(59,130,246,.3)'><span class='material-icons-round' style='font-size:.85rem'>store</span> " + _esc(dFNome) + "</span>";
 
-                    var rows = itensOrc.map(function(item) {
+                    var rows = itensOrc.map(function (item) {
                         var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
+                        var precoExibir = Number(item.precoUnitario || item.preco || 0);
                         var btnAprovar = item.status !== "venda_aprovada"
                             ? "<button onclick=\"DemandaApp._aprovarItemOrcamento('" + d.id + "','" + item.id + "')\" " +
-                              "style='background:var(--accent-success);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer;margin-right:.3rem'>Aprovar</button>" : "";
+                            "style='background:var(--accent-success);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer;margin-right:.3rem'>Aprovar</button>" : "";
                         var btnPerder = "<button onclick=\"DemandaApp._perderItemOrcamento('" + d.id + "','" + item.id + "','" + item.status + "')\" " +
                             "style='background:var(--accent-danger);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer'>Perder</button>";
                         return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
@@ -4562,7 +4589,7 @@ const DemandaApp = (function() {
                             "<td style='padding:.38rem .5rem;color:var(--text-secondary);font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
                             "<td style='padding:.38rem .5rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
                             "<td style='padding:.38rem .5rem'><span style='font-size:.7rem;padding:.12rem .45rem;border-radius:8px;background:" + sc.color + "22;color:" + sc.color + "'>" + _esc(sc.label) + "</span></td>" +
-                            "<td style='padding:.38rem .5rem'>" + (item.preco ? "R$ " + Number(item.preco).toFixed(2).replace(".",",") : "—") + "</td>" +
+                            "<td style='padding:.38rem .5rem'>" + (precoExibir > 0 ? "R$ " + precoExibir.toFixed(2).replace(".", ",") : "—") + "</td>" +
                             "<td style='padding:.38rem .5rem'>" + btnAprovar + btnPerder + "</td></tr>";
                     }).join("");
 
@@ -4576,10 +4603,10 @@ const DemandaApp = (function() {
                         "  <div style='font-size:.8rem;color:var(--text-secondary)'><strong style='color:var(--text-primary)'>Cliente:</strong> " + _esc(d.clienteNome || "—") + " · " + dt + "</div>" +
                         "</div>" +
                         (total > 0 ? "<div style='text-align:right'><div style='font-size:.7rem;color:var(--text-secondary)'>Total estimado</div>" +
-                            "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".",",") + "</div></div>" : "") + "</div>" +
+                            "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".", ",") + "</div></div>" : "") + "</div>" +
                         "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
                         "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                        ["Referência","Descrição","Qtd","Status","Preço","Ação"].map(function(h) {
+                        ["Referência", "Descrição", "Qtd", "Status", "Preço", "Ação"].map(function (h) {
                             return "<th style='padding:.35rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                         }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
                         "<div style='margin-top:.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.75rem'>" +
@@ -4599,15 +4626,15 @@ const DemandaApp = (function() {
                 // Se "Todas as Filiais" estiver selecionado, agrupa os orçamentos por Filial com cabeçalhos visuais
                 if (_filtroFilialOrcamento === "") {
                     var gruposFilial = {};
-                    comItens.forEach(function(t) {
+                    comItens.forEach(function (t) {
                         var fId = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
                         if (!gruposFilial[fId]) gruposFilial[fId] = [];
                         gruposFilial[fId].push(t);
                     });
 
                     var htmlAgrupado = "";
-                    var fIds = Object.keys(gruposFilial).map(Number).sort(function(a,b){ return a-b; });
-                    fIds.forEach(function(fid) {
+                    var fIds = Object.keys(gruposFilial).map(Number).sort(function (a, b) { return a - b; });
+                    fIds.forEach(function (fid) {
                         var fNomeG = (window.DemandaFilial && typeof DemandaFilial.nome === "function") ? DemandaFilial.nome(fid) : ("Filial " + fid);
                         var listaGrupo = gruposFilial[fid];
                         htmlAgrupado += "<div style='display:flex;align-items:center;gap:.5rem;padding:.45rem .85rem;background:rgba(59,130,246,.08);border-left:4px solid #3b82f6;border-radius:4px;margin-bottom:.85rem;margin-top:1.25rem'>" +
@@ -4622,19 +4649,34 @@ const DemandaApp = (function() {
                     container.innerHTML = comItens.map(_renderCardOrcamento).join("");
                 }
             })
-            .catch(function(err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
+            .catch(function (err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
     }
 
     function _aprovarItemOrcamento(demandaId, itemId) {
         var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
         DemandaDB.updateItem(demandaId, itemId, { status: "venda_aprovada" },
             { evento: "status_changed", para: "venda_aprovada", por: por, obs: "Aprovado no or\u00e7amento" })
-            .then(function() { _toast("Venda aprovada!", "success"); loadOrcamento(); })
-            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+            .then(function () { _toast("Venda aprovada!", "success"); loadOrcamento(); })
+            .catch(function (e) { _toast("Erro: " + e.message, "error"); });
     }
 
-    function _perderItemOrcamento(demandaId, itemId, deStatus) {
-        _demandaAtual = { id: demandaId, data: {}, itens: [{ id: itemId, status: deStatus }] };
+    async function _perderItemOrcamento(demandaId, itemId, deStatus) {
+        var dData = (typeof DemandaDB !== "undefined" && DemandaDB.getDemandaLocal) ? (DemandaDB.getDemandaLocal(demandaId) || {}) : {};
+        var dItens = (typeof DemandaDB !== "undefined" && DemandaDB.getItensLocal) ? (DemandaDB.getItensLocal(demandaId) || []) : [];
+        if ((!dItens || !dItens.some(function (i) { return i.id === itemId; })) && typeof DemandaDB !== "undefined") {
+            try {
+                var res = await Promise.all([
+                    DemandaDB.getDemanda(demandaId).catch(function () { return dData; }),
+                    DemandaDB.getItens(demandaId).catch(function () { return dItens; })
+                ]);
+                if (res[0]) dData = res[0];
+                if (Array.isArray(res[1]) && res[1].length) dItens = res[1];
+            } catch (_) { }
+        }
+        if (!dItens || !dItens.some(function (i) { return i.id === itemId; })) {
+            dItens = [{ id: itemId, status: deStatus }];
+        }
+        _demandaAtual = { id: demandaId, data: dData || {}, itens: dItens, _fromOrcamento: true };
         _confirmarVendaPerdida(itemId, deStatus);
     }
 
@@ -4642,16 +4684,16 @@ const DemandaApp = (function() {
     // VIEW: PREÇO CONCORRENTE & INTELIGÊNCIA COMPETITIVA
     // ════════════════════════════════════════════════════════
 
-    var _concItens                = [];
-    var _concClienteSelecionado   = null;
-    var _concorrenteAtual         = null; // { id, nome } | null
-    var _concorrentesCadastrados  = [];
-    var _concSubTabAtual          = "precos"; // 'precos' | 'cotacoes' | 'concorrentes'
-    var _precosMapeadosCache      = [];
-    var _termoFiltroPrecos        = "";
-    var _concorrenteFiltroPrecos  = "todos";
-    var _filialFiltroPrecos       = null;   // null = filial padrão do usuário
-    var _CONC_INP                 = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
+    var _concItens = [];
+    var _concClienteSelecionado = null;
+    var _concorrenteAtual = null; // { id, nome } | null
+    var _concorrentesCadastrados = [];
+    var _concSubTabAtual = "precos"; // 'precos' | 'cotacoes' | 'concorrentes'
+    var _precosMapeadosCache = [];
+    var _termoFiltroPrecos = "";
+    var _concorrenteFiltroPrecos = "todos";
+    var _filialFiltroPrecos = null;   // null = filial padrão do usuário
+    var _CONC_INP = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
 
     var _CONCORRENTES_DEFAULT = [
         { id: "ja_agricola", nome: "J.A. Agrícola", cidade: "Redenção - PA", telefone: "(94) 99157-5463", obs: "Peças e Insumos Agrícolas / Rolamentos" },
@@ -4661,10 +4703,45 @@ const DemandaApp = (function() {
         { id: "casa_produtor", nome: "Casa do Produtor", cidade: "Interior", telefone: "", obs: "Peças para Tratores e Implementos" }
     ];
 
-    function _concDB() {
+    function _concColRaw() {
         if (typeof firebase === "undefined" || !firebase.firestore) return null;
         var t = (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) ? DemandaDB.TENANT_ID : "centralpecas";
         return firebase.firestore().collection("tenants").doc(t).collection("cotacoes_concorrente");
+    }
+
+    // Cache curto da coleção cotacoes_concorrente (evita reler 100 docs a cada abertura de cotação/aba)
+    var _concSnapCache = null;      // { ts, tenant, snap }
+    var _concSnapInflight = null;
+    var _CONC_TTL = 3 * 60 * 1000;
+
+    function _invalidarConcCache() { _concSnapCache = null; }
+
+    /** Acesso para ESCRITA/consultas pontuais: invalida o cache de leitura em lote. */
+    function _concDB() {
+        _invalidarConcCache();
+        return _concColRaw();
+    }
+
+    /** Leitura em lote (limit 100) com cache de 3 minutos e deduplicação. */
+    function _getConcSnapCached(force) {
+        var col = _concColRaw();
+        if (!col) return Promise.resolve({ docs: [] });
+        var t = (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) ? DemandaDB.TENANT_ID : "";
+        if (!force && _concSnapCache && _concSnapCache.tenant === t && (Date.now() - _concSnapCache.ts) < _CONC_TTL) {
+            return Promise.resolve(_concSnapCache.snap);
+        }
+        if (_concSnapInflight) return _concSnapInflight;
+        _concSnapInflight = col.limit(100).get()
+            .then(function (snap) {
+                _concSnapCache = { ts: Date.now(), tenant: t, snap: snap };
+                return snap;
+            })
+            .catch(function (err) {
+                console.warn("[DemandaApp] Falha ao ler cotacoes_concorrente:", err);
+                return { docs: [] };
+            })
+            .finally(function () { _concSnapInflight = null; });
+        return _concSnapInflight;
     }
 
     function _concorrentesCadDB() {
@@ -4683,7 +4760,7 @@ const DemandaApp = (function() {
                     _popularSelectsConcorrentes();
                 }
             }
-        } catch(_) {}
+        } catch (_) { }
 
         if (_concorrentesCadastrados.length === 0) {
             _concorrentesCadastrados = _CONCORRENTES_DEFAULT.slice();
@@ -4694,31 +4771,31 @@ const DemandaApp = (function() {
         if (!db) return;
 
         db.orderBy("nome").get()
-            .then(function(snap) {
+            .then(function (snap) {
                 if (!snap.empty) {
-                    var doBanco = snap.docs.map(function(d) {
+                    var doBanco = snap.docs.map(function (d) {
                         var data = d.data();
                         data.id = d.id;
                         return data;
                     });
                     var mapNomes = {};
-                    doBanco.forEach(function(c) { mapNomes[c.nome.toLowerCase()] = true; });
-                    _CONCORRENTES_DEFAULT.forEach(function(def) {
+                    doBanco.forEach(function (c) { mapNomes[c.nome.toLowerCase()] = true; });
+                    _CONCORRENTES_DEFAULT.forEach(function (def) {
                         if (!mapNomes[def.nome.toLowerCase()]) doBanco.push(def);
                     });
                     _concorrentesCadastrados = doBanco;
                 } else {
-                    _CONCORRENTES_DEFAULT.forEach(function(def) {
-                        db.doc(def.id).set(def).catch(function(){});
+                    _CONCORRENTES_DEFAULT.forEach(function (def) {
+                        db.doc(def.id).set(def).catch(function () { });
                     });
                     _concorrentesCadastrados = _CONCORRENTES_DEFAULT.slice();
                 }
                 try {
                     localStorage.setItem("demanda_concorrentes_cadastrados", JSON.stringify(_concorrentesCadastrados));
-                } catch(_) {}
+                } catch (_) { }
                 _popularSelectsConcorrentes();
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 console.warn("[DemandaApp] Falha ao carregar concorrentes do Firestore:", err);
             });
     }
@@ -4728,7 +4805,7 @@ const DemandaApp = (function() {
         var sel2 = document.getElementById("confSelectConcorrente");
 
         var html1 = "<option value=''>📁 Cotação Própria (Sem Concorrente)</option>" +
-            _concorrentesCadastrados.map(function(c) {
+            _concorrentesCadastrados.map(function (c) {
                 var sel = (_concorrenteAtual && _concorrenteAtual.nome === c.nome) ? "selected" : "";
                 return "<option value='" + _escAttr(c.nome) + "' " + sel + ">" + _esc(c.nome) + (c.cidade ? " (" + _esc(c.cidade) + ")" : "") + "</option>";
             }).join("");
@@ -4739,7 +4816,7 @@ const DemandaApp = (function() {
         }
 
         var html2 = "<option value=''>📁 Cotação Própria (Central Peças)</option>" +
-            _concorrentesCadastrados.map(function(c) {
+            _concorrentesCadastrados.map(function (c) {
                 var sel = (_concorrenteAtual && _concorrenteAtual.nome === c.nome) ? "selected" : "";
                 return "<option value='" + _escAttr(c.nome) + "' " + sel + ">" + _esc(c.nome) + "</option>";
             }).join("");
@@ -4756,32 +4833,35 @@ const DemandaApp = (function() {
         if (!val) {
             _concorrenteAtual = null;
         } else {
-            var found = _concorrentesCadastrados.find(function(c) { return c.nome === val; });
+            var found = _concorrentesCadastrados.find(function (c) { return c.nome === val; });
             _concorrenteAtual = found ? { id: found.id, nome: found.nome } : { id: null, nome: val };
         }
         renderItens();
     }
 
     function onConfConcorrenteChange(val) {
-        if (val) {
-            var sel1 = document.getElementById("selectConcorrente");
-            if (sel1) sel1.value = val;
-            var found = _concorrentesCadastrados.find(function(c) { return c.nome === val; });
-            _concorrenteAtual = found ? { id: found.id, nome: found.nome } : { id: null, nome: val };
+        var sel1 = document.getElementById("selectConcorrente");
+        if (!val) {
+            if (sel1) sel1.value = "";
+            _concorrenteAtual = null;
+            return;
         }
+        if (sel1) sel1.value = val;
+        var found = _concorrentesCadastrados.find(function (c) { return c.nome === val; });
+        _concorrenteAtual = found ? { id: found.id, nome: found.nome } : { id: null, nome: val };
     }
 
     function abrirModalNovoConcorrente() {
         var inpNome = document.getElementById("novoConcNome");
-        var inpCid  = document.getElementById("novoConcCidade");
-        var inpTel  = document.getElementById("novoConcTelefone");
-        var inpObs  = document.getElementById("novoConcObs");
+        var inpCid = document.getElementById("novoConcCidade");
+        var inpTel = document.getElementById("novoConcTelefone");
+        var inpObs = document.getElementById("novoConcObs");
         if (inpNome) inpNome.value = "";
-        if (inpCid)  inpCid.value = "";
-        if (inpTel)  inpTel.value = "";
-        if (inpObs)  inpObs.value = "";
+        if (inpCid) inpCid.value = "";
+        if (inpTel) inpTel.value = "";
+        if (inpObs) inpObs.value = "";
         _openModal("modalNovoConcorrente");
-        setTimeout(function() { if (inpNome) inpNome.focus(); }, 150);
+        setTimeout(function () { if (inpNome) inpNome.focus(); }, 150);
     }
 
     function salvarNovoConcorrenteModal() {
@@ -4808,11 +4888,11 @@ const DemandaApp = (function() {
         _concorrentesCadastrados.push(novoObj);
         try {
             localStorage.setItem("demanda_concorrentes_cadastrados", JSON.stringify(_concorrentesCadastrados));
-        } catch(_) {}
+        } catch (_) { }
 
         var db = _concorrentesCadDB();
         if (db) {
-            db.doc(novoObj.id).set(novoObj).catch(function(e) { console.warn("Erro ao salvar concorrente no Firestore:", e); });
+            db.doc(novoObj.id).set(novoObj).catch(function (e) { console.warn("Erro ao salvar concorrente no Firestore:", e); });
         }
 
         _concorrenteAtual = { id: novoObj.id, nome: novoObj.nome };
@@ -4837,12 +4917,12 @@ const DemandaApp = (function() {
             ? DemandaSearch.getProdutos()
             : [];
 
-        var itensFormatados = itens.map(function(it, idx) {
+        var itensFormatados = itens.map(function (it, idx) {
             var refUpper = (it.refOriginal || it.erpCodigoFab || it.ref || "").toUpperCase().trim();
-            var prodMeu = catalogo.find(function(p) {
+            var prodMeu = catalogo.find(function (p) {
                 return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                       (p.referencia && p.referencia.toUpperCase() === refUpper) ||
-                       (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
+                    (p.referencia && p.referencia.toUpperCase() === refUpper) ||
+                    (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
             });
             var pm = (prodMeu && prodMeu.preco > 0) ? parseFloat(prodMeu.preco) : 0;
             if (!pm && typeof window !== "undefined") {
@@ -4871,20 +4951,20 @@ const DemandaApp = (function() {
         });
 
         var doc = {
-            concorrente:      concNome.trim(),
-            clienteRef:       cliente ? cliente.nome : "",
-            clienteId:        cliente ? cliente.id : null,
-            clienteCnpj:      cliente ? (cliente.cnpj || cliente.cpf || "") : "",
-            obs:              "Gerado a partir da Cotação #" + demandaId + " (Intenção de Compra)",
-            vendedorNome:     por,
-            criadoEm:         (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
-            status:           "ativa",
-            demandaOrigemId:  demandaId,
-            filialId:         (window.DemandaFilial ? DemandaFilial.atual() : 1),
-            itens:            itensFormatados
+            concorrente: concNome.trim(),
+            clienteRef: cliente ? cliente.nome : "",
+            clienteId: cliente ? cliente.id : null,
+            clienteCnpj: cliente ? (cliente.cnpj || cliente.cpf || "") : "",
+            obs: "Gerado a partir da Cotação #" + demandaId + " (Intenção de Compra)",
+            vendedorNome: por,
+            criadoEm: (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+            status: "ativa",
+            demandaOrigemId: demandaId,
+            filialId: (window.DemandaFilial ? DemandaFilial.atual() : 1),
+            itens: itensFormatados
         };
 
-        db.add(doc).then(function(r) { r.update({ id: r.id }); }).catch(function(e) { console.warn("Erro ao salvar histórico do concorrente:", e); });
+        db.add(doc).then(function (r) { r.update({ id: r.id }); }).catch(function (e) { console.warn("Erro ao salvar histórico do concorrente:", e); });
     }
 
     function loadConcorrente() {
@@ -4926,46 +5006,41 @@ const DemandaApp = (function() {
             "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2rem;color:var(--primary-color)'>sync</span>" +
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando mapeamento de preços da concorrência...</p></div>";
 
-        var db = _concDB();
+        var db = _concColRaw();
         var catalogo = (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.getProdutos === "function")
             ? DemandaSearch.getProdutos()
             : [];
 
-        // 1. Busca cotações de concorrente sem where composto para evitar falha de índice composto no Firestore
-        var pCotacoes = db
-            ? db.limit(100).get().catch(function(err) {
-                console.warn("[DemandaApp] Falha ao ler cotacoes_concorrente:", err);
-                return { docs: [] };
-              })
-            : Promise.resolve({ docs: [] });
+        // 1. Busca cotações de concorrente (cache de 3 min, sem where composto)
+        var pCotacoes = db ? _getConcSnapCached() : Promise.resolve({ docs: [] });
 
         // 2. Busca cotações gerais de demandas para mesclar quaisquer cotações com concorrente vinculado
         var pDemandas = (typeof DemandaDB !== "undefined" && typeof DemandaDB.listDemandas === "function")
-            ? DemandaDB.listDemandas().catch(function() { return []; })
+            ? DemandaDB.listDemandas().catch(function () { return []; })
             : Promise.resolve([]);
 
         Promise.all([pCotacoes, pDemandas])
-            .then(async function(res) {
+            .then(async function (res) {
                 var snap = res[0];
                 var todasDemandas = res[1] || [];
 
-                var cotacoes = (snap.docs || []).map(function(d) {
+                var cotacoes = (snap.docs || []).map(function (d) {
                     var data = d.data();
                     data.id = d.id;
                     return data;
-                }).filter(function(c) {
+                }).filter(function (c) {
                     return !c.status || c.status === "ativa";
                 });
 
                 // Ordenação em memória para não exigir composite index
-                cotacoes.sort(function(a, b) {
+                cotacoes.sort(function (a, b) {
                     var ta = a.criadoEm && a.criadoEm.toMillis ? a.criadoEm.toMillis() : (new Date(a.criadoEm || 0)).getTime();
                     var tb = b.criadoEm && b.criadoEm.toMillis ? b.criadoEm.toMillis() : (new Date(b.criadoEm || 0)).getTime();
                     return tb - ta;
                 });
 
                 // Mantém cotações ativas sem exclusão automática destrutiva
-                cotacoes = cotacoes.filter(function(c) {
+                cotacoes = cotacoes.filter(function (c) {
                     return !c.status || c.status === "ativa";
                 });
 
@@ -4976,28 +5051,45 @@ const DemandaApp = (function() {
                 // entre a referência do orçamento importado e a referência interna (ERP)
                 var itensPorDemanda = {};
                 var idsOrigem = [];
-                cotacoes.forEach(function(c) {
+                cotacoes.forEach(function (c) {
                     if (c.demandaOrigemId && idsOrigem.indexOf(c.demandaOrigemId) < 0) idsOrigem.push(c.demandaOrigemId);
                 });
-                for (var oi = 0; oi < idsOrigem.length; oi++) {
-                    try {
-                        itensPorDemanda[idsOrigem[oi]] = await DemandaDB.getItens(idsOrigem[oi]);
-                    } catch (_) { itensPorDemanda[idsOrigem[oi]] = []; }
+
+                // Demandas com concorrente vinculado ainda não registradas em cotacoes_concorrente
+                var origensSet = {};
+                idsOrigem.forEach(function (oid) { origensSet[oid] = true; });
+                var demandasComConcPre = todasDemandas.filter(function (dm) {
+                    return !origensSet[dm.id] && (dm.concorrenteNome || dm.isConcorrente) && dm.status !== "cancelada";
+                });
+
+                // Carga única, paralela (concorrência limitada) e com cache versionado de itens
+                var demandaPorId = {};
+                todasDemandas.forEach(function (dm) { demandaPorId[dm.id] = dm; });
+                var paraCarregar = idsOrigem.map(function (oid) { return demandaPorId[oid] || { id: oid }; })
+                    .concat(demandasComConcPre);
+                if (typeof DemandaDB.getItensMany === "function") {
+                    var paresIt = await DemandaDB.getItensMany(paraCarregar, 6).catch(function () { return []; });
+                    paresIt.forEach(function (p) { if (p && p.demanda) itensPorDemanda[p.demanda.id] = p.itens || []; });
+                } else {
+                    for (var oi = 0; oi < paraCarregar.length; oi++) {
+                        try { itensPorDemanda[paraCarregar[oi].id] = await DemandaDB.getItens(paraCarregar[oi].id); }
+                        catch (_) { itensPorDemanda[paraCarregar[oi].id] = []; }
+                    }
                 }
 
-                cotacoes.forEach(function(c) {
+                cotacoes.forEach(function (c) {
                     if (c.demandaOrigemId) origensRegistradas[c.demandaOrigemId] = true;
                     var dtStr = c.criadoEm && c.criadoEm.toDate
                         ? c.criadoEm.toDate().toLocaleDateString("pt-BR")
                         : (c.criadoEm ? String(c.criadoEm).slice(0, 10) : "—");
                     var itensOrigem = itensPorDemanda[c.demandaOrigemId] || [];
 
-                    (c.itens || []).forEach(function(it, itIdx) {
+                    (c.itens || []).forEach(function (it, itIdx) {
                         var pc = parseFloat(it.precoConcorrente) || 0;
                         var refUpper = (it.ref || "").toUpperCase().trim();
 
                         // 1. Vínculo na cotação de origem
-                        var itOrig = refUpper ? itensOrigem.find(function(io) {
+                        var itOrig = refUpper ? itensOrigem.find(function (io) {
                             return (io.refOriginal || "").toUpperCase().trim() === refUpper;
                         }) : null;
                         if (!itOrig && itensOrigem.length === (c.itens || []).length) itOrig = itensOrigem[itIdx];
@@ -5043,20 +5135,20 @@ const DemandaApp = (function() {
                 });
 
                 // Adiciona demandas que tenham concorrente vinculado e estejam ativas
-                var demandasComConc = todasDemandas.filter(function(dm) {
+                var demandasComConc = todasDemandas.filter(function (dm) {
                     return !origensRegistradas[dm.id] && (dm.concorrenteNome || dm.isConcorrente) && dm.status !== "cancelada";
                 });
 
                 for (var ki = 0; ki < demandasComConc.length; ki++) {
                     var dm = demandasComConc[ki];
                     try {
-                        var dmItens = await DemandaDB.getItens(dm.id);
+                        var dmItens = itensPorDemanda[dm.id] || [];
                         var dmDtStr = dm.criadoEm && dm.criadoEm.toDate
                             ? dm.criadoEm.toDate().toLocaleDateString("pt-BR")
                             : (dm.criadoEm ? String(dm.criadoEm).slice(0, 10) : "—");
                         var cNome = dm.concorrenteNome || "J.A. Agrícola";
 
-                        dmItens.forEach(function(it) {
+                        dmItens.forEach(function (it) {
                             var pc = parseFloat(it.precoConcorrente) || 0;
                             if (!pc && it.obsCliente) {
                                 var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
@@ -5101,7 +5193,7 @@ const DemandaApp = (function() {
                                 cotacaoId: dm.id
                             });
                         });
-                    } catch(eIt) {
+                    } catch (eIt) {
                         console.warn("[DemandaApp] Erro ao carregar itens da demanda concorrente:", dm.id, eIt);
                     }
                 }
@@ -5109,7 +5201,7 @@ const DemandaApp = (function() {
                 _precosMapeadosCache = linhasMapeadas;
                 _desenharTabelaPrecosMapeados();
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 console.error("[DemandaApp] Erro ao carregar preços concorrentes:", err);
                 hc.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
             });
@@ -5122,8 +5214,8 @@ const DemandaApp = (function() {
         var refNorm = String(refConc || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
         if (refNorm.length < 3 || typeof window === "undefined" || !Array.isArray(window.COMPACT_SKUS)) return vazio;
         var skus = window.COMPACT_SKUS;
-        var estq = function(s) { return Number(s[10] != null ? s[10] : (s[9] || 0)); };
-        var montar = function(s, origem) {
+        var estq = function (s) { return Number(s[10] != null ? s[10] : (s[9] || 0)); };
+        var montar = function (s, origem) {
             return { ref: String(s[38] || s[0] || ""), desc: String(s[1] || ""), id: String(s[0] || ""), origem: origem };
         };
 
@@ -5133,12 +5225,12 @@ const DemandaApp = (function() {
             var alvo = mapa[refNorm] || mapa[String(refConc || "").trim()];
             if (alvo) {
                 var alvoNorm = String(alvo).toUpperCase().replace(/[^A-Z0-9]/g, "");
-                var sMap = skus.find(function(s) {
+                var sMap = skus.find(function (s) {
                     return String(s[0]) === String(alvo) || String(s[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alvoNorm;
                 });
                 if (sMap) return montar(sMap, "Vínculo manual salvo");
             }
-        } catch (_) {}
+        } catch (_) { }
 
         // 2. Código de fábrica exato / 3. Cross-reference exato (token inteiro)
         var porFab = [], porCross = [];
@@ -5153,8 +5245,8 @@ const DemandaApp = (function() {
                 }
             }
         }
-        var escolher = function(lista) {
-            return lista.slice().sort(function(a, b) { return (estq(b) > 0 ? 1 : 0) - (estq(a) > 0 ? 1 : 0); })[0];
+        var escolher = function (lista) {
+            return lista.slice().sort(function (a, b) { return (estq(b) > 0 ? 1 : 0) - (estq(a) > 0 ? 1 : 0); })[0];
         };
         if (porFab.length > 0) return montar(escolher(porFab), "Cód. fábrica exato" + (porFab.length > 1 ? " (" + porFab.length + " opções)" : ""));
         if (porCross.length > 0) return montar(escolher(porCross), "Cross-reference ERP" + (porCross.length > 1 ? " (" + porCross.length + " opções)" : ""));
@@ -5171,17 +5263,17 @@ const DemandaApp = (function() {
         if (!cod) return;
         var codNorm = cod.toUpperCase().replace(/[^A-Z0-9]/g, "");
         var skus = (typeof window !== "undefined" && Array.isArray(window.COMPACT_SKUS)) ? window.COMPACT_SKUS : [];
-        var s = skus.find(function(x) { return String(x[0]) === cod; }) ||
-                skus.find(function(x) { return String(x[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === codNorm; });
+        var s = skus.find(function (x) { return String(x[0]) === cod; }) ||
+            skus.find(function (x) { return String(x[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === codNorm; });
         if (!s) { _toast("Código \"" + cod + "\" não encontrado no cadastro do ERP.", "error"); return; }
 
         var vinc = { id: String(s[0]), ref: String(s[38] || s[0]), desc: String(s[1] || "") };
         var preco = _precoVendaInterno(vinc, []);
         var estoque = Number(s[10] != null ? s[10] : (s[9] || 0));
         if (!confirm("Confirmar vínculo?\n\nConcorrente: " + r.ref + " — " + r.desc +
-                     "\nInterno: " + vinc.ref + " — " + vinc.desc + " (ERP " + vinc.id + ")" +
-                     "\nPreço de venda: " + (preco > 0 ? "R$ " + preco.toFixed(2).replace(".", ",") : "sem preço") +
-                     " · Estoque: " + estoque)) return;
+            "\nInterno: " + vinc.ref + " — " + vinc.desc + " (ERP " + vinc.id + ")" +
+            "\nPreço de venda: " + (preco > 0 ? "R$ " + preco.toFixed(2).replace(".", ",") : "sem preço") +
+            " · Estoque: " + estoque)) return;
 
         var campos = { erpProdutoId: vinc.id, erpCodigoFab: vinc.ref, erpProdutoDesc: vinc.desc, vinculoOrigem: "Vínculo manual" };
         try {
@@ -5202,7 +5294,7 @@ const DemandaApp = (function() {
                     status: estoque > 0 ? "estoque_disponivel" : "sem_estoque",
                     identificadoPor: "manual_preco_concorrente"
                 }, { evento: "produto_vinculado", para: estoque > 0 ? "estoque_disponivel" : "sem_estoque", por: (_sessao && _sessao.nome) || "usuario", obs: "Vínculo manual via Preço Concorrente" });
-                DemandaDB.recalcTotals(r.demandaOrigemId).catch(function(){});
+                DemandaDB.recalcTotals(r.demandaOrigemId).catch(function () { });
             }
             if (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
                 DemandaSearch.addConcorrenteMapping(r.ref, vinc.id);
@@ -5240,7 +5332,7 @@ const DemandaApp = (function() {
         if (!_fabPorIdCache) {
             _fabPorIdCache = {};
             if (typeof window !== "undefined" && Array.isArray(window.COMPACT_SKUS)) {
-                window.COMPACT_SKUS.forEach(function(s) {
+                window.COMPACT_SKUS.forEach(function (s) {
                     if (s && s[0] != null && s[2] && !/^n[aã]o informado$/i.test(String(s[2]).trim())) _fabPorIdCache[String(s[0])] = String(s[2]).trim();
                 });
             }
@@ -5263,9 +5355,9 @@ const DemandaApp = (function() {
             }
         }
         if (catalogo && catalogo.length > 0) {
-            var p = catalogo.find(function(x) {
+            var p = catalogo.find(function (x) {
                 return (vinc.id && String(x.codigo || x.codigoErp || "") === vinc.id) ||
-                       (refU && (x.codigoFab || "").toUpperCase() === refU);
+                    (refU && (x.codigoFab || "").toUpperCase() === refU);
             });
             if (p && Number(p.preco) > 0) return Number(p.preco);
         }
@@ -5288,7 +5380,7 @@ const DemandaApp = (function() {
 
         // Nosso preço conforme a filial selecionada (padrão = filial do usuário)
         var empSel = _filialFiltroPrecos || (window.DemandaFilial ? (DemandaFilial.padraoUsuario() || DemandaFilial.atual()) : 1);
-        _precosMapeadosCache.forEach(function(r) {
+        _precosMapeadosCache.forEach(function (r) {
             if (!r.refInterna) return;
             var pf = _precoInternoFilial({ id: r.idInterno, ref: r.refInterna }, empSel);
             var pm = pf.v > 0 ? pf.v : (r._pmFallback || 0);
@@ -5302,7 +5394,7 @@ const DemandaApp = (function() {
         var q = (_termoFiltroPrecos || "").trim().toLowerCase();
         var concFiltro = _concorrenteFiltroPrecos || "todos";
 
-        var filtrados = _precosMapeadosCache.filter(function(r) {
+        var filtrados = _precosMapeadosCache.filter(function (r) {
             if (concFiltro !== "todos" && r.concorrente.toLowerCase() !== concFiltro.toLowerCase()) {
                 return false;
             }
@@ -5314,66 +5406,66 @@ const DemandaApp = (function() {
         });
 
         var concsUnicos = [];
-        _precosMapeadosCache.forEach(function(r) {
+        _precosMapeadosCache.forEach(function (r) {
             if (r.concorrente && concsUnicos.indexOf(r.concorrente) === -1) {
                 concsUnicos.push(r.concorrente);
             }
         });
 
         var totalItens = filtrados.length;
-        var maisBaratos = filtrados.filter(function(r) { return r.diff !== null && r.diff < 0; }).length;
-        var maisCaros = filtrados.filter(function(r) { return r.diff !== null && r.diff > 0; }).length;
+        var maisBaratos = filtrados.filter(function (r) { return r.diff !== null && r.diff < 0; }).length;
+        var maisCaros = filtrados.filter(function (r) { return r.diff !== null && r.diff > 0; }).length;
 
         var kpiHtml =
             "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:1rem'>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Preços Mapeados</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:var(--text-primary);margin-top:.2rem'>" + totalItens + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>" + concsUnicos.length + " concorrente(s) monitorado(s)</div>" +
-                "</div>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Nós Mais Baratos</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:#10b981;margin-top:.2rem'>" + maisBaratos + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>Ganhamos em preço</div>" +
-                "</div>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Concorrente Mais Barato</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:#ef4444;margin-top:.2rem'>" + maisCaros + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>Oportunidade de cobrir</div>" +
-                "</div>" +
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Preços Mapeados</div>" +
+            "<div style='font-size:1.4rem;font-weight:800;color:var(--text-primary);margin-top:.2rem'>" + totalItens + "</div>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary)'>" + concsUnicos.length + " concorrente(s) monitorado(s)</div>" +
+            "</div>" +
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Nós Mais Baratos</div>" +
+            "<div style='font-size:1.4rem;font-weight:800;color:#10b981;margin-top:.2rem'>" + maisBaratos + "</div>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary)'>Ganhamos em preço</div>" +
+            "</div>" +
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Concorrente Mais Barato</div>" +
+            "<div style='font-size:1.4rem;font-weight:800;color:#ef4444;margin-top:.2rem'>" + maisCaros + "</div>" +
+            "<div style='font-size:.72rem;color:var(--text-secondary)'>Oportunidade de cobrir</div>" +
+            "</div>" +
             "</div>";
 
         var barHtml =
             "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem'>" +
-                "<div style='position:relative;flex:1;min-width:240px'>" +
-                    "<span class='material-icons-round' style='position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)'>search</span>" +
-                    "<input type='text' id='inpBuscaPrecosMapeados' placeholder='Buscar por código da peça, descrição, concorrente ou cliente...' value='" + _escAttr(_termoFiltroPrecos) + "' " +
-                        "oninput='DemandaApp.filtrarPrecosMapeados(this.value)' " +
-                        "style='width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem .4rem 2.2rem;color:var(--text-primary);font-size:.82rem'>" +
-                "</div>" +
-                "<select id='selFiltroConcPrecos' onchange='DemandaApp.filtrarPorConcorrente(this.value)' " +
-                    "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
-                    "<option value='todos'>Todos os Concorrentes (" + concsUnicos.length + ")</option>" +
-                    concsUnicos.map(function(c) {
-                        return "<option value='" + _escAttr(c) + "' " + (concFiltro.toLowerCase() === c.toLowerCase() ? "selected" : "") + ">" + _esc(c) + "</option>";
-                    }).join("") +
-                "</select>" +
-                (window.DemandaFilial ?
+            "<div style='position:relative;flex:1;min-width:240px'>" +
+            "<span class='material-icons-round' style='position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)'>search</span>" +
+            "<input type='text' id='inpBuscaPrecosMapeados' placeholder='Buscar por código da peça, descrição, concorrente ou cliente...' value='" + _escAttr(_termoFiltroPrecos) + "' " +
+            "oninput='DemandaApp.filtrarPrecosMapeados(this.value)' " +
+            "style='width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem .4rem 2.2rem;color:var(--text-primary);font-size:.82rem'>" +
+            "</div>" +
+            "<select id='selFiltroConcPrecos' onchange='DemandaApp.filtrarPorConcorrente(this.value)' " +
+            "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
+            "<option value='todos'>Todos os Concorrentes (" + concsUnicos.length + ")</option>" +
+            concsUnicos.map(function (c) {
+                return "<option value='" + _escAttr(c) + "' " + (concFiltro.toLowerCase() === c.toLowerCase() ? "selected" : "") + ">" + _esc(c) + "</option>";
+            }).join("") +
+            "</select>" +
+            (window.DemandaFilial ?
                 "<select id='selFiltroFilialPrecos' onchange='DemandaApp.filtrarPorFilialPrecos(this.value)' title='Filial usada no Nosso Preço' " +
-                    "style='background:var(--bg-dark);border:1px solid rgba(16,185,129,.4);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
-                    DemandaFilial.listar().map(function(f) {
-                        return "<option value='" + f.empId + "' " + (f.empId === empSel ? "selected" : "") + ">Nosso preço: " + _esc(f.nome) + "</option>";
-                    }).join("") +
+                "style='background:var(--bg-dark);border:1px solid rgba(16,185,129,.4);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
+                DemandaFilial.listar().map(function (f) {
+                    return "<option value='" + f.empId + "' " + (f.empId === empSel ? "selected" : "") + ">Nosso preço: " + _esc(f.nome) + "</option>";
+                }).join("") +
                 "</select>" : "") +
-                "<button class='btn btn-secondary btn-sm' onclick='DemandaApp._limparMapeamentoOrfao()' title='Limpar cotações e registros excluídos da concorrência' style='display:inline-flex;align-items:center;gap:.3rem'>" +
-                    "<span class='material-icons-round' style='font-size:.9rem'>cleaning_services</span> Limpar Excluídos" +
-                "</button>" +
-                "<button class='btn btn-primary btn-sm' onclick='DemandaApp.switchView(\"captura\")' style='display:inline-flex;align-items:center;gap:.3rem;margin-left:auto'>" +
-                    "<span class='material-icons-round' style='font-size:.9rem'>add_circle</span> Nova Cotação" +
-                "</button>" +
+            "<button class='btn btn-secondary btn-sm' onclick='DemandaApp._limparMapeamentoOrfao()' title='Limpar cotações e registros excluídos da concorrência' style='display:inline-flex;align-items:center;gap:.3rem'>" +
+            "<span class='material-icons-round' style='font-size:.9rem'>cleaning_services</span> Limpar Excluídos" +
+            "</button>" +
+            "<button class='btn btn-primary btn-sm' onclick='DemandaApp.switchView(\"captura\")' style='display:inline-flex;align-items:center;gap:.3rem;margin-left:auto'>" +
+            "<span class='material-icons-round' style='font-size:.9rem'>add_circle</span> Nova Cotação" +
+            "</button>" +
             "</div>";
 
-        var tableRows = filtrados.map(function(r, idx) {
+        var tableRows = filtrados.map(function (r, idx) {
             var ci = _precosMapeadosCache.indexOf(r);
             var cor = r.diff !== null
                 ? (r.diff < 0 ? "#10b981" : r.diff > 0 ? "#ef4444" : "var(--text-secondary)")
@@ -5386,25 +5478,25 @@ const DemandaApp = (function() {
             var badgeComparativo = !r.refInterna
                 ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.72rem;font-weight:700'>Sem vínculo</span>"
                 : r.diff !== null
-                ? (r.diff < 0
-                    ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;font-size:.72rem;font-weight:700'>Nós - Barato</span>"
-                    : r.diff > 0
-                        ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(239,68,68,.15);color:#ef4444;font-size:.72rem;font-weight:700'>Conc. - Barato</span>"
-                        : "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(255,255,255,.08);color:var(--text-secondary);font-size:.72rem'>Empatado</span>")
-                : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>";
+                    ? (r.diff < 0
+                        ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;font-size:.72rem;font-weight:700'>Nós - Barato</span>"
+                        : r.diff > 0
+                            ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(239,68,68,.15);color:#ef4444;font-size:.72rem;font-weight:700'>Conc. - Barato</span>"
+                            : "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(255,255,255,.08);color:var(--text-secondary);font-size:.72rem'>Empatado</span>")
+                    : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>";
 
             var refCell = r.refInterna
                 ? "<strong style='font-size:.85rem;color:#10b981;letter-spacing:.02em;font-family:monospace' title='Referência interna vinculada (ERP)'>" + _esc(r.refInterna) + "</strong>" +
-                  " <button onclick='DemandaApp.vincularItemMapeamento(" + ci + ")' title='Alterar vínculo' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:0;vertical-align:middle'><span class='material-icons-round' style='font-size:.85rem'>edit</span></button>" +
-                  (r.ref && r.ref !== r.refInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(r.ref) + "</span>" : "") +
-                  (r.vinculoOrigem ? "<span style='display:block;font-size:.64rem;color:#10b981;opacity:.85'>✓ " + _esc(r.vinculoOrigem) + "</span>" : "")
+                " <button onclick='DemandaApp.vincularItemMapeamento(" + ci + ")' title='Alterar vínculo' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:0;vertical-align:middle'><span class='material-icons-round' style='font-size:.85rem'>edit</span></button>" +
+                (r.ref && r.ref !== r.refInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(r.ref) + "</span>" : "") +
+                (r.vinculoOrigem ? "<span style='display:block;font-size:.64rem;color:#10b981;opacity:.85'>✓ " + _esc(r.vinculoOrigem) + "</span>" : "")
                 : "<strong style='font-size:.85rem;color:var(--text-primary);letter-spacing:.02em;font-family:monospace'>" + _esc(r.ref) + "</strong>" +
-                  "<span style='display:block;font-size:.66rem;color:#f59e0b;font-weight:600'>Sem vínculo interno</span>";
+                "<span style='display:block;font-size:.66rem;color:#f59e0b;font-weight:600'>Sem vínculo interno</span>";
 
             var descTitle = (r.descInterna || r.desc) + (r.descInterna && r.desc && r.desc !== r.descInterna ? " | Orig: " + r.desc : "");
             var descCell = r.descInterna
                 ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(r.descInterna) + "</span>" +
-                  (r.desc && r.desc !== r.descInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis'>Orig: " + _esc(r.desc) + "</span>" : "")
+                (r.desc && r.desc !== r.descInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis'>Orig: " + _esc(r.desc) + "</span>" : "")
                 : _esc(r.desc);
 
             return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
@@ -5412,9 +5504,9 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;white-space:nowrap'>" + refCell + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(descTitle) + "'>" + descCell + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.78rem;white-space:nowrap' title='Nosso fabricante (ERP) / marca cotada pelo concorrente'>" +
-                    (r.fabInterno ? "<span style='color:var(--text-primary);font-weight:600'>" + _esc(r.fabInterno) + "</span>" : (r.refInterna ? "<span style='color:var(--text-secondary)'>—</span>" : "")) +
-                    (r.marcaConc ? "<span style='display:block;font-size:.68rem;color:" + (r.fabInterno && r.fabInterno.toUpperCase() !== r.marcaConc.toUpperCase() ? "#f59e0b" : "var(--text-secondary)") + "'>Conc.: " + _esc(r.marcaConc) + "</span>" : "") +
-                    (!r.fabInterno && !r.marcaConc ? "<span style='color:var(--text-secondary)'>—</span>" : "") +
+                (r.fabInterno ? "<span style='color:var(--text-primary);font-weight:600'>" + _esc(r.fabInterno) + "</span>" : (r.refInterna ? "<span style='color:var(--text-secondary)'>—</span>" : "")) +
+                (r.marcaConc ? "<span style='display:block;font-size:.68rem;color:" + (r.fabInterno && r.fabInterno.toUpperCase() !== r.marcaConc.toUpperCase() ? "#f59e0b" : "var(--text-secondary)") + "'>Conc.: " + _esc(r.marcaConc) + "</span>" : "") +
+                (!r.fabInterno && !r.marcaConc ? "<span style='color:var(--text-secondary)'>—</span>" : "") +
                 "</td>" +
                 "<td style='padding:.45rem .6rem'><span style='padding:.18rem .55rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.74rem;font-weight:700;display:inline-block;white-space:nowrap'><span class='material-icons-round' style='font-size:.8rem;vertical-align:middle;margin-right:2px'>store</span>" + _esc(r.concorrente) + "</span></td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
@@ -5425,35 +5517,35 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;font-size:.78rem;color:var(--text-secondary)'>" + _esc(r.cliente) + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + r.data + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:center'>" +
-                    "<button onclick=\"DemandaApp._excluirItemMapeamento('" + _esc(r.cotacaoId || "") + "')\" title='Excluir do mapeamento' style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem;display:inline-flex;align-items:center;opacity:.8' onmouseover='this.style.opacity=\"1\"' onmouseout='this.style.opacity=\"0.8\"'>" +
-                        "<span class='material-icons-round' style='font-size:1.05rem'>delete</span>" +
-                    "</button>" +
+                "<button onclick=\"DemandaApp._excluirItemMapeamento(" + ci + ")\" title='Excluir somente este item do mapeamento' style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem;display:inline-flex;align-items:center;opacity:.8' onmouseover='this.style.opacity=\"1\"' onmouseout='this.style.opacity=\"0.8\"'>" +
+                "<span class='material-icons-round' style='font-size:1.05rem'>delete</span>" +
+                "</button>" +
                 "</td>" +
-            "</tr>";
+                "</tr>";
         }).join("");
 
         var tableHtml =
             "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden'>" +
-                "<div style='overflow-x:auto'>" +
-                    "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
-                        "<thead><tr style='border-bottom:1px solid var(--border-color);background:rgba(255,255,255,.02)'>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>#</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Referência</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Descrição</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Fabricante</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Concorrente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:right;color:#f59e0b;font-size:.7rem;font-weight:700;text-transform:uppercase'>Preço Concorrente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço" + (nomeFilSel ? "<span style='display:block;font-size:.6rem;color:#10b981;text-transform:none'>" + _esc(nomeFilSel) + "</span>" : "") + "</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Comparativo</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Cliente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Data</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Ação</th>" +
-                        "</tr></thead>" +
-                        "<tbody>" +
-                            (tableRows || "<tr><td colspan='11' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
-                        "</tbody>" +
-                    "</table>" +
-                "</div>" +
+            "<div style='overflow-x:auto'>" +
+            "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
+            "<thead><tr style='border-bottom:1px solid var(--border-color);background:rgba(255,255,255,.02)'>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>#</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Referência</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Descrição</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Fabricante</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Concorrente</th>" +
+            "<th style='padding:.5rem .6rem;text-align:right;color:#f59e0b;font-size:.7rem;font-weight:700;text-transform:uppercase'>Preço Concorrente</th>" +
+            "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço" + (nomeFilSel ? "<span style='display:block;font-size:.6rem;color:#10b981;text-transform:none'>" + _esc(nomeFilSel) + "</span>" : "") + "</th>" +
+            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Comparativo</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Cliente</th>" +
+            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Data</th>" +
+            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Ação</th>" +
+            "</tr></thead>" +
+            "<tbody>" +
+            (tableRows || "<tr><td colspan='11' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
+            "</tbody>" +
+            "</table>" +
+            "</div>" +
             "</div>";
 
         hc.innerHTML = kpiHtml + barHtml + tableHtml;
@@ -5480,34 +5572,34 @@ const DemandaApp = (function() {
 
         var header =
             "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div>" +
-                    "<h3 style='margin:0;font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
-                        "<span class='material-icons-round' style='color:#f59e0b'>store</span> Empresas Concorrentes Cadastradas</h3>" +
-                    "<p style='margin:.2rem 0 0;font-size:.78rem;color:var(--text-secondary)'>Empresas concorrentes mapeadas para inteligência e precificação comparativa.</p>" +
-                "</div>" +
-                "<button class='btn btn-primary btn-sm' onclick='DemandaApp.abrirModalNovoConcorrente()' style='display:inline-flex;align-items:center;gap:.3rem'>" +
-                    "<span class='material-icons-round' style='font-size:.9rem'>add_business</span> + Novo Concorrente" +
-                "</button>" +
+            "<div>" +
+            "<h3 style='margin:0;font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
+            "<span class='material-icons-round' style='color:#f59e0b'>store</span> Empresas Concorrentes Cadastradas</h3>" +
+            "<p style='margin:.2rem 0 0;font-size:.78rem;color:var(--text-secondary)'>Empresas concorrentes mapeadas para inteligência e precificação comparativa.</p>" +
+            "</div>" +
+            "<button class='btn btn-primary btn-sm' onclick='DemandaApp.abrirModalNovoConcorrente()' style='display:inline-flex;align-items:center;gap:.3rem'>" +
+            "<span class='material-icons-round' style='font-size:.9rem'>add_business</span> + Novo Concorrente" +
+            "</button>" +
             "</div>";
 
-        var cards = _concorrentesCadastrados.map(function(c, i) {
+        var cards = _concorrentesCadastrados.map(function (c, i) {
             return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap'>" +
                 "<div>" +
-                    "<div style='font-weight:700;font-size:.95rem;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
-                        "<span class='material-icons-round' style='font-size:1rem;color:#f59e0b'>store</span>" + _esc(c.nome) +
-                    "</div>" +
-                    "<div style='font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap'>" +
-                        (c.cidade ? "<span>📍 " + _esc(c.cidade) + "</span>" : "") +
-                        (c.telefone ? "<span>📞 " + _esc(c.telefone) + "</span>" : "") +
-                        (c.obs ? "<span>📝 " + _esc(c.obs) + "</span>" : "") +
-                    "</div>" +
+                "<div style='font-weight:700;font-size:.95rem;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
+                "<span class='material-icons-round' style='font-size:1rem;color:#f59e0b'>store</span>" + _esc(c.nome) +
+                "</div>" +
+                "<div style='font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap'>" +
+                (c.cidade ? "<span>📍 " + _esc(c.cidade) + "</span>" : "") +
+                (c.telefone ? "<span>📞 " + _esc(c.telefone) + "</span>" : "") +
+                (c.obs ? "<span>📝 " + _esc(c.obs) + "</span>" : "") +
+                "</div>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem'>" +
-                    "<button class='btn btn-secondary btn-sm' onclick=\"DemandaApp.filtrarPorConcorrente('" + _escAttr(c.nome) + "');DemandaApp.switchConcSubTab('precos');\" style='font-size:.75rem;padding:.25rem .65rem'>" +
-                        "<span class='material-icons-round' style='font-size:.85rem'>table_rows</span> Ver Preços" +
-                    "</button>" +
+                "<button class='btn btn-secondary btn-sm' onclick=\"DemandaApp.filtrarPorConcorrente('" + _escAttr(c.nome) + "');DemandaApp.switchConcSubTab('precos');\" style='font-size:.75rem;padding:.25rem .65rem'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>table_rows</span> Ver Preços" +
+                "</button>" +
                 "</div>" +
-            "</div>";
+                "</div>";
         }).join("");
 
         hc.innerHTML = header + cards;
@@ -5523,11 +5615,11 @@ const DemandaApp = (function() {
             "<div style='display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:.75rem;margin-bottom:.75rem'>" +
             _concField("concNome", "Concorrente *", "text", "Ex: Distribuidora ABC", "list='concNomeSugestoes'") +
             "<div>" +
-                "<label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>Cliente <span style=\'color:var(--accent-danger);font-weight:bold;\'>*</span></label>" +
-                "<div style='position:relative'>" +
-                    "<input id='concCliente' type='text' placeholder='Buscar ou digitar cliente (obrigat\u00f3rio)...' list='concClienteSugestoes' autocomplete='off' style='" + _CONC_INP + "' oninput='this.style.borderColor=\'\';DemandaApp._onConcClienteInput(this.value)' onfocus='DemandaApp._onConcClienteFocus(this)'>" +
-                    "<div id='concClienteDropdown' class='client-dropdown' style='width:100%;left:0;right:0;top:100%;'></div>" +
-                "</div>" +
+            "<label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>Cliente <span style=\'color:var(--accent-danger);font-weight:bold;\'>*</span></label>" +
+            "<div style='position:relative'>" +
+            "<input id='concCliente' type='text' placeholder='Buscar ou digitar cliente (obrigat\u00f3rio)...' list='concClienteSugestoes' autocomplete='off' style='" + _CONC_INP + "' oninput=\"this.style.borderColor='';DemandaApp._onConcClienteInput(this.value)\" onfocus='DemandaApp._onConcClienteFocus(this)'>" +
+            "<div id='concClienteDropdown' class='client-dropdown' style='width:100%;left:0;right:0;top:100%;'></div>" +
+            "</div>" +
             "</div>" +
             _concField("concObs", "Observação", "text", "Contexto opcional", "") +
             "</div>" +
@@ -5536,7 +5628,7 @@ const DemandaApp = (function() {
             "<div style='overflow-x:auto;margin-bottom:.75rem'>" +
             "<table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
             "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-            ["#","Referência","Descrição","Qtde","Preço Concorrente","Preço Nosso","Diferença",""].map(function(h) {
+            ["#", "Referência", "Descrição", "Qtde", "Preço Concorrente", "Preço Nosso", "Diferença", ""].map(function (h) {
                 return "<th style='padding:.35rem .4rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;white-space:nowrap'>" + h + "</th>";
             }).join("") +
             "</tr></thead>" +
@@ -5555,41 +5647,41 @@ const DemandaApp = (function() {
 
     function _concField(id, label, type, ph, extra) {
         return "<div><label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>" + label + "</label>" +
-            "<input id='" + id + "' type='" + type + "' placeholder='" + ph + "' " + (extra||'') + " style='" + _CONC_INP + "'></div>";
+            "<input id='" + id + "' type='" + type + "' placeholder='" + ph + "' " + (extra || '') + " style='" + _CONC_INP + "'></div>";
     }
 
     function _renderConcTbody() {
         var tbody = document.getElementById("concTbody");
         if (!tbody) return;
-        tbody.innerHTML = _concItens.map(function(item, i) {
-            var pc  = parseFloat(item.precoConcorrente) || 0;
-            var pm  = parseFloat(item.precoMeu) || 0;
-            var d   = (pc && pm) ? (pm - pc) : null;
+        tbody.innerHTML = _concItens.map(function (item, i) {
+            var pc = parseFloat(item.precoConcorrente) || 0;
+            var pm = parseFloat(item.precoMeu) || 0;
+            var d = (pc && pm) ? (pm - pc) : null;
             var pct = (pc && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
-            var cor = d !== null ? (d > 0 ? "#10b981" : d < 0 ? "#ef4444" : "var(--text-secondary)") : "var(--text-secondary)";
+            var cor = d !== null ? (d < 0 ? "#10b981" : d > 0 ? "#ef4444" : "var(--text-secondary)") : "var(--text-secondary)";
             var dTxt = d !== null
-                ? "R$ " + d.toFixed(2).replace(".",",") + (pct ? " <span style='font-size:.7rem;opacity:.8'>(" + (d>0?"+":"") + pct + "%)</span>" : "")
+                ? "R$ " + d.toFixed(2).replace(".", ",") + (pct ? " <span style='font-size:.7rem;opacity:.8'>(" + (d > 0 ? "+" : "") + pct + "%)</span>" : "")
                 : "\u2014";
             return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-                "<td style='padding:.3rem .4rem;color:var(--text-secondary);font-size:.72rem'>" + (i+1) + "</td>" +
-                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.ref||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'ref',this.value)\" placeholder='Ref.' style='" + _CONC_INP + "min-width:90px'></td>" +
-                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.desc||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'desc',this.value)\" placeholder='Descri\u00e7\u00e3o' style='" + _CONC_INP + "min-width:140px'></td>" +
-                "<td style='padding:.3rem .4rem'><input type='number' min='1' value='" + (item.qtde||1) + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'qtde',this.value)\" style='" + _CONC_INP + "width:55px;text-align:center'></td>" +
-                "<td style='padding:.3rem .4rem'><input type='number' step='0.01' min='0' value='" + (item.precoConcorrente||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoConcorrente',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
-                "<td style='padding:.3rem .4rem'><input type='number' step='0.01' min='0' value='" + (item.precoMeu||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoMeu',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
-                "<td style='padding:.3rem .4rem;font-size:.78rem;font-weight:700;color:" + cor + ";white-space:nowrap'>" + dTxt + "</td>" +
+                "<td style='padding:.3rem .4rem;color:var(--text-secondary);font-size:.72rem'>" + (i + 1) + "</td>" +
+                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.ref || '') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'ref',this.value)\" placeholder='Ref.' style='" + _CONC_INP + "min-width:90px'></td>" +
+                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.desc || '') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'desc',this.value)\" placeholder='Descri\u00e7\u00e3o' style='" + _CONC_INP + "min-width:140px'></td>" +
+                "<td style='padding:.3rem .4rem'><input type='number' min='1' value='" + (item.qtde || 1) + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'qtde',this.value)\" style='" + _CONC_INP + "width:55px;text-align:center'></td>" +
+                "<td style='padding:.3rem .4rem'><input type='number' step='0.01' min='0' value='" + (item.precoConcorrente || '') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoConcorrente',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
+                "<td style='padding:.3rem .4rem'><input id='concPrecoMeu_" + i + "' type='number' step='0.01' min='0' value='" + (item.precoMeu || '') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoMeu',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
+                "<td id='concDiffCell_" + i + "' style='padding:.3rem .4rem;font-size:.78rem;font-weight:700;color:" + cor + ";white-space:nowrap'>" + dTxt + "</td>" +
                 "<td style='padding:.3rem .4rem'><button onclick=\"DemandaApp._concRemoveItem(" + i + ")\" style='background:transparent;border:none;color:var(--accent-danger);cursor:pointer;padding:.1rem'><span class='material-icons-round' style='font-size:1rem'>close</span></button></td>" +
                 "</tr>";
         }).join("");
     }
 
     function _escAttr(str) {
-        if (!str) return "";
-        return String(str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+        if (!str && str !== 0) return "";
+        return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     function _concAddItem() {
-        _concItens.push({ id: Date.now(), ref:"", desc:"", qtde:1, precoConcorrente:"", precoMeu:"" });
+        _concItens.push({ id: Date.now(), ref: "", desc: "", qtde: 1, precoConcorrente: "", precoMeu: "" });
         _renderConcTbody();
     }
 
@@ -5610,11 +5702,23 @@ const DemandaApp = (function() {
                 if (foundPrc && foundPrc.v) {
                     var pfC = (window.DemandaFilial && window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[valUp]) ? DemandaFilial.preco(valUp) : null;
                     _concItens[idx].precoMeu = (pfC && pfC.exato && pfC.v > 0) ? pfC.v : foundPrc.v;
+                    var inpPm = document.getElementById("concPrecoMeu_" + idx);
+                    if (inpPm) inpPm.value = _concItens[idx].precoMeu;
                 }
             }
         }
-        var tbody = document.getElementById("concTbody");
-        if (tbody) _renderConcTbody();
+        // Atualiza apenas a célula de diferença sem re-renderizar o tbody (mantém o foco do input)
+        var diffCell = document.getElementById("concDiffCell_" + idx);
+        if (diffCell) {
+            var pc = parseFloat(_concItens[idx].precoConcorrente) || 0;
+            var pm = parseFloat(_concItens[idx].precoMeu) || 0;
+            var d = (pc && pm) ? (pm - pc) : null;
+            var pct = (pc && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
+            diffCell.style.color = d !== null ? (d < 0 ? "#10b981" : d > 0 ? "#ef4444" : "var(--text-secondary)") : "var(--text-secondary)";
+            diffCell.innerHTML = d !== null
+                ? "R$ " + d.toFixed(2).replace(".", ",") + (pct ? " <span style='font-size:.7rem;opacity:.8'>(" + (d > 0 ? "+" : "") + pct + "%)</span>" : "")
+                : "\u2014";
+        }
     }
 
     function _onConcClienteInput(val) {
@@ -5630,7 +5734,7 @@ const DemandaApp = (function() {
             ? _todosClientesCache
             : _extrairClientesLocais();
 
-        var matches = todos.filter(function(c) {
+        var matches = todos.filter(function (c) {
             var hay = (c.nome + " " + (c.cnpj || "") + " " + (c.codigo || "") + " " + (c.cidade || "")).toLowerCase();
             return hay.indexOf(qTerm) >= 0;
         }).slice(0, 15);
@@ -5642,12 +5746,12 @@ const DemandaApp = (function() {
 
         _concClientesCache = matches;
         dd.style.display = "block";
-        dd.innerHTML = matches.map(function(c, i) {
+        dd.innerHTML = matches.map(function (c, i) {
             var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
             return "<div class='client-dropdown-item' onclick='DemandaApp._selectConcCliente(" + i + ")'>" +
-                   "<strong>" + _esc(c.nome) + "</strong>" +
-                   (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
-                   "</div>";
+                "<strong>" + _esc(c.nome) + "</strong>" +
+                (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
+                "</div>";
         }).join("");
     }
 
@@ -5675,7 +5779,7 @@ const DemandaApp = (function() {
         if (!dl) return;
         var todos = (_todosClientesCache && _todosClientesCache.length > 0) ? _todosClientesCache : _extrairClientesLocais();
         if (!todos || todos.length === 0) return;
-        dl.innerHTML = todos.slice(0, 150).map(function(c) {
+        dl.innerHTML = todos.slice(0, 150).map(function (c) {
             var label = c.nome + (c.cnpj ? " (" + c.cnpj + ")" : "") + (c.cidade ? " - " + c.cidade : "");
             return "<option value=\"" + _escAttr(c.nome) + "\" label=\"" + _escAttr(label) + "\">";
         }).join("");
@@ -5694,34 +5798,36 @@ const DemandaApp = (function() {
                 cliInp.focus();
                 cliInp.style.borderColor = "var(--accent-danger)";
                 cliInp.style.animation = "shake 0.4s ease";
-                setTimeout(function() { if (cliInp) cliInp.style.animation = ""; }, 500);
+                setTimeout(function () { if (cliInp) cliInp.style.animation = ""; }, 500);
             }
             return;
         }
-        var itens = _concItens.filter(function(it) { return it.ref || it.desc; });
+        var itens = _concItens.filter(function (it) { return it.ref || it.desc; });
         if (itens.length === 0) { _toast("Adicione ao menos um item.", "warning"); return; }
         var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
         var doc = {
-            concorrente:  concNome.trim(),
-            clienteRef:   (document.getElementById("concCliente") || {}).value || "",
-            clienteId:    (_concClienteSelecionado ? _concClienteSelecionado.id : null),
-            clienteCnpj:  (_concClienteSelecionado ? _concClienteSelecionado.cnpj : ""),
-            obs:          (document.getElementById("concObs") || {}).value || "",
+            concorrente: concNome.trim(),
+            clienteRef: (document.getElementById("concCliente") || {}).value || "",
+            clienteId: (_concClienteSelecionado ? _concClienteSelecionado.id : null),
+            clienteCnpj: (_concClienteSelecionado ? _concClienteSelecionado.cnpj : ""),
+            obs: (document.getElementById("concObs") || {}).value || "",
             vendedorNome: por,
-            criadoEm:     firebase.firestore.FieldValue.serverTimestamp(),
-            status:       "ativa",
-            itens:        itens.map(function(it) {
-                return { id: String(it.id), ref: it.ref||'', desc: it.desc||'',
-                    qtde: parseFloat(it.qtde)||1,
-                    precoConcorrente: parseFloat(it.precoConcorrente)||0,
-                    precoMeu:         parseFloat(it.precoMeu)||0 };
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+            status: "ativa",
+            itens: itens.map(function (it) {
+                return {
+                    id: String(it.id), ref: it.ref || '', desc: it.desc || '',
+                    qtde: parseFloat(it.qtde) || 1,
+                    precoConcorrente: parseFloat(it.precoConcorrente) || 0,
+                    precoMeu: parseFloat(it.precoMeu) || 0
+                };
             })
         };
         db.add(doc)
-            .then(function(ref) {
+            .then(function (ref) {
                 return ref.update({ id: ref.id });
             })
-            .then(function() {
+            .then(function () {
                 _toast("Cota\u00e7\u00e3o de " + concNome + " salva!", "success");
                 _concItens = [];
                 _concClienteSelecionado = null;
@@ -5729,7 +5835,7 @@ const DemandaApp = (function() {
                 _renderConcorrenteForm();
                 _loadHistoricoConcorrente();
             })
-            .catch(function(e) { _toast("Erro ao salvar: " + (e.message||e), "error"); });
+            .catch(function (e) { _toast("Erro ao salvar: " + (e.message || e), "error"); });
     }
 
     function _loadHistoricoConcorrente() {
@@ -5737,21 +5843,21 @@ const DemandaApp = (function() {
         if (!hc) return;
         hc.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
             "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span></div>";
-        var db = _concDB();
+        var db = _concColRaw();
         if (!db) { hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Firebase não disponível.</p>"; return; }
-        db.limit(60).get()
-            .then(function(snap) {
-                var cotacoes = snap.docs.map(function(d){ return d.data(); })
-                    .filter(function(c){ return !c.status || c.status === "ativa"; });
-                cotacoes.sort(function(a, b) {
+        _getConcSnapCached()
+            .then(function (snap) {
+                var cotacoes = (snap.docs || []).map(function (d) { var o = d.data(); if (!o.id) o.id = d.id; return o; })
+                    .filter(function (c) { return !c.status || c.status === "ativa"; });
+                cotacoes.sort(function (a, b) {
                     var ta = a.criadoEm && a.criadoEm.toMillis ? a.criadoEm.toMillis() : (new Date(a.criadoEm || 0)).getTime();
                     var tb = b.criadoEm && b.criadoEm.toMillis ? b.criadoEm.toMillis() : (new Date(b.criadoEm || 0)).getTime();
                     return tb - ta;
                 });
                 _renderHistoricoConcorrente(cotacoes);
             })
-            .catch(function(err) {
-                hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message||String(err)) + "</p>";
+            .catch(function (err) {
+                hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
             });
     }
 
@@ -5768,49 +5874,49 @@ const DemandaApp = (function() {
             "<h3 style='margin:0;font-size:.88rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em'>Hist\u00f3rico (" + cotacoes.length + ") cota\u00e7\u00f5es</h3>" +
             "<button onclick='DemandaApp._loadHistoricoConcorrente()' title='Atualizar' style='background:transparent;border:none;color:var(--accent-primary);cursor:pointer'>" +
             "<span class='material-icons-round' style='font-size:1rem'>refresh</span></button></div>";
-        var cards = cotacoes.map(function(c) {
+        var cards = cotacoes.map(function (c) {
             var dt = c.criadoEm && c.criadoEm.toDate
-                ? c.criadoEm.toDate().toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"})
+                ? c.criadoEm.toDate().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })
                 : "\u2014";
             var itens = c.itens || [];
-            var totalC = itens.reduce(function(a,it){return a+((it.precoConcorrente||0)*(it.qtde||1));},0);
-            var totalM = itens.reduce(function(a,it){return a+((it.precoMeu||0)*(it.qtde||1));},0);
-            var diff   = totalM - totalC;
-            var bCor   = diff > 0 ? "#ef4444" : diff < 0 ? "#10b981" : "#6366f1";
-            var bTxt   = (totalC && totalM) ? (diff > 0 ? "Concorrente mais barato" : diff < 0 ? "N\u00f3s somos mais baratos" : "Mesmo pre\u00e7o") : "";
-            var rows = itens.map(function(it,i) {
-                var pc = it.precoConcorrente||0; var pm = it.precoMeu||0;
-                var d  = (pc && pm) ? (pm - pc) : null;
-                var pct= (pc && d!==null) ? ((d/pc)*100).toFixed(1) : null;
-                var cor= d!==null ? (d>0?"#10b981":d<0?"#ef4444":"var(--text-secondary)") : "var(--text-secondary)";
+            var totalC = itens.reduce(function (a, it) { return a + ((it.precoConcorrente || 0) * (it.qtde || 1)); }, 0);
+            var totalM = itens.reduce(function (a, it) { return a + ((it.precoMeu || 0) * (it.qtde || 1)); }, 0);
+            var diff = totalM - totalC;
+            var bCor = diff > 0 ? "#ef4444" : diff < 0 ? "#10b981" : "#6366f1";
+            var bTxt = (totalC && totalM) ? (diff > 0 ? "Concorrente mais barato" : diff < 0 ? "N\u00f3s somos mais baratos" : "Mesmo pre\u00e7o") : "";
+            var rows = itens.map(function (it, i) {
+                var pc = it.precoConcorrente || 0; var pm = it.precoMeu || 0;
+                var d = (pc && pm) ? (pm - pc) : null;
+                var pct = (pc && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
+                var cor = d !== null ? (d < 0 ? "#10b981" : d > 0 ? "#ef4444" : "var(--text-secondary)") : "var(--text-secondary)";
                 return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-                    "<td style='padding:.28rem .5rem;font-size:.72rem;color:var(--text-secondary)'>" + (i+1) + "</td>" +
-                    "<td style='padding:.28rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(it.ref||"\u2014") + "</td>" +
-                    "<td style='padding:.28rem .5rem;font-size:.78rem;color:var(--text-secondary);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(it.desc||"\u2014") + "</td>" +
-                    "<td style='padding:.28rem .5rem;text-align:center;font-size:.8rem'>" + (it.qtde||1) + "</td>" +
-                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pc?"R$ "+pc.toFixed(2).replace(".",","):"\u2014") + "</td>" +
-                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pm?"R$ "+pm.toFixed(2).replace(".",","):"\u2014") + "</td>" +
-                    "<td style='padding:.28rem .5rem;font-size:.78rem;font-weight:700;color:"+cor+"'>" +
-                        (d!==null?"R$ "+d.toFixed(2).replace(".",",")+(pct?" ("+(d>0?"+":"")+pct+"%)":""):"\u2014")+
+                    "<td style='padding:.28rem .5rem;font-size:.72rem;color:var(--text-secondary)'>" + (i + 1) + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(it.ref || "\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.78rem;color:var(--text-secondary);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(it.desc || "\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;text-align:center;font-size:.8rem'>" + (it.qtde || 1) + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pc ? "R$ " + pc.toFixed(2).replace(".", ",") : "\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pm ? "R$ " + pm.toFixed(2).replace(".", ",") : "\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.78rem;font-weight:700;color:" + cor + "'>" +
+                    (d !== null ? "R$ " + d.toFixed(2).replace(".", ",") + (pct ? " (" + (d > 0 ? "+" : "") + pct + "%)" : "") : "\u2014") +
                     "</td></tr>";
             }).join("");
-            var cid = _esc(c.id||"");
+            var cid = _esc(c.id || "");
             return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.1rem;margin-bottom:.75rem'>" +
                 "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;cursor:pointer' onclick=\"DemandaApp._toggleConcCard('" + cid + "')\">" +
                 "<div><div style='font-weight:700;font-size:.93rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap'>" +
                 "<span class='material-icons-round' style='font-size:1rem;color:#f59e0b'>trending_up</span>" + _esc(c.concorrente) +
-                (bTxt?"<span style='font-size:.68rem;padding:.12rem .4rem;border-radius:6px;background:"+bCor+"22;color:"+bCor+"'>"+bTxt+"</span>":"") +
+                (bTxt ? "<span style='font-size:.68rem;padding:.12rem .4rem;border-radius:6px;background:" + bCor + "22;color:" + bCor + "'>" + bTxt + "</span>" : "") +
                 "</div><div style='font-size:.77rem;color:var(--text-secondary);margin-top:.2rem'>" + dt +
-                (c.clienteRef?" \u00b7 "+_esc(c.clienteRef):"") + " \u00b7 " + _esc(c.vendedorNome||"") + "</div></div>" +
+                (c.clienteRef ? " \u00b7 " + _esc(c.clienteRef) : "") + " \u00b7 " + _esc(c.vendedorNome || "") + "</div></div>" +
                 "<div style='display:flex;align-items:center;gap:.75rem'>" +
-                (totalC?"<div style='text-align:right'><div style='font-size:.68rem;color:var(--text-secondary)'>Total concorrente</div><div style='font-weight:700;font-size:.88rem'>R$ "+totalC.toFixed(2).replace(".",",")+"</div></div>":"") +
-                "<span class='material-icons-round' id='concCardIcon_"+cid+"' style='color:var(--text-secondary);font-size:1.1rem'>expand_more</span>" +
+                (totalC ? "<div style='text-align:right'><div style='font-size:.68rem;color:var(--text-secondary)'>Total concorrente</div><div style='font-weight:700;font-size:.88rem'>R$ " + totalC.toFixed(2).replace(".", ",") + "</div></div>" : "") +
+                "<span class='material-icons-round' id='concCardIcon_" + cid + "' style='color:var(--text-secondary);font-size:1.1rem'>expand_more</span>" +
                 "</div></div>" +
-                "<div id='concCardBody_"+cid+"' style='display:none;margin-top:.75rem'>" +
-                (c.obs?"<div style='font-size:.78rem;color:var(--text-secondary);margin-bottom:.5rem;font-style:italic'>"+_esc(c.obs)+"</div>":"") +
+                "<div id='concCardBody_" + cid + "' style='display:none;margin-top:.75rem'>" +
+                (c.obs ? "<div style='font-size:.78rem;color:var(--text-secondary);margin-bottom:.5rem;font-style:italic'>" + _esc(c.obs) + "</div>" : "") +
                 "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
                 "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                ["#","Ref.","Descri\u00e7\u00e3o","Qtde","Pre\u00e7o Concorrente","Pre\u00e7o Nosso","Diferen\u00e7a"].map(function(h){
+                ["#", "Ref.", "Descri\u00e7\u00e3o", "Qtde", "Pre\u00e7o Concorrente", "Pre\u00e7o Nosso", "Diferen\u00e7a"].map(function (h) {
                     return "<th style='padding:.28rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                 }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
                 "<div style='margin-top:.75rem;text-align:right;display:flex;justify-content:flex-end;gap:.5rem'>" +
@@ -5835,8 +5941,8 @@ const DemandaApp = (function() {
         var db = _concDB();
         if (!db) return;
         db.doc(id).update({ status: "arquivada" })
-            .then(function() { _toast("Cota\u00e7\u00e3o arquivada.", "info"); _loadHistoricoConcorrente(); })
-            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+            .then(function () { _toast("Cota\u00e7\u00e3o arquivada.", "info"); _loadHistoricoConcorrente(); })
+            .catch(function (e) { _toast("Erro: " + e.message, "error"); });
     }
 
     function _excluirCotacaoConcorrente(id) {
@@ -5844,29 +5950,61 @@ const DemandaApp = (function() {
         var db = _concDB();
         if (!db) return;
         db.doc(id).delete()
-            .then(function() {
+            .then(function () {
                 _toast("Cotação excluída com sucesso!", "success");
                 _loadHistoricoConcorrente();
                 _renderMapeamentoPrecos();
             })
-            .catch(function(e) { _toast("Erro ao excluir: " + e.message, "error"); });
+            .catch(function (e) { _toast("Erro ao excluir: " + e.message, "error"); });
     }
 
-    async function _excluirItemMapeamento(cotacaoId) {
+    async function _excluirItemMapeamento(rowIdxOrId) {
+        var r = (typeof rowIdxOrId === "number") ? _precosMapeadosCache[rowIdxOrId] : null;
+        var cotacaoId = r ? r.cotacaoId : rowIdxOrId;
         if (!cotacaoId) return;
-        if (!confirm("Deseja remover este registro do mapeamento de concorrência?")) return;
+        var msg = r
+            ? ("Remover o item " + (r.ref || "") + " (" + (r.concorrente || "concorrente") + ") do mapeamento de preços?")
+            : "Deseja remover este registro do mapeamento de concorrência?";
+        if (!confirm(msg)) return;
         var db = _concDB();
         try {
-            if (db) {
-                await db.doc(cotacaoId).delete().catch(function() {});
+            if (r && r.fonte === "demanda" && r.demandaOrigemId && r.itemId && typeof DemandaDB !== "undefined") {
+                await DemandaDB.updateItem(r.demandaOrigemId, r.itemId, { precoConcorrente: null }, {
+                    evento: "preco_concorrente_removido",
+                    por: (_sessao && (_sessao.login || _sessao.nome)) || "sistema",
+                    obs: "Preço concorrente removido no mapeamento"
+                });
+            } else if (r && r.fonte === "conc" && db) {
+                var docRef = db.doc(cotacaoId);
+                var docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    var data = docSnap.data() || {};
+                    var itensOrig = Array.isArray(data.itens) ? data.itens.slice() : [];
+                    var idxRemover = (typeof r.itemIndex === "number" && r.itemIndex >= 0 && r.itemIndex < itensOrig.length)
+                        ? r.itemIndex
+                        : itensOrig.findIndex(function (it) {
+                            return (it.ref || "—") === r.ref && (parseFloat(it.precoConcorrente) || 0) === r.precoConcorrente;
+                        });
+                    if (idxRemover >= 0) {
+                        itensOrig.splice(idxRemover, 1);
+                    }
+                    if (itensOrig.length === 0) {
+                        await docRef.delete();
+                    } else {
+                        await docRef.update({ itens: itensOrig });
+                    }
+                }
+            } else if (db) {
+                await db.doc(cotacaoId).delete().catch(function () { });
                 var snap = await db.where("demandaOrigemId", "==", cotacaoId).get();
                 var batch = firebase.firestore().batch();
-                snap.docs.forEach(function(d) { batch.delete(d.ref); });
+                snap.docs.forEach(function (d) { batch.delete(d.ref); });
                 await batch.commit();
             }
-            _toast("Registro removido da concorrência!", "success");
+            _toast("Item removido da concorrência!", "success");
             _renderMapeamentoPrecos();
-        } catch(err) {
+            _loadHistoricoConcorrente();
+        } catch (err) {
             console.error("[DemandaApp] Erro ao excluir do mapeamento:", err);
             _toast("Erro: " + (err.message || err), "error");
         }
@@ -5881,34 +6019,37 @@ const DemandaApp = (function() {
             var todasDemandas = (typeof DemandaDB !== "undefined" && typeof DemandaDB.listDemandas === "function")
                 ? await DemandaDB.listDemandas()
                 : [];
-            var batch = firebase.firestore().batch();
-            var count = 0;
-            snap.docs.forEach(function(doc) {
+            var refsOrfaos = [];
+            snap.docs.forEach(function (doc) {
                 var c = doc.data();
                 var deveExcluir = false;
                 if (c.demandaOrigemId) {
-                    var dm = todasDemandas.find(function(d) { return d.id === c.demandaOrigemId || d.codigo === c.demandaOrigemId; });
+                    var dm = todasDemandas.find(function (d) { return d.id === c.demandaOrigemId || d.codigo === c.demandaOrigemId; });
                     if (!dm || dm.status === "cancelada") deveExcluir = true;
                 } else if (c.obs && /Gerado a partir da Cotação #([^\s\)]+)/i.test(c.obs)) {
                     var m = c.obs.match(/Gerado a partir da Cotação #([^\s\)]+)/i);
                     var cod = m ? m[1] : "";
-                    var dm2 = todasDemandas.find(function(d) { return d.id === cod || d.codigo === cod; });
+                    var dm2 = todasDemandas.find(function (d) { return d.id === cod || d.codigo === cod; });
                     if (!dm2 || dm2.status === "cancelada") deveExcluir = true;
                 }
                 if (deveExcluir) {
-                    batch.delete(doc.ref);
-                    count++;
+                    refsOrfaos.push(doc.ref);
                 }
             });
+            var count = refsOrfaos.length;
             if (count > 0) {
-                await batch.commit();
+                for (var oi = 0; oi < count; oi += 450) {
+                    var batch = firebase.firestore().batch();
+                    refsOrfaos.slice(oi, oi + 450).forEach(function (r) { batch.delete(r); });
+                    await batch.commit();
+                }
                 _toast(count + " cotação(ões) órfã(s) removida(s) da concorrência!", "success");
             } else {
                 _toast("Nenhum registro órfão pendente.", "info");
             }
             _renderMapeamentoPrecos();
             _loadHistoricoConcorrente();
-        } catch(err) {
+        } catch (err) {
             console.error("[DemandaApp] Erro ao limpar órfãos:", err);
             _toast("Erro: " + (err.message || err), "error");
         }
@@ -5917,8 +6058,8 @@ const DemandaApp = (function() {
     function _populateConcSugestoes() {
         var dl = document.getElementById("concNomeSugestoes");
         if (!dl) return;
-        var nomes = _concorrentesCadastrados.map(function(c){ return c.nome; }).filter(Boolean);
-        dl.innerHTML = nomes.map(function(n){ return "<option value='" + _escAttr(n) + "'>"; }).join("");
+        var nomes = _concorrentesCadastrados.map(function (c) { return c.nome; }).filter(Boolean);
+        dl.innerHTML = nomes.map(function (n) { return "<option value='" + _escAttr(n) + "'>"; }).join("");
     }
 
     // ════════════════════════════════════════════════════════
@@ -5927,9 +6068,9 @@ const DemandaApp = (function() {
 
     function _toast(msg, type) {
         var COLORS = { success: "#10b981", error: "#ef4444", info: "#3b82f6", warning: "#f59e0b" };
-        var ICONS  = { success: "check_circle", error: "error", info: "info", warning: "warning" };
-        var cor    = COLORS[type] || COLORS.info;
-        var icon   = ICONS[type]  || "info";
+        var ICONS = { success: "check_circle", error: "error", info: "info", warning: "warning" };
+        var cor = COLORS[type] || COLORS.info;
+        var icon = ICONS[type] || "info";
         var el = document.createElement("div");
         el.style.cssText =
             "position:fixed;bottom:80px;right:1.5rem;z-index:99999;" +
@@ -5941,9 +6082,9 @@ const DemandaApp = (function() {
             "<span class='material-icons-round' style='color:" + cor + ";font-size:1.1rem;flex-shrink:0'>" + icon + "</span>" +
             "<span>" + _esc(msg) + "</span>";
         document.body.appendChild(el);
-        setTimeout(function() {
+        setTimeout(function () {
             el.style.opacity = "0";
-            setTimeout(function() { el.remove(); }, 350);
+            setTimeout(function () { el.remove(); }, 350);
         }, 3200);
     }
 
@@ -5955,7 +6096,8 @@ const DemandaApp = (function() {
         if (!str && str !== 0) return "";
         return String(str)
             .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
     }
 
     // ════════════════════════════════════════════════════════
@@ -5967,8 +6109,8 @@ const DemandaApp = (function() {
         var f = (s && (s.filial || s.tenantNome || s.empresa)) || "Plataforma";
         var r = (s && s.role) || "";
         var en = document.getElementById("sidebarUserName"); if (en) en.textContent = n;
-        var ef = document.getElementById("sidebarFilial");   if (ef) ef.textContent = f;
-        var er = document.getElementById("sidebarRole");     if (er) er.textContent = r || f;
+        var ef = document.getElementById("sidebarFilial"); if (ef) ef.textContent = f;
+        var er = document.getElementById("sidebarRole"); if (er) er.textContent = r || f;
         var ea = document.getElementById("sidebarAvatarLetter"); if (ea) ea.textContent = n.charAt(0).toUpperCase();
     }
 
@@ -5984,54 +6126,49 @@ const DemandaApp = (function() {
     function init() {
         console.log("[DemandaApp] Inicializando v1.1.0...");
 
-        // Exibe shell imediatamente (elimina risco de tela preta)
-        var sh = document.getElementById("appShell");
-        if (sh) sh.style.display = "flex";
-        try { switchView("captura"); } catch(_) {}
-
-        // Guard de autenticação
+        // Guard de autenticação ANTES de exibir o shell (evita flash de conteúdo não autorizado)
         if (typeof ParreiraAuth !== "undefined") {
             if (!ParreiraAuth.isLogado()) {
-                // ✅ Redireciona para login.html com module=demanda e redirect correto
-                // (antes ia para index.html do portal, que perdia o contexto e abria o despacho)
                 var destPath = encodeURIComponent("modules/demanda/index.html");
                 window.location.href = "/platform/login.html?module=demanda&redirect=" + destPath;
                 return;
             }
             try {
                 _sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
-                var mods   = (_sessao && _sessao.modulos) ? _sessao.modulos : [];
-                var role   = _sessao ? (_sessao.role || "") : "";
+                var mods = (_sessao && _sessao.modulos) ? _sessao.modulos : [];
+                var role = _sessao ? (_sessao.role || "") : "";
                 var tenant = _sessao ? (_sessao.tenantId || "") : "";
-                // Admin/master sempre têm acesso a todos os módulos
                 var isAdmin = (role === "admin" || role === "master");
-                // Tenant centralpecas tem acesso ao módulo (configuração pendente no Firestore)
                 var isCentralPecas = (tenant === "centralpecas");
                 if (!isAdmin && !isCentralPecas && mods.length > 0 && mods.indexOf("demanda") === -1) {
                     alert("Voce nao tem acesso ao modulo Inteligencia de Demanda.\nContate o administrador.");
                     history.back(); return;
                 }
-            } catch(e) { console.warn("[DemandaApp] Erro ao verificar modulos:", e); }
+            } catch (e) { console.warn("[DemandaApp] Erro ao verificar modulos:", e); }
         }
 
+        // Exibe shell após validação
+        var sh = document.getElementById("appShell");
+        if (sh) sh.style.display = "flex";
+
         // Preenche sidebar
-        try { _updateUser(_sessao || { nome: "Demo", filial: "Demo" }); } catch(e) {}
+        try { _updateUser(_sessao || { nome: "Demo", filial: "Demo" }); } catch (e) { }
 
         // Filial da cotação: começa vazia (obrigatória para salvar)
-        try { _renderSeletorFilial(); } catch(e) {}
+        try { _renderSeletorFilial(); } catch (e) { }
 
         // Versão no footer
         fetch("version.json?v=" + Date.now())
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
                 var el = document.getElementById("demandaFooterVersion");
                 if (el) el.textContent = "v" + (d.version || "1.1.0");
             })
-            .catch(function() {});
+            .catch(function () { });
 
         // Fecha dropdown de cliente ao clicar fora
-        document.addEventListener("click", function(ev) {
-            var dd  = document.getElementById("clienteDropdown");
+        document.addEventListener("click", function (ev) {
+            var dd = document.getElementById("clienteDropdown");
             var btn = document.getElementById("btnSelectCliente");
             if (!dd || dd.style.display !== "block") return;
             if (btn && (ev.target === btn || btn.contains(ev.target))) return;
@@ -6044,13 +6181,13 @@ const DemandaApp = (function() {
         switchView("captura");
 
         // Carrega clientes assincronamente em segundo plano
-        try { _carregarClientesAsync(); } catch(e) { console.warn("[DemandaApp] _carregarClientesAsync:", e); }
+        try { _carregarClientesAsync(); } catch (e) { console.warn("[DemandaApp] _carregarClientesAsync:", e); }
         // Carrega concorrentes cadastrados
-        try { _carregarConcorrentesAsync(); } catch(e) { console.warn("[DemandaApp] _carregarConcorrentesAsync:", e); }
+        try { _carregarConcorrentesAsync(); } catch (e) { console.warn("[DemandaApp] _carregarConcorrentesAsync:", e); }
 
         // Fecha dropdown de cliente concorrente ao clicar fora
-        document.addEventListener("click", function(ev) {
-            var cdd  = document.getElementById("concClienteDropdown");
+        document.addEventListener("click", function (ev) {
+            var cdd = document.getElementById("concClienteDropdown");
             var cinp = document.getElementById("concCliente");
             if (!cdd || cdd.style.display !== "block") return;
             if (cinp && (ev.target === cinp || cinp.contains(ev.target))) return;
@@ -6060,7 +6197,7 @@ const DemandaApp = (function() {
         console.log("[DemandaApp] Pronto v1.1.0.");
     }
 
-// ════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // VIEW: PESQUISAR PEÇAS & SIMILARES
     // ════════════════════════════════════════════════════════
 
@@ -6089,11 +6226,11 @@ const DemandaApp = (function() {
         }
 
         DemandaSearch.search(q, { limit: 50 })
-            .then(function(resultados) {
+            .then(function (resultados) {
                 _pesquisaViewResultados = resultados || [];
                 _renderPesquisaView();
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 if (container) {
                     container.innerHTML = "<p style='color:var(--accent-danger);padding:1.5rem'>Erro na busca: " + _esc(err.message || String(err)) + "</p>";
                 }
@@ -6102,7 +6239,7 @@ const DemandaApp = (function() {
 
     function filtrarPesquisaView(filtro) {
         _filtroPesquisaViewAtivo = filtro;
-        ['Todos', 'Estoque', 'JD', 'CNH', 'AGCO', 'Kuhn', 'Stara', 'Jacto', 'Tatu', 'Baldan', 'JAN', 'ZF'].forEach(function(k) {
+        ['Todos', 'Estoque', 'JD', 'CNH', 'AGCO', 'Kuhn', 'Stara', 'Jacto', 'Tatu', 'Baldan', 'JAN', 'ZF'].forEach(function (k) {
             var el = document.getElementById('chipPesq' + k);
             if (el) el.classList.remove('active');
         });
@@ -6128,7 +6265,7 @@ const DemandaApp = (function() {
             return;
         }
 
-        var filtrados = _pesquisaViewResultados.filter(function(p) {
+        var filtrados = _pesquisaViewResultados.filter(function (p) {
             var est = Number(p.estoqueFilial || p.estoque || 0);
             var fab = (p.fabricante || '').toUpperCase();
             var app = (p.aplicacao || '').toUpperCase();
@@ -6153,7 +6290,7 @@ const DemandaApp = (function() {
             "</div>" +
             "<div style='display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:.85rem'>";
 
-        html += filtrados.map(function(p) {
+        html += filtrados.map(function (p) {
             var est = Number(p.estoqueFilial || p.estoque || 0);
             var temEst = est > 0;
             var badgeCor = temEst ? '#10b981' : '#f59e0b';
@@ -6225,7 +6362,7 @@ const DemandaApp = (function() {
 
     function criarDemandaComPeca(codigo, descricao) {
         switchView('captura');
-        setTimeout(function() {
+        setTimeout(function () {
             var inpLista = document.getElementById('inpDemandaTexto');
             if (inpLista) {
                 inpLista.value = codigo + (descricao ? ' - ' + descricao : '') + ' (1 UN)';
@@ -6265,7 +6402,7 @@ const DemandaApp = (function() {
 
     function onErpBuscaRemota(termo) {
         clearTimeout(_produtosErpBuscaTimeout);
-        _produtosErpBuscaTimeout = setTimeout(function() {
+        _produtosErpBuscaTimeout = setTimeout(function () {
             var inpDesc = document.getElementById("erpInpBuscaDesc") || document.getElementById("erpInpBusca");
             var q = (termo !== undefined ? termo : (inpDesc ? inpDesc.value : "")).trim();
             _erpUltimaQuery = q;
@@ -6276,7 +6413,7 @@ const DemandaApp = (function() {
 
     function loadProdutosErp(forceRefresh, page, searchOverride) {
         var container = document.getElementById("erpProdutosContainer");
-        var contador  = document.getElementById("erpTotalContador");
+        var contador = document.getElementById("erpTotalContador");
         if (!container) return;
 
         // Garante que a base mestre de peças tecnicas esteja pronta para busca de equivalentes
@@ -6297,19 +6434,19 @@ const DemandaApp = (function() {
             "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
             "<p style='margin-top:.75rem;font-size:.88rem'>Carregando produtos do ERP Maxdata (página " + targetPage + ")...</p></div>";
 
-        _buscarProdutosErpRemoto(forceRefresh, targetPage, searchOverride).then(function(prods) {
+        _buscarProdutosErpRemoto(forceRefresh, targetPage, searchOverride).then(function (prods) {
             _produtosErpList = prods;
             _produtosErpCarregando = false;
             _popularFiltrosErp(prods);
             filtrarProdutosErp();
-        }).catch(function(err) {
+        }).catch(function (err) {
             console.warn("[DemandaApp] Falha ao carregar direto do ERP via proxy, tentando cache do Firestore:", err);
-            _buscarProdutosErpFirestore().then(function(fsProds) {
+            _buscarProdutosErpFirestore().then(function (fsProds) {
                 _produtosErpList = fsProds;
                 _produtosErpCarregando = false;
                 _popularFiltrosErp(fsProds);
                 filtrarProdutosErp();
-            }).catch(function(err2) {
+            }).catch(function (err2) {
                 _produtosErpCarregando = false;
                 container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
                     "<span class='material-icons-round' style='font-size:2rem'>error_outline</span>" +
@@ -6323,7 +6460,7 @@ const DemandaApp = (function() {
     async function _buscarProdutosErpRemoto(forceRefresh, page, searchOverride) {
         var adapter = null;
         if (typeof DemandaSearch !== "undefined" && DemandaSearch.getAdapter) {
-            try { adapter = DemandaSearch.getAdapter(); } catch(_) {}
+            try { adapter = DemandaSearch.getAdapter(); } catch (_) { }
         }
         if (!adapter && window.MaxDataAdapter) {
             var cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
@@ -6369,8 +6506,8 @@ const DemandaApp = (function() {
             _erpTotalPages = Number(data.pages || Math.ceil(_erpTotalGeral / (params.limit || 50)) || 1);
             _erpPageAtual = Number(data.page || curPage);
         }
-        
-        return rawDocs.map(function(item) {
+
+        return rawDocs.map(function (item) {
             var saldo = 0;
             if (item.estoque && typeof item.estoque === "object") {
                 saldo = Number(item.estoque.filial1 || item.estoque.saldo || item.estoque.total || 0);
@@ -6413,15 +6550,21 @@ const DemandaApp = (function() {
         });
     }
 
+    var _erpFsCache = null; // { ts, tenant, data } — cache de 10 min do fallback Firestore (até 1.000 docs)
+
     async function _buscarProdutosErpFirestore() {
         if (typeof firebase === "undefined") return [];
+        var tenantAtual = _currentTenant();
+        if (_erpFsCache && _erpFsCache.tenant === tenantAtual && (Date.now() - _erpFsCache.ts) < 10 * 60 * 1000) {
+            return _erpFsCache.data.slice();
+        }
         var db = firebase.firestore();
-        var snap = await db.collection("tenants/" + _currentTenant() + "/demanda/techbase/products")
+        var snap = await db.collection("tenants/" + tenantAtual + "/demanda/techbase/products")
             .where("ativo", "==", true)
             .limit(1000)
             .get();
 
-        return snap.docs.map(function(doc) {
+        var mapeados = snap.docs.map(function (doc) {
             var d = doc.data();
             return {
                 id: d.codigoErp || doc.id,
@@ -6452,6 +6595,8 @@ const DemandaApp = (function() {
                 origem: "firestore"
             };
         });
+        _erpFsCache = { ts: Date.now(), tenant: tenantAtual, data: mapeados };
+        return mapeados.slice();
     }
 
     function _popularFiltrosErp(prods) {
@@ -6460,7 +6605,7 @@ const DemandaApp = (function() {
         if (!selFab || !selGrp) return;
 
         var fabSet = {}, grpSet = {};
-        prods.forEach(function(p) {
+        prods.forEach(function (p) {
             if (_isProdutoImpureza(p)) return;
             if (p.fabricante) fabSet[p.fabricante.toUpperCase()] = true;
             if (p.grupo) grpSet[p.grupo.toUpperCase()] = true;
@@ -6470,12 +6615,12 @@ const DemandaApp = (function() {
         var curGrp = selGrp.value;
 
         selFab.innerHTML = "<option value=''>Todos os Fabricantes (" + Object.keys(fabSet).length + ")</option>" +
-            Object.keys(fabSet).sort().map(function(f) {
+            Object.keys(fabSet).sort().map(function (f) {
                 return "<option value='" + _escAttr(f) + "'>" + _esc(f) + "</option>";
             }).join("");
 
         selGrp.innerHTML = "<option value=''>Todos os Grupos (" + Object.keys(grpSet).length + ")</option>" +
-            Object.keys(grpSet).sort().map(function(g) {
+            Object.keys(grpSet).sort().map(function (g) {
                 return "<option value='" + _escAttr(g) + "'>" + _esc(g) + "</option>";
             }).join("");
 
@@ -6485,16 +6630,16 @@ const DemandaApp = (function() {
 
     function onErpBuscaInput() {
         clearTimeout(_produtosErpBuscaTimeout);
-        _produtosErpBuscaTimeout = setTimeout(function() {
+        _produtosErpBuscaTimeout = setTimeout(function () {
             var inp = document.getElementById("erpInpBusca");
             var q = inp ? inp.value.trim() : "";
             if (q.length >= 2) {
                 var contador = document.getElementById("erpTotalContador");
                 if (contador) contador.textContent = "Buscando \"" + q + "\" no ERP...";
-                
+
                 if (typeof DemandaSearch !== "undefined") {
-                    DemandaSearch.search(q, { limit: 60, forceRefresh: true }).then(function(res) {
-                        var mapeados = res.map(function(r) {
+                    DemandaSearch.search(q, { limit: 60, forceRefresh: true }).then(function (res) {
+                        var mapeados = res.map(function (r) {
                             return {
                                 id: r.erpProdutoId || r._firestoreId || "",
                                 codigoErp: String(r.erpProdutoId || ""),
@@ -6523,7 +6668,7 @@ const DemandaApp = (function() {
                         });
                         _produtosErpFiltrados = mapeados;
                         _renderProdutosErpTable(_produtosErpFiltrados);
-                    }).catch(function() {
+                    }).catch(function () {
                         filtrarProdutosErp();
                     });
                     return;
@@ -6559,7 +6704,7 @@ const DemandaApp = (function() {
             }
         }
 
-        [item.similar1, item.similar2, item.similar3, item.similar4].forEach(function(sim, idx) {
+        [item.similar1, item.similar2, item.similar3, item.similar4].forEach(function (sim, idx) {
             if (sim) {
                 var simUp = sim.toUpperCase().trim();
                 if (simUp && simUp !== meuCodFab && !jaVistos[simUp]) {
@@ -6599,7 +6744,7 @@ const DemandaApp = (function() {
 
         // 1. Pesquisa na Base Técnica Mestre (_baseTecnicaPecas)
         if (typeof _baseTecnicaPecas !== "undefined" && _baseTecnicaPecas.length > 0) {
-            _baseTecnicaPecas.forEach(function(pm) {
+            _baseTecnicaPecas.forEach(function (pm) {
                 var bate = false;
                 var refOemUp = (pm.refOem || "").toUpperCase();
                 if (meuCodFab && refOemUp && (meuCodFab === refOemUp || meuCodFab.indexOf(refOemUp) !== -1 || refOemUp.indexOf(meuCodFab) !== -1)) {
@@ -6609,7 +6754,7 @@ const DemandaApp = (function() {
                     bate = true;
                 }
                 if (!bate && pm.equivalentes) {
-                    pm.equivalentes.forEach(function(eq) {
+                    pm.equivalentes.forEach(function (eq) {
                         var eqRefUp = (eq.ref || "").toUpperCase();
                         if (meuCodFab && eqRefUp && (meuCodFab === eqRefUp || meuCodFab.indexOf(eqRefUp) !== -1)) {
                             bate = true;
@@ -6632,7 +6777,7 @@ const DemandaApp = (function() {
                             origem: "Base Técnica Mestre"
                         });
                     }
-                    (pm.equivalentes || []).forEach(function(eq) {
+                    (pm.equivalentes || []).forEach(function (eq) {
                         var rUp = (eq.ref || "").toUpperCase();
                         if (rUp && rUp !== meuCodFab && !jaVistos[rUp]) {
                             jaVistos[rUp] = true;
@@ -6658,11 +6803,11 @@ const DemandaApp = (function() {
             var meusTokens = [];
             if (meuCodFab && meuCodFab.length >= 4) meusTokens.push(meuCodFab);
             var tokensApp = (minhaAplicacao.match(/[A-Z0-9\-\.\/]{4,}/g) || []);
-            tokensApp.forEach(function(tk) {
+            tokensApp.forEach(function (tk) {
                 if (tk.length >= 4 && meusTokens.indexOf(tk) === -1) meusTokens.push(tk);
             });
 
-            _produtosErpList.forEach(function(outro) {
+            _produtosErpList.forEach(function (outro) {
                 var outroCodErp = String(outro.codigoErp || outro.id || "").trim();
                 if (outroCodErp === meuCodErp) return;
                 var outroCodFab = String(outro.codigoFab || "").trim().toUpperCase();
@@ -6715,23 +6860,23 @@ const DemandaApp = (function() {
 
         var desc = (p.descricao || "").toUpperCase().trim();
         // Veículos da frota / imobilizado
-        if (desc.indexOf("FIAT/") !== -1 || desc.indexOf("STRADA") !== -1 || desc.indexOf("VOLKSWAGEN") !== -1 || 
-            desc.indexOf("CHEVROLET") !== -1 || desc.indexOf("HILUX") !== -1 || desc.indexOf("SAVEIRO") !== -1 || 
+        if (desc.indexOf("FIAT/") !== -1 || desc.indexOf("STRADA") !== -1 || desc.indexOf("VOLKSWAGEN") !== -1 ||
+            desc.indexOf("CHEVROLET") !== -1 || desc.indexOf("HILUX") !== -1 || desc.indexOf("SAVEIRO") !== -1 ||
             desc.indexOf("AUTOMOVEL") !== -1 || desc.indexOf("VEICULO") !== -1 || desc.indexOf("PASSAGEIROS") !== -1 ||
             desc.indexOf("CAMINHAO") !== -1) {
             return true;
         }
 
         // Embalagens, fitas e material de expedição
-        if (desc.indexOf("FITA DE EMPACOTAMENTO") !== -1 || desc.indexOf("FITA ADESIVA") !== -1 || 
-            desc.indexOf("SC BOPP") !== -1 || desc.indexOf("SACO PLASTICO") !== -1 || 
-            desc.indexOf("ETIQUETA") !== -1 || desc.indexOf("PAPEL TOALHA") !== -1 || 
+        if (desc.indexOf("FITA DE EMPACOTAMENTO") !== -1 || desc.indexOf("FITA ADESIVA") !== -1 ||
+            desc.indexOf("SC BOPP") !== -1 || desc.indexOf("SACO PLASTICO") !== -1 ||
+            desc.indexOf("ETIQUETA") !== -1 || desc.indexOf("PAPEL TOALHA") !== -1 ||
             desc.indexOf("COPO DESCARTAVEL") !== -1 || desc.indexOf("BOBBINA") !== -1) {
             return true;
         }
 
         // Refeições e alimentação
-        if (desc.indexOf("SELF SERVICE") !== -1 || desc.indexOf("REFEICAO") !== -1 || 
+        if (desc.indexOf("SELF SERVICE") !== -1 || desc.indexOf("REFEICAO") !== -1 ||
             desc.indexOf("ALMOCO") !== -1 || desc.indexOf("MARMITA") !== -1 || desc.indexOf("LANCHE") !== -1) {
             return true;
         }
@@ -6741,22 +6886,22 @@ const DemandaApp = (function() {
 
     function filtrarProdutosErp() {
         var inpDesc = document.getElementById("erpInpBuscaDesc") || document.getElementById("erpInpBusca");
-        var inpFab  = document.getElementById("erpInpBuscaCodFab");
-        var inpApp  = document.getElementById("erpInpBuscaAplicacao");
-        var selFab  = document.getElementById("erpSelFabricante");
-        var selGrp  = document.getElementById("erpSelGrupo");
-        var chkEst  = document.getElementById("erpChkEstoque");
+        var inpFab = document.getElementById("erpInpBuscaCodFab");
+        var inpApp = document.getElementById("erpInpBuscaAplicacao");
+        var selFab = document.getElementById("erpSelFabricante");
+        var selGrp = document.getElementById("erpSelGrupo");
+        var chkEst = document.getElementById("erpChkEstoque");
         var chkUsoConsumo = document.getElementById("erpChkOcultarUsoConsumo");
 
         var qDesc = (inpDesc ? inpDesc.value : "").trim().toLowerCase();
-        var qFab  = (inpFab ? inpFab.value : "").trim().toLowerCase();
-        var qApp  = (inpApp ? inpApp.value : "").trim().toLowerCase();
-        var f     = (selFab ? selFab.value : "").toUpperCase();
-        var g     = (selGrp ? selGrp.value : "").toUpperCase();
+        var qFab = (inpFab ? inpFab.value : "").trim().toLowerCase();
+        var qApp = (inpApp ? inpApp.value : "").trim().toLowerCase();
+        var f = (selFab ? selFab.value : "").toUpperCase();
+        var g = (selGrp ? selGrp.value : "").toUpperCase();
         var soEstoque = chkEst ? chkEst.checked : false;
         var ocultarUsoConsumo = chkUsoConsumo ? chkUsoConsumo.checked : true;
 
-        var filtrados = _produtosErpList.filter(function(p) {
+        var filtrados = _produtosErpList.filter(function (p) {
             // Filtro rigoroso de Uso e Consumo e Ativo Imobilizado
             if (ocultarUsoConsumo && _isProdutoImpureza(p)) {
                 return false;
@@ -6793,7 +6938,7 @@ const DemandaApp = (function() {
 
     function _renderProdutosErpTable(lista) {
         var container = document.getElementById("erpProdutosContainer");
-        var contador  = document.getElementById("erpTotalContador");
+        var contador = document.getElementById("erpTotalContador");
         if (!container) return;
 
         if (contador) {
@@ -6824,24 +6969,24 @@ const DemandaApp = (function() {
             "<th style='width:120px;text-align:center'>Ações</th>" +
             "</tr></thead><tbody>";
 
-        html += lista.map(function(item) {
+        html += lista.map(function (item) {
             var temEstoque = Number(item.estoque || 0) > 0;
             var estCor = temEstoque ? "#10b981" : "#94a3b8";
-            var estBg  = temEstoque ? "rgba(16,185,129,.12)" : "rgba(148,163,184,.1)";
+            var estBg = temEstoque ? "rgba(16,185,129,.12)" : "rgba(148,163,184,.1)";
             var precoFormatado = Number(item.preco || 0) > 0
                 ? "R$ " + Number(item.preco).toFixed(2).replace(".", ",")
                 : "—";
 
             var codErp = item.codigoErp ? _esc(item.codigoErp) : "—";
             var codFab = item.codigoFab ? _esc(item.codigoFab) : "—";
-            var desc   = _esc(item.descricao || "SEM DESCRIÇÃO");
-            var fab    = item.fabricante ? "<span class='bt-brand-badge'>" + _esc(item.fabricante) + "</span>" : "—";
-            var grp    = item.grupo ? _esc(item.grupo) : "—";
+            var desc = _esc(item.descricao || "SEM DESCRIÇÃO");
+            var fab = item.fabricante ? "<span class='bt-brand-badge'>" + _esc(item.fabricante) + "</span>" : "—";
+            var grp = item.grupo ? _esc(item.grupo) : "—";
 
-            var safeRef  = _escAttr(item.codigoFab || item.codigoErp || "");
+            var safeRef = _escAttr(item.codigoFab || item.codigoErp || "");
             var safeDesc = _escAttr(item.descricao || "");
             var safePreco = Number(item.preco || 0);
-            var safeId   = _escAttr(item.codigoErp || item.id || "");
+            var safeId = _escAttr(item.codigoErp || item.id || "");
 
             var isExp = !!_erpExpandedRows[item.id];
             var equivs = _obterEquivalentesDoProduto(item);
@@ -6862,7 +7007,7 @@ const DemandaApp = (function() {
                 "</td>" +
                 "<td>" +
                 "<div style='font-weight:600;color:var(--text-primary);line-height:1.3'>" + desc + "</div>" +
-                ((function() {
+                ((function () {
                     var bHtml = "";
                     if (item.equipamento) {
                         bHtml += "<span style='display:inline-flex;align-items:center;gap:3px;font-size:.67rem;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:.08rem .35rem;font-weight:600' title='Equipamento / Máquina'><span class='material-icons-round' style='font-size:.78rem'>agriculture</span>" + _esc(item.equipamento) + "</span>";
@@ -6911,7 +7056,7 @@ const DemandaApp = (function() {
                         "<th style='padding:.45rem .6rem;text-align:right'>Preço Venda</th>" +
                         "<th style='padding:.45rem .6rem;text-align:center'>Ação</th>" +
                         "</tr></thead><tbody>" +
-                        equivs.map(function(eq) {
+                        equivs.map(function (eq) {
                             var eqTemEstoque = Number(eq.estoque || 0) > 0;
                             var eqEstCor = eqTemEstoque ? "#10b981" : "#94a3b8";
                             var eqPreco = Number(eq.preco || 0) > 0 ? "R$ " + Number(eq.preco).toFixed(2).replace(".", ",") : "—";
@@ -7036,12 +7181,6 @@ const DemandaApp = (function() {
     // VIEW: BASE TÉCNICA HIERÁRQUICA (Prompt 2 — Seções 5.2, 5.3, 5.4)
     // ════════════════════════════════════════════════════════
 
-    var _baseTecnicaPecas = [];
-    var _baseTecnicaInicializada = false;
-    var _btViewMode = "grid";
-    var _btExpandedRows = {};
-
-    // Catálogo Mestre Inicial de Alta Fidelidade (15 marcas de máquinas e implementos agrícolas)
     // Base Externa de Catálogos & Peças Técnicas (Limpa e Pronta para Alimentação)
     var _PECA_MESTRE_SEED = [];
     var _baseTecnicaPecas = [];
@@ -7052,7 +7191,7 @@ const DemandaApp = (function() {
 
     function onBtBuscaGeral(val) {
         clearTimeout(_btBuscaGeralTimeout);
-        _btBuscaGeralTimeout = setTimeout(function() {
+        _btBuscaGeralTimeout = setTimeout(function () {
             filtrarBaseTecnica();
         }, 250);
     }
@@ -7086,17 +7225,17 @@ const DemandaApp = (function() {
     }
 
     function processarImportacaoCatalogo() {
-        var inpMarca   = document.getElementById("catImpMarca");
-        var selTipo    = document.getElementById("catImpTipoOrigem");
-        var selSist    = document.getElementById("catImpSistema");
+        var inpMarca = document.getElementById("catImpMarca");
+        var selTipo = document.getElementById("catImpTipoOrigem");
+        var selSist = document.getElementById("catImpSistema");
         var inpArquivo = document.getElementById("catImpNomeArquivo");
-        var txtDados   = document.getElementById("catImpTexto");
-        var elStatus   = document.getElementById("catImpStatus");
+        var txtDados = document.getElementById("catImpTexto");
+        var elStatus = document.getElementById("catImpStatus");
 
         var marca = (inpMarca ? inpMarca.value : "").trim().toUpperCase();
-        var tipo  = (selTipo ? selTipo.value : "OEM").trim().toUpperCase();
-        var sist  = (selSist ? selSist.value : "DISCO_MANCAL").trim().toUpperCase();
-        var arq   = (inpArquivo ? inpArquivo.value : "").trim() || ("Catálogo " + marca);
+        var tipo = (selTipo ? selTipo.value : "OEM").trim().toUpperCase();
+        var sist = (selSist ? selSist.value : "DISCO_MANCAL").trim().toUpperCase();
+        var arq = (inpArquivo ? inpArquivo.value : "").trim() || ("Catálogo " + marca);
         var texto = (txtDados ? txtDados.value : "").trim();
 
         if (!marca) {
@@ -7115,7 +7254,7 @@ const DemandaApp = (function() {
         var novosItens = [];
         var timestamp = new Date().toISOString();
 
-        linhas.forEach(function(linha, idx) {
+        linhas.forEach(function (linha, idx) {
             var l = linha.trim();
             if (!l) return;
             // Ignora cabeçalhos comuns
@@ -7123,20 +7262,20 @@ const DemandaApp = (function() {
 
             // Separadores aceitos: TAB, ponto e vírgula, ou barra vertical
             var cols = l.indexOf("\t") !== -1 ? l.split("\t") : (l.indexOf(";") !== -1 ? l.split(";") : l.split("|"));
-            cols = cols.map(function(c) { return (c || "").trim(); });
+            cols = cols.map(function (c) { return (c || "").trim(); });
 
             var codigo = cols[0] || "";
             if (!codigo) return;
 
-            var desc   = cols[1] || ("PEÇA " + codigo + " " + marca);
-            var app    = cols[2] || "Geral / Máquinas e Implementos";
+            var desc = cols[1] || ("PEÇA " + codigo + " " + marca);
+            var app = cols[2] || "Geral / Máquinas e Implementos";
             var rawSim = cols[3] || "";
 
             // Trata referências similares
             var equivalentes = [];
             if (rawSim) {
                 var partesSim = rawSim.split(/[,;/]+/);
-                partesSim.forEach(function(sim) {
+                partesSim.forEach(function (sim) {
                     var s = sim.trim();
                     if (s) {
                         equivalentes.push({
@@ -7176,8 +7315,8 @@ const DemandaApp = (function() {
         if (elStatus) elStatus.textContent = "⏳ Gravando " + novosItens.length + " peças no catálogo...";
 
         // Atualiza cache em memória
-        novosItens.forEach(function(novo) {
-            var jaExiste = _baseTecnicaPecas.some(function(p) {
+        novosItens.forEach(function (novo) {
+            var jaExiste = _baseTecnicaPecas.some(function (p) {
                 return (p.codigoNorm && p.codigoNorm === novo.codigoNorm && p.marca === novo.marca);
             });
             if (!jaExiste) {
@@ -7188,21 +7327,24 @@ const DemandaApp = (function() {
         // Persiste no localStorage
         try {
             localStorage.setItem("demanda_catalogos_centralpecas", JSON.stringify(_baseTecnicaPecas));
-        } catch (_) {}
+        } catch (_) { }
 
-        // Persiste no Firestore em lote se disponível
+        // Persiste no Firestore em lotes de 400 (evita truncamento silencioso e limite de 500 ops/batch)
         if (typeof firebase !== "undefined" && firebase.firestore) {
             try {
                 var db = firebase.firestore();
-                var batch = db.batch();
                 var colRef = db.collection("tenants/" + _currentTenant() + "/demanda/techbase/catalogos");
-                novosItens.slice(0, 100).forEach(function(item) {
-                    var docId = (item.marca + "_" + item.codigoNorm).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
-                    batch.set(colRef.doc(docId), item, { merge: true });
-                });
-                batch.commit().catch(function(err) {
-                    console.warn("[DemandaApp] Erro ao sincronizar catálogo no Firestore:", err);
-                });
+                var CHUNK = 400;
+                for (var bi = 0; bi < novosItens.length; bi += CHUNK) {
+                    var batch = db.batch();
+                    novosItens.slice(bi, bi + CHUNK).forEach(function (item) {
+                        var docId = (item.marca + "_" + item.codigoNorm).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
+                        batch.set(colRef.doc(docId), item, { merge: true });
+                    });
+                    batch.commit().catch(function (err) {
+                        console.warn("[DemandaApp] Erro ao sincronizar lote de catálogo no Firestore:", err);
+                    });
+                }
             } catch (e) {
                 console.warn("[DemandaApp] Falha Firestore batch:", e);
             }
@@ -7223,13 +7365,13 @@ const DemandaApp = (function() {
 
         var valAtual = sel.value;
         var marcasMap = {};
-        _baseTecnicaPecas.forEach(function(p) {
+        _baseTecnicaPecas.forEach(function (p) {
             if (p.marca) marcasMap[p.marca.toUpperCase()] = true;
         });
         var marcas = Object.keys(marcasMap).sort();
 
         var optHtml = '<option value="">Todas as Marcas' + (marcas.length > 0 ? ' (' + marcas.length + ')' : '') + '</option>';
-        marcas.forEach(function(m) {
+        marcas.forEach(function (m) {
             optHtml += '<option value="' + _esc(m) + '">' + _esc(m) + '</option>';
         });
         sel.innerHTML = optHtml;
@@ -7261,10 +7403,21 @@ const DemandaApp = (function() {
         try {
             var raw = localStorage.getItem("demanda_catalogos_centralpecas");
             if (raw) localData = JSON.parse(raw);
-        } catch (_) {}
+        } catch (_) { }
 
         if (Array.isArray(localData) && localData.length > 0) {
             _baseTecnicaPecas = localData;
+        }
+
+        // Evita reler até 300 documentos a cada abertura: sincroniza no máximo a cada 30 min
+        var _btSyncKey = "demanda_catalogos_sync_ts_" + _currentTenant();
+        var _btUltimoSync = 0;
+        try { _btUltimoSync = Number(localStorage.getItem(_btSyncKey) || 0); } catch (_) { }
+        if (!forceRefresh && _baseTecnicaPecas.length > 0 && (Date.now() - _btUltimoSync) < 30 * 60 * 1000) {
+            _baseTecnicaInicializada = true;
+            _popularSelectMarcas();
+            filtrarBaseTecnica();
+            return;
         }
 
         // 2. Consulta Firestore para carregar catálogos persistidos
@@ -7274,11 +7427,12 @@ const DemandaApp = (function() {
                 db.collection("tenants/" + _currentTenant() + "/demanda/techbase/catalogos")
                     .limit(300)
                     .get()
-                    .then(function(snap) {
-                        snap.docs.forEach(function(d) {
+                    .then(function (snap) {
+                        try { localStorage.setItem(_btSyncKey, String(Date.now())); } catch (_) { }
+                        snap.docs.forEach(function (d) {
                             var dt = d.data();
                             var codNorm = dt.codigoNorm || (dt.codigo || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-                            var jaTem = _baseTecnicaPecas.some(function(p) {
+                            var jaTem = _baseTecnicaPecas.some(function (p) {
                                 return (p.codigoNorm && p.codigoNorm === codNorm && p.marca === dt.marca);
                             });
                             if (!jaTem && (dt.codigo || dt.codigoMestre)) {
@@ -7289,13 +7443,13 @@ const DemandaApp = (function() {
                         _popularSelectMarcas();
                         filtrarBaseTecnica();
                     })
-                    .catch(function() {
+                    .catch(function () {
                         _baseTecnicaInicializada = true;
                         _popularSelectMarcas();
                         filtrarBaseTecnica();
                     });
                 return;
-            } catch (_) {}
+            } catch (_) { }
         }
 
         _baseTecnicaInicializada = true;
@@ -7309,25 +7463,25 @@ const DemandaApp = (function() {
         if (!container) return;
 
         var inpGeral = document.getElementById("btInpBuscaGeral");
-        var inpDesc  = document.getElementById("btInpBuscaDesc");
-        var inpRef   = document.getElementById("btInpBuscaRef");
-        var inpApp   = document.getElementById("btInpBuscaAplicacao");
+        var inpDesc = document.getElementById("btInpBuscaDesc");
+        var inpRef = document.getElementById("btInpBuscaRef");
+        var inpApp = document.getElementById("btInpBuscaAplicacao");
         var selMarca = document.getElementById("btSelMarca");
-        var selTipo  = document.getElementById("btSelTipoOrigem");
-        var selSist  = document.getElementById("btSelSistema");
+        var selTipo = document.getElementById("btSelTipoOrigem");
+        var selSist = document.getElementById("btSelSistema");
 
         var qGeral = (inpGeral ? inpGeral.value : "").trim().toLowerCase();
-        var qDesc  = (inpDesc ? inpDesc.value : "").trim().toLowerCase();
-        var qRef   = (inpRef ? inpRef.value : "").trim().toLowerCase();
-        var qApp   = (inpApp ? inpApp.value : "").trim().toLowerCase();
+        var qDesc = (inpDesc ? inpDesc.value : "").trim().toLowerCase();
+        var qRef = (inpRef ? inpRef.value : "").trim().toLowerCase();
+        var qApp = (inpApp ? inpApp.value : "").trim().toLowerCase();
         var fMarca = (selMarca ? selMarca.value : "").trim().toUpperCase();
-        var fTipo  = (selTipo ? selTipo.value : "").trim().toUpperCase();
-        var fSist  = (selSist ? selSist.value : "").trim().toUpperCase();
+        var fTipo = (selTipo ? selTipo.value : "").trim().toUpperCase();
+        var fSist = (selSist ? selSist.value : "").trim().toUpperCase();
 
-        var filtradas = _baseTecnicaPecas.filter(function(p) {
+        var filtradas = _baseTecnicaPecas.filter(function (p) {
             // Filtro Marca
             if (fMarca && (p.marca || "").toUpperCase() !== fMarca) {
-                var bateEquiv = p.equivalentes && p.equivalentes.some(function(eq) {
+                var bateEquiv = p.equivalentes && p.equivalentes.some(function (eq) {
                     return (eq.marca || "").toUpperCase() === fMarca;
                 });
                 if (!bateEquiv) return false;
@@ -7352,7 +7506,7 @@ const DemandaApp = (function() {
             // Filtro Ref / Similar
             if (qRef) {
                 var hayRef = ((p.refOem || "") + " " + (p.codigo || "")).toLowerCase();
-                var eqText = (p.equivalentes || []).map(function(e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
+                var eqText = (p.equivalentes || []).map(function (e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
                 if (hayRef.indexOf(qRef) === -1 && eqText.indexOf(qRef) === -1) return false;
             }
 
@@ -7365,7 +7519,7 @@ const DemandaApp = (function() {
             // Filtro Busca Geral (Top bar)
             if (qGeral) {
                 var searchStr = ((p.codigo || "") + " " + (p.codigoMestre || "") + " " + (p.funcaoTecnica || "") + " " + (p.marca || "") + " " + (p.refOem || "") + " " + (p.modeloEquipamento || "") + " " + (p.erpDesc || "")).toLowerCase();
-                var eqStr = (p.equivalentes || []).map(function(e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
+                var eqStr = (p.equivalentes || []).map(function (e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
                 if (searchStr.indexOf(qGeral) === -1 && eqStr.indexOf(qGeral) === -1) return false;
             }
 
@@ -7378,7 +7532,7 @@ const DemandaApp = (function() {
                 elContador.textContent = "0 peças catalogadas na base";
             } else {
                 var marcasUnicas = {};
-                _baseTecnicaPecas.forEach(function(p) { if (p.marca) marcasUnicas[p.marca] = true; });
+                _baseTecnicaPecas.forEach(function (p) { if (p.marca) marcasUnicas[p.marca] = true; });
                 var qtdMarcas = Object.keys(marcasUnicas).length;
                 elContador.textContent = filtradas.length.toLocaleString("pt-BR") + " de " + _baseTecnicaPecas.length.toLocaleString("pt-BR") + " peças catalogadas (" + qtdMarcas + " marcas)";
             }
@@ -7444,21 +7598,21 @@ const DemandaApp = (function() {
             "</thead>" +
             "<tbody>";
 
-        html += lista.map(function(p) {
+        html += lista.map(function (p) {
             var isOem = (p.tipoOrigem || "OEM") === "OEM";
             var origBadge = isOem
                 ? "<span class='badge-confianca badge-grau1' title='Peça de Catálogo Oficial de Montadora'>🛡️ Original OEM</span>"
                 : "<span class='badge-confianca badge-grau2' title='Peça de Fabricante / Aftermarket'>📘 Fabricante</span>";
 
             var codExibido = _esc(p.codigo || p.codigoMestre || p.refOem);
-            var safeDesc   = _esc(p.funcaoTecnica || p.descricao || "PEÇA TÉCNICA");
-            var safeMarca  = _esc(p.marca || "CATÁLOGO");
-            var safeApp    = _esc(p.modeloEquipamento || p.aplicacao || "Geral");
-            var sistNome   = sistLabels[p.sistema] || p.sistema || "Peças Agrícolas";
-            var isExp      = !!_btExpandedRows[p.codigoMestre || codExibido];
+            var safeDesc = _esc(p.funcaoTecnica || p.descricao || "PEÇA TÉCNICA");
+            var safeMarca = _esc(p.marca || "CATÁLOGO");
+            var safeApp = _esc(p.modeloEquipamento || p.aplicacao || "Geral");
+            var sistNome = sistLabels[p.sistema] || p.sistema || "Peças Agrícolas";
+            var isExp = !!_btExpandedRows[p.codigoMestre || codExibido];
 
             // Renderiza referências equivalentes / similares
-            var equivHtml = (p.equivalentes || []).map(function(eq) {
+            var equivHtml = (p.equivalentes || []).map(function (eq) {
                 var eqBadge = getGrauConfiancaBadge(eq.grau || "2");
                 return "<span class='bt-sim-pill' title='" + _esc(eq.marca || "Similar") + "'>" +
                     "<strong>" + _esc(eq.ref) + "</strong> " +
@@ -7472,7 +7626,7 @@ const DemandaApp = (function() {
             var itemErpBate = null;
             if (typeof _produtosErpList !== "undefined" && _produtosErpList.length > 0) {
                 var codNorm = (p.codigoNorm || p.codigo || "").toUpperCase();
-                itemErpBate = _produtosErpList.find(function(erp) {
+                itemErpBate = _produtosErpList.find(function (erp) {
                     var cFab = (erp.codigoFab || "").toUpperCase();
                     var cOrig = (erp.codigoOriginal || "").toUpperCase();
                     return (cFab && cFab === codNorm) || (cOrig && cOrig === codNorm);
@@ -7562,43 +7716,72 @@ const DemandaApp = (function() {
         _loadBaseTecnicaStats();
     }
 
-    function _loadBaseTecnicaStats() {
+    function _loadBaseTecnicaStats(force) {
         if (typeof firebase === 'undefined') return;
-        var db  = firebase.firestore();
-        var col = db.collection('tenants/' + _currentTenant() + '/demanda/techbase/products');
-        col.get().then(function(snap) {
+        var colPath = 'tenants/' + _currentTenant() + '/demanda/techbase/products';
+        function _set(id, n) {
+            var el = document.getElementById(id);
+            if (el && n != null) el.textContent = Number(n).toLocaleString('pt-BR');
+        }
+
+        // Agregação count(): 1 leitura por 1.000 entradas de índice (antes: leitura de TODOS os produtos)
+        if (typeof DemandaDB !== 'undefined' && typeof DemandaDB.countDocs === 'function') {
+            Promise.all([
+                DemandaDB.countDocs(colPath, null, null, { force: !!force }),
+                DemandaDB.countDocs(colPath, 'hasErpRecord', true, { force: !!force }),
+                DemandaDB.countDocs(colPath, 'origem', 'pdf_catalog', { force: !!force })
+            ]).then(function (r) {
+                if (r[0] == null) return _loadBaseTecnicaStatsLegado(colPath, _set);
+                _set('btCountTotal', r[0]);
+                _set('btCountErp', r[1]);
+                _set('btCountPdf', r[2]);
+            }).catch(function () { _loadBaseTecnicaStatsLegado(colPath, _set); });
+            return;
+        }
+        _loadBaseTecnicaStatsLegado(colPath, _set);
+    }
+
+    // Fallback (SDK sem count()): leitura completa com cache local de 6 horas
+    function _loadBaseTecnicaStatsLegado(colPath, _set) {
+        var key = 'demanda_bt_stats_' + colPath;
+        try {
+            var c = JSON.parse(localStorage.getItem(key) || 'null');
+            if (c && (Date.now() - c.ts) < 6 * 60 * 60 * 1000) {
+                _set('btCountTotal', c.total); _set('btCountErp', c.erp); _set('btCountPdf', c.pdf);
+                return;
+            }
+        } catch (_) { }
+        firebase.firestore().collection(colPath).get().then(function (snap) {
             var total = snap.size;
-            var erp   = snap.docs.filter(function(d) { return d.data().hasErpRecord; }).length;
-            var pdf   = snap.docs.filter(function(d) { return d.data().origem === 'pdf_catalog'; }).length;
-            var el;
-            el = document.getElementById('btCountTotal'); if (el) el.textContent = total.toLocaleString('pt-BR');
-            el = document.getElementById('btCountErp');   if (el) el.textContent = erp.toLocaleString('pt-BR');
-            el = document.getElementById('btCountPdf');   if (el) el.textContent = pdf.toLocaleString('pt-BR');
-        }).catch(function() {});
+            var erp = snap.docs.filter(function (d) { return d.data().hasErpRecord; }).length;
+            var pdf = snap.docs.filter(function (d) { return d.data().origem === 'pdf_catalog'; }).length;
+            _set('btCountTotal', total); _set('btCountErp', erp); _set('btCountPdf', pdf);
+            try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), total: total, erp: erp, pdf: pdf })); } catch (_) { }
+        }).catch(function () { });
     }
 
     function syncMaxdataTechbase() {
         if (typeof DemandaLookup === 'undefined') { _toast('DemandaLookup não carregado.', 'error'); return; }
-        var btn  = document.getElementById('btBtnSync');
+        var btn = document.getElementById('btBtnSync');
         var stat = document.getElementById('btSyncStatus');
-        var bar  = document.getElementById('btSyncBar');
+        var bar = document.getElementById('btSyncBar');
         var fill = document.getElementById('btSyncBarFill');
-        if (btn)  btn.disabled = true;
-        if (bar)  bar.style.display = 'block';
-        if (fill) fill.style.width  = '5%';
-        if (stat) stat.textContent  = 'Conectando ao Maxdata...';
-        DemandaLookup.syncMaxdataToTechbase(1, function(salvo, pagina) {
+        if (btn) btn.disabled = true;
+        if (bar) bar.style.display = 'block';
+        if (fill) fill.style.width = '5%';
+        if (stat) stat.textContent = 'Conectando ao Maxdata...';
+        DemandaLookup.syncMaxdataToTechbase(1, function (salvo, pagina) {
             if (stat) stat.textContent = 'Sincronizando... ' + salvo + ' peças (pág. ' + (pagina || '?') + ')';
             if (fill) fill.style.width = Math.min(95, 5 + salvo / 10) + '%';
-        }).then(function(total) {
-            if (fill) fill.style.width  = '100%';
-            if (stat) stat.textContent  = '✓ ' + total + ' peças agrícolas sincronizadas!';
+        }).then(function (total) {
+            if (fill) fill.style.width = '100%';
+            if (stat) stat.textContent = '✓ ' + total + ' peças agrícolas sincronizadas!';
             _toast(total + ' peças salvas na base técnica.', 'success');
             _loadBaseTecnicaStats();
-        }).catch(function(e) {
+        }).catch(function (e) {
             if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
             _toast('Erro na sincronização: ' + (e.message || e), 'error');
-        }).finally(function() {
+        }).finally(function () {
             if (btn) btn.disabled = false;
         });
     }
@@ -7607,30 +7790,30 @@ const DemandaApp = (function() {
         if (!file) return;
         if (typeof DemandaPDF === 'undefined') { _toast('DemandaPDF não carregado.', 'error'); return; }
         var stat = document.getElementById('btPdfStatus');
-        var bar  = document.getElementById('btPdfBar');
+        var bar = document.getElementById('btPdfBar');
         var fill = document.getElementById('btPdfBarFill');
         if (stat) stat.textContent = 'Processando: ' + file.name;
-        if (bar)  bar.style.display = 'block';
-        if (fill) fill.style.width  = '5%';
+        if (bar) bar.style.display = 'block';
+        if (fill) fill.style.width = '5%';
         var meta = {
-            fabricante:  (document.getElementById('btPdfFabricante')  || {}).value || '',
+            fabricante: (document.getElementById('btPdfFabricante') || {}).value || '',
             equipamento: (document.getElementById('btPdfEquipamento') || {}).value || '',
-            modelo:      (document.getElementById('btPdfModelo')      || {}).value || '',
+            modelo: (document.getElementById('btPdfModelo') || {}).value || '',
         };
-        DemandaPDF.importCatalogPDF(file, meta, function(fase, atual, total, msg) {
+        DemandaPDF.importCatalogPDF(file, meta, function (fase, atual, total, msg) {
             if (stat) stat.textContent = msg || (fase + ' ' + atual + '/' + total);
             var pct = total > 0 ? Math.round((atual / total) * 90) + 5 : 50;
             if (fill) fill.style.width = pct + '%';
-        }).then(function(result) {
+        }).then(function (result) {
             if (fill) fill.style.width = '100%';
             if (stat) stat.textContent = '✓ ' + result.totalRefs + ' referências de ' + result.totalPaginas +
                 ' páginas | ' + result.fabricante + ' ' + result.equipamento;
             _toast(result.totalRefs + ' peças importadas do PDF!', 'success');
             _loadBaseTecnicaStats();
-        }).catch(function(e) {
+        }).catch(function (e) {
             if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
             _toast('Erro ao importar PDF: ' + (e.message || e), 'error');
-        }).finally(function() {
+        }).finally(function () {
             var inp = document.getElementById('btPdfInput');
             if (inp) inp.value = '';
         });
@@ -7652,7 +7835,7 @@ const DemandaApp = (function() {
             } else if (typeof DemandaDB !== "undefined" && typeof DemandaDB.getTenantId === "function") {
                 raw = DemandaDB.getTenantId();
             }
-        } catch (_) {}
+        } catch (_) { }
 
         if (!raw) {
             try {
@@ -7671,7 +7854,7 @@ const DemandaApp = (function() {
                     var s = JSON.parse(sessionStorage.getItem("parreira_session") || localStorage.getItem("parreira_session_ls") || "null");
                     if (s && s.tenantId) raw = s.tenantId;
                 }
-            } catch (_) {}
+            } catch (_) { }
         }
         if (!raw) raw = localStorage.getItem("app_tenant_id") || "centralpecas";
         if (raw && typeof raw === "object") return String(raw.id || raw.tenantId || "centralpecas");
@@ -7694,7 +7877,7 @@ const DemandaApp = (function() {
                 itens = await DemandaDB.getItens(demandaId);
             }
 
-            var itensValidos = (itens || []).filter(function(i) {
+            var itensValidos = (itens || []).filter(function (i) {
                 return i.status !== 'venda_perdida';
             });
 
@@ -7712,7 +7895,7 @@ const DemandaApp = (function() {
             validadeDt.setDate(emissaoDt.getDate() + 5);
 
             var totalGeral = 0;
-            var rowsHtml = itensValidos.map(function(item, idx) {
+            var rowsHtml = itensValidos.map(function (item, idx) {
                 var qtd = Number(item.qtdeSolicitada || 1);
                 var unit = Number(item.preco || item.precoUnitario || 0);
                 var subtotal = qtd * unit;
@@ -7728,9 +7911,9 @@ const DemandaApp = (function() {
                     "<td style='padding:8px;font-size:12px;color:#334155;'>" + _esc(desc) + "</td>" +
                     "<td style='padding:8px;font-size:12px;color:#64748b;'>" + _esc(marca) + "</td>" +
                     "<td style='padding:8px;font-size:12px;text-align:center;font-weight:700;'>" + qtd + "</td>" +
-                    "<td style='padding:8px;font-size:12px;text-align:right;'>" + (unit > 0 ? "R$ " + unit.toFixed(2).replace(".",",") : "Consulte") + "</td>" +
-                    "<td style='padding:8px;font-size:12px;text-align:right;font-weight:700;color:#0f172a;'>" + (subtotal > 0 ? "R$ " + subtotal.toFixed(2).replace(".",",") : "—") + "</td>" +
-                "</tr>";
+                    "<td style='padding:8px;font-size:12px;text-align:right;'>" + (unit > 0 ? "R$ " + unit.toFixed(2).replace(".", ",") : "Consulte") + "</td>" +
+                    "<td style='padding:8px;font-size:12px;text-align:right;font-weight:700;color:#0f172a;'>" + (subtotal > 0 ? "R$ " + subtotal.toFixed(2).replace(".", ",") : "—") + "</td>" +
+                    "</tr>";
             }).join("");
 
             if (itensValidos.length === 0) {
@@ -7793,7 +7976,7 @@ const DemandaApp = (function() {
                 "  </div>" +
                 "  <div style='background:#f8fafc;padding:14px;border-radius:6px;border:2px solid #0284c7;display:flex;flex-direction:column;justify-content:center;text-align:right;'>" +
                 "    <span style='font-size:11px;text-transform:uppercase;color:#64748b;font-weight:700;'>Valor Total da Proposta</span>" +
-                "    <span style='font-size:22px;font-weight:800;color:#0284c7;'>R$ " + totalGeral.toFixed(2).replace(".",",") + "</span>" +
+                "    <span style='font-size:22px;font-weight:800;color:#0284c7;'>R$ " + totalGeral.toFixed(2).replace(".", ",") + "</span>" +
                 "    <span style='font-size:11px;color:#10b981;font-weight:600;margin-top:4px;'>Tributos e ICMS Inclusos</span>" +
                 "  </div>" +
                 "</div>" +
@@ -7847,7 +8030,7 @@ const DemandaApp = (function() {
 
             var totalGeral = 0;
             var linhasTexto = [];
-            (itens || []).forEach(function(i) {
+            (itens || []).forEach(function (i) {
                 if (i.status === 'venda_perdida') return;
                 var q = Number(i.qtdeSolicitada || 1);
                 var p = Number(i.preco || i.precoUnitario || 0);
@@ -7857,7 +8040,7 @@ const DemandaApp = (function() {
                 var ref = i.refOriginal || i.erpProdutoId || "—";
                 var desc = i.descOriginal || i.erpProdutoDesc || "Peça";
                 var marca = i.marca ? " (" + i.marca + ")" : "";
-                linhasTexto.push("• " + q + "x *" + ref + "* - " + desc + marca + (p > 0 ? " — R$ " + tot.toFixed(2).replace(".",",") : ""));
+                linhasTexto.push("• " + q + "x *" + ref + "* - " + desc + marca + (p > 0 ? " — R$ " + tot.toFixed(2).replace(".", ",") : ""));
             });
 
             var msg =
@@ -7869,7 +8052,7 @@ const DemandaApp = (function() {
                 "📦 *ITENS DA COTAÇÃO:*\n" +
                 linhasTexto.slice(0, 15).join("\n") + "\n\n" +
                 (linhasTexto.length > 15 ? "_(...e mais " + (linhasTexto.length - 15) + " itens)_\n\n" : "") +
-                "💰 *VALOR TOTAL: R$ " + totalGeral.toFixed(2).replace(".",",") + "*\n" +
+                "💰 *VALOR TOTAL: R$ " + totalGeral.toFixed(2).replace(".", ",") + "*\n" +
                 "💳 *Condição:* À vista / Faturado 30 dias\n" +
                 "🚚 *Entrega:* Pronta entrega / Despacho imediato\n\n" +
                 "Deseja confirmar o pedido ou precisa de mais algum item? Estamos à disposição!";
@@ -7909,7 +8092,7 @@ const DemandaApp = (function() {
             var itens = demanda.itens;
             if (!itens || itens.length === 0) itens = await DemandaDB.getItens(demandaId);
 
-            var itensAprovados = (itens || []).filter(function(i) {
+            var itensAprovados = (itens || []).filter(function (i) {
                 return i.status === 'venda_aprovada' || i.status === 'proposta_enviada' || i.status === 'aguardando_cliente';
             });
 
@@ -7918,12 +8101,12 @@ const DemandaApp = (function() {
             }
 
             var s = _sessao || {};
-            var empId = Number(s.empId || 1);
+            var empId = Number(demanda.filialId || s.empId || 1);
             var clientId = Number(demanda.clienteId || 0);
             var sellerId = Number(s.vendedorId || s.idUser || 804);
             var paymentConditionId = 1;
 
-            var itemsPayload = itensAprovados.map(function(it, idx) {
+            var itemsPayload = itensAprovados.map(function (it, idx) {
                 var q = Number(it.qtdeSolicitada || 1);
                 var p = Number(it.preco || it.precoUnitario || 0);
                 return {
@@ -7938,7 +8121,7 @@ const DemandaApp = (function() {
                 };
             });
 
-            var totalValor = itemsPayload.reduce(function(acc, it) { return acc + it.total; }, 0);
+            var totalValor = itemsPayload.reduce(function (acc, it) { return acc + it.total; }, 0);
 
             var payloadErp = {
                 header: {
@@ -7951,7 +8134,7 @@ const DemandaApp = (function() {
                     paymentConditionId: paymentConditionId,
                     pricingTableId: 1,
                     origin: "PLATAFORMA_COTACAO",
-                    quoteCode: demanda.codigo || ("CTR-" + demandaId.slice(0,8).toUpperCase()),
+                    quoteCode: demanda.codigo || ("CTR-" + demandaId.slice(0, 8).toUpperCase()),
                     totalAmount: Number(totalValor.toFixed(2)),
                     observation: "Pedido originado da Cotação " + (demanda.codigo || demandaId) + " na Plataforma Comercial Central Peças"
                 },
@@ -7983,7 +8166,7 @@ const DemandaApp = (function() {
                     "</div>" +
                     "<div style='background:#1e293b;padding:0.75rem;border-radius:6px;border:1px solid #334155;'>" +
                     "  <div style='font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;'>Valor Total do Pedido</div>" +
-                    "  <div style='font-size:0.95rem;font-weight:800;color:#f59e0b;margin-top:2px;'>R$ " + totalValor.toFixed(2).replace(".",",") + "</div>" +
+                    "  <div style='font-size:0.95rem;font-weight:800;color:#f59e0b;margin-top:2px;'>R$ " + totalValor.toFixed(2).replace(".", ",") + "</div>" +
                     "</div>";
             }
 
@@ -7993,7 +8176,7 @@ const DemandaApp = (function() {
             DemandaDB.updateDemanda(demandaId, {
                 erpPayloadHomologacao: payloadErp,
                 erpStatusIntegracao: "pausado_homologacao"
-            }).catch(function() {});
+            }).catch(function () { });
 
         } catch (err) {
             console.error("[DemandaApp] Erro na estrutura ERP:", err);
@@ -8010,8 +8193,8 @@ const DemandaApp = (function() {
         var el = document.getElementById("erpPayloadCode");
         if (el && el.textContent) {
             navigator.clipboard.writeText(el.textContent)
-                .then(function() { _toast("JSON copiado para a área de transferência!", "success"); })
-                .catch(function() { _toast("Selecione e copie o texto manualmente.", "info"); });
+                .then(function () { _toast("JSON copiado para a área de transferência!", "success"); })
+                .catch(function () { _toast("Selecione e copie o texto manualmente.", "info"); });
         }
     }
 
@@ -8135,7 +8318,7 @@ const DemandaApp = (function() {
                 "<th style='padding:0.6rem 0.8rem;text-align:center;'>Ação</th>" +
                 "</tr></thead><tbody>";
 
-            html += equivalencias.map(function(eq, idx) {
+            html += equivalencias.map(function (eq, idx) {
                 var badgeEstoque = eq.temEstoque
                     ? "<span style='background:rgba(16,185,129,0.2);color:#10b981;padding:0.2rem 0.5rem;border-radius:4px;font-weight:700;'>" + eq.estoque + " un (Disponível)</span>"
                     : "<span style='background:rgba(239,68,68,0.15);color:#ef4444;padding:0.2rem 0.5rem;border-radius:4px;'>Sem Estoque</span>";
@@ -8174,21 +8357,24 @@ const DemandaApp = (function() {
 
     async function substituirPorEquivalencia(eq) {
         if (!_equivContext || !_equivContext.itemId) return;
+        var ctx = _equivContext;
         try {
             _toast("Substituindo peça pela equivalência OEM...", "info");
+            var prcEq = Number(eq.precoUnitario || eq.preco || 0);
             var patch = {
                 refOriginal: eq.codigo,
                 descOriginal: eq.descricao || eq.codigo,
                 erpProdutoId: eq.erpProdutoId || null,
-                preco: eq.preco || 0,
+                preco: prcEq,
+                precoUnitario: prcEq,
                 status: eq.temEstoque ? "estoque_disponivel" : "sem_estoque",
                 marca: eq.marca || "",
                 tipoEquivalencia: eq.tipo || "OEM"
             };
 
-            await DemandaDB.updateItem(_equivContext.demandaId, _equivContext.itemId, patch, {
+            await DemandaDB.updateItem(ctx.demandaId, ctx.itemId, patch, {
                 evento: "equivalencia_aplicada",
-                de: _equivContext.refOriginal,
+                de: ctx.refOriginal,
                 para: eq.codigo,
                 tipo: eq.tipo,
                 por: (_sessao && (_sessao.login || _sessao.nome)) || "Consultor"
@@ -8196,7 +8382,7 @@ const DemandaApp = (function() {
 
             _toast("✓ Peça substituída por " + eq.codigo + " (" + eq.marca + ") com sucesso!", "success");
             fecharModalEquivalencias();
-            if (_demandaAtual && _demandaAtual.id === _equivContext.demandaId) {
+            if (_demandaAtual && _demandaAtual.id === ctx.demandaId) {
                 abrirDemanda(_demandaAtual.id);
             }
         } catch (e) {
@@ -8206,22 +8392,25 @@ const DemandaApp = (function() {
 
     async function adicionarComoAlternativa(eq) {
         if (!_equivContext || !_equivContext.demandaId) return;
+        var ctx = _equivContext;
         try {
             _toast("Adicionando alternativa técnica à cotação...", "info");
+            var prcEq = Number(eq.precoUnitario || eq.preco || 0);
             var novoItem = {
                 refOriginal: eq.codigo,
                 descOriginal: "[ALT] " + (eq.descricao || eq.codigo) + " (" + eq.marca + ")",
                 qtdeSolicitada: 1,
                 erpProdutoId: eq.erpProdutoId || null,
-                preco: eq.preco || 0,
+                preco: prcEq,
+                precoUnitario: prcEq,
                 status: eq.temEstoque ? "estoque_disponivel" : "sem_estoque",
-                obs: "Alternativa técnica à peça " + _equivContext.refOriginal
+                obs: "Alternativa técnica à peça " + ctx.refOriginal
             };
 
-            await DemandaDB.addItens(_equivContext.demandaId, [novoItem]);
+            await DemandaDB.addItens(ctx.demandaId, [novoItem]);
             _toast("✓ Item alternativo " + eq.codigo + " adicionado à cotação!", "success");
             fecharModalEquivalencias();
-            if (_demandaAtual && _demandaAtual.id === _equivContext.demandaId) {
+            if (_demandaAtual && _demandaAtual.id === ctx.demandaId) {
                 abrirDemanda(_demandaAtual.id);
             }
         } catch (e) {
@@ -8235,7 +8424,7 @@ const DemandaApp = (function() {
     function _registrarPerdaDMD(itemId, motivo, obs) {
         try {
             if (!_demandaAtual || !_demandaAtual.itens) return;
-            var it = _demandaAtual.itens.find(function(i) { return i.id === itemId; });
+            var it = _demandaAtual.itens.find(function (i) { return i.id === itemId; });
             if (!it) return;
 
             var key = it.erpProdutoId || it.refOriginal || it.codigoFab || "";
@@ -8251,8 +8440,8 @@ const DemandaApp = (function() {
             prev.qtdPerdida += (it.qtdeSolicitada || 1);
             prev.historico.push({
                 demandaId: _demandaAtual.id,
-                codigo: _demandaAtual.codigo || "",
-                cliente: _demandaAtual.clienteNome || "Cliente",
+                codigo: (_demandaAtual.data && _demandaAtual.data.codigo) || _demandaAtual.codigo || "",
+                cliente: (_demandaAtual.data && _demandaAtual.data.clienteNome) || _demandaAtual.clienteNome || "Cliente",
                 motivo: motivo || "Ruptura de Estoque",
                 obs: obs || "",
                 data: new Date().toISOString()
@@ -8261,7 +8450,7 @@ const DemandaApp = (function() {
 
             try {
                 localStorage.setItem("cotacao_reprimida_map", JSON.stringify(window.COTACAO_REPRIMIDA_MAP));
-            } catch (_) {}
+            } catch (_) { }
 
             console.log("[DemandaApp] Demanda reprimida registrada para SKU:", key, prev);
         } catch (e) {
@@ -8269,169 +8458,166 @@ const DemandaApp = (function() {
         }
     }
 
-// ════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // API PÚBLICA
     // ════════════════════════════════════════════════════════
 
     return {
         // Equivalências OEM & Demanda Reprimida (Lotes B e C)
-        abrirModalEquivalencias:      abrirModalEquivalencias,
-        fecharModalEquivalencias:     fecharModalEquivalencias,
-        substituirPorEquivalencia:    substituirPorEquivalencia,
-        adicionarComoAlternativa:     adicionarComoAlternativa,
-        _registrarPerdaDMD:           _registrarPerdaDMD,
+        abrirModalEquivalencias: abrirModalEquivalencias,
+        fecharModalEquivalencias: fecharModalEquivalencias,
+        substituirPorEquivalencia: substituirPorEquivalencia,
+        adicionarComoAlternativa: adicionarComoAlternativa,
+        _registrarPerdaDMD: _registrarPerdaDMD,
         // Proposta Comercial, WhatsApp e ERP (Prompts 1 e 2)
-        gerarPropostaPdf:             gerarPropostaPdf,
-        fecharModalProposta:          fecharModalProposta,
-        enviarPropostaWhatsapp:       enviarPropostaWhatsapp,
+        gerarPropostaPdf: gerarPropostaPdf,
+        fecharModalProposta: fecharModalProposta,
+        enviarPropostaWhatsapp: enviarPropostaWhatsapp,
         enviarWhatsappDaPropostaAtual: enviarWhatsappDaPropostaAtual,
-        converterEmPedidoErp:         converterEmPedidoErp,
-        fecharModalIntegracaoERP:     fecharModalIntegracaoERP,
-        copiarPayloadErp:             copiarPayloadErp,
-        abrirModalSplit:              abrirModalSplit,
-        fecharModalSplit:             fecharModalSplit,
-        onSplitInput:                 onSplitInput,
-        confirmarSplitItem:           confirmarSplitItem,
-        _currentTenant:               _currentTenant,
-        init:                   init,
-        logout:                 logout,
-        switchView:             switchView,
+        converterEmPedidoErp: converterEmPedidoErp,
+        fecharModalIntegracaoERP: fecharModalIntegracaoERP,
+        copiarPayloadErp: copiarPayloadErp,
+        abrirModalSplit: abrirModalSplit,
+        fecharModalSplit: fecharModalSplit,
+        onSplitInput: onSplitInput,
+        confirmarSplitItem: confirmarSplitItem,
+        _currentTenant: _currentTenant,
+        init: init,
+        logout: logout,
+        switchView: switchView,
         // Pesquisa
-        onSearchInput:          onSearchInput,
-        clearSearch:            clearSearch,
-        selectSearchResult:     selectSearchResult,
+        onSearchInput: onSearchInput,
+        clearSearch: clearSearch,
+        selectSearchResult: selectSearchResult,
         // Importação
-        openImportModal:        openImportModal,
-        closeModal:             closeModal,
-        addItemFromDetails:     addItemFromDetails,
-        processImportTexto:     processImportTexto,
+        openImportModal: openImportModal,
+        closeModal: closeModal,
+        addItemFromDetails: addItemFromDetails,
+        processImportTexto: processImportTexto,
         // Import PDF
-        _abrirImportPDF:        _abrirImportPDF,
-        _fecharImportPDF:       _fecharImportPDF,
-        _copiarDoPDF:           _copiarDoPDF,
+        _abrirImportPDF: _abrirImportPDF,
+        _fecharImportPDF: _fecharImportPDF,
+        _copiarDoPDF: _copiarDoPDF,
         // Import Foto
-        _abrirImportFoto:       _abrirImportFoto,
-        _fecharImportFoto:      _fecharImportFoto,
+        _abrirImportFoto: _abrirImportFoto,
+        _fecharImportFoto: _fecharImportFoto,
         _processarFotoTranscricao: _processarFotoTranscricao,
-        onExcelDrop:            onExcelDrop,
-        onExcelFileSelected:    onExcelFileSelected,
-        confirmExcelImport:     confirmExcelImport,
-        updateConferenciaItem:  updateConferenciaItem,
-        selectAllConferencia:          selectAllConferencia,
-        toggleAllConferencia:          toggleAllConferencia,
-        desmarcarIncertosConferencia:  desmarcarIncertosConferencia,
-        confirmConferencia:            confirmConferencia,
-        desvincularConferenciaItem:    desvincularConferenciaItem,
-        buscarErpConferenciaItem:      buscarErpConferenciaItem,
+        onExcelDrop: onExcelDrop,
+        onExcelFileSelected: onExcelFileSelected,
+        confirmExcelImport: confirmExcelImport,
+        updateConferenciaItem: updateConferenciaItem,
+        selectAllConferencia: selectAllConferencia,
+        toggleAllConferencia: toggleAllConferencia,
+        desmarcarIncertosConferencia: desmarcarIncertosConferencia,
+        confirmConferencia: confirmConferencia,
+        desvincularConferenciaItem: desvincularConferenciaItem,
+        buscarErpConferenciaItem: buscarErpConferenciaItem,
         // Grade de entrada
-        addItemGrade:           addItemGrade,
-        onGradeKeydown:         onGradeKeydown,
-        removeItem:             removeItem,
-        renderItens:            renderItens,
-        limparDemanda:          limparDemanda,
+        addItemGrade: addItemGrade,
+        onGradeKeydown: onGradeKeydown,
+        removeItem: removeItem,
+        renderItens: renderItens,
+        limparDemanda: limparDemanda,
         // Salvar
-        salvarDemanda:          salvarDemanda,
+        salvarDemanda: salvarDemanda,
         // Cliente
-        toggleClienteDropdown:  toggleClienteDropdown,
-        searchCliente:          searchCliente,
-        selectClienteIdx:       selectClienteIdx,
+        toggleClienteDropdown: toggleClienteDropdown,
+        searchCliente: searchCliente,
+        selectClienteIdx: selectClienteIdx,
         limparClienteSelecionado: limparClienteSelecionado,
-        usarClienteAvulso:      usarClienteAvulso,
-        onClienteSearchEnter:   onClienteSearchEnter,
-        _onConcClienteInput:    _onConcClienteInput,
-        _onConcClienteFocus:    _onConcClienteFocus,
-        _selectConcCliente:     _selectConcCliente,
-        carregarClientes:       _carregarClientesAsync,
+        usarClienteAvulso: usarClienteAvulso,
+        onClienteSearchEnter: onClienteSearchEnter,
+        _onConcClienteInput: _onConcClienteInput,
+        _onConcClienteFocus: _onConcClienteFocus,
+        _selectConcCliente: _selectConcCliente,
+        carregarClientes: _carregarClientesAsync,
         // Lista
-        filterDemandas:         filterDemandas,
+        filterDemandas: filterDemandas,
         filtrarFilialRelatorio: filtrarFilialRelatorio,
-        loadDemandasLista:      loadDemandasLista,
-        abrirDemanda:           abrirDemanda,
-        setFiltroDetalhe:       setFiltroDetalhe,
-        onFiltroTextoChange:    onFiltroTextoChange,
-        enviarItensParaComprasLote:   enviarItensParaComprasLote,
+        loadDemandasLista: loadDemandasLista,
+        abrirDemanda: abrirDemanda,
+        setFiltroDetalhe: setFiltroDetalhe,
+        onFiltroTextoChange: onFiltroTextoChange,
+        enviarItensParaComprasLote: enviarItensParaComprasLote,
         enviarItensParaOrcamentoLote: enviarItensParaOrcamentoLote,
-        consultarFiliaisLote:         consultarFiliaisLote,
-        avancarItemStatus:      avancarItemStatus,
-        toggleItemTimeline:     toggleItemTimeline,
+        consultarFiliaisLote: consultarFiliaisLote,
+        avancarItemStatus: avancarItemStatus,
+        toggleItemTimeline: toggleItemTimeline,
         // Dashboard e Compras
-        loadDashboard:          loadDashboard,
-        loadFilaCompras:        loadFilaCompras,
+        loadDashboard: loadDashboard,
+        loadFilaCompras: loadFilaCompras,
         avancarItemFilaCompras: avancarItemFilaCompras,
         // Orçamento
-        loadOrcamento:          loadOrcamento,
+        loadOrcamento: loadOrcamento,
         filtrarFilialOrcamento: filtrarFilialOrcamento,
-        alterarFilialDemanda:   alterarFilialDemanda,
-        _aprovarItemOrcamento:  _aprovarItemOrcamento,
-        _perderItemOrcamento:   _perderItemOrcamento,
+        alterarFilialDemanda: alterarFilialDemanda,
+        _aprovarItemOrcamento: _aprovarItemOrcamento,
+        _perderItemOrcamento: _perderItemOrcamento,
         // Busca ERP
-        _abrirBuscaERP:         _abrirBuscaERP,
-        _fecharBuscaERP:        _fecharBuscaERP,
-        _executarBuscaERP:      _executarBuscaERP,
-        _vincularProduto:       _vincularProduto,
+        _abrirBuscaERP: _abrirBuscaERP,
+        _fecharBuscaERP: _fecharBuscaERP,
+        _executarBuscaERP: _executarBuscaERP,
+        _vincularProduto: _vincularProduto,
         _adicionarProdutoAlternativo: _adicionarProdutoAlternativo,
-        executarPesquisaPecasView:    executarPesquisaPecasView,
-        filtrarPesquisaView:          filtrarPesquisaView,
-        criarDemandaComPeca:          criarDemandaComPeca,
+        executarPesquisaPecasView: executarPesquisaPecasView,
+        filtrarPesquisaView: filtrarPesquisaView,
+        criarDemandaComPeca: criarDemandaComPeca,
         // Ações Rápidas da Cotação
-        reavaliarEstoque:             reavaliarEstoque,
-        consultarFiliaisLote:         consultarFiliaisLote,
-        enviarItensParaOrcamentoLote: enviarItensParaOrcamentoLote,
-        enviarItensParaComprasLote:   enviarItensParaComprasLote,
+        reavaliarEstoque: reavaliarEstoque,
         // Gestão da Cotação
-        autoMatchDemanda:             autoMatchDemanda,
-        vincularItemMapeamento:       vincularItemMapeamento,
-        excluirDemanda:               excluirDemanda,
-        estornarDemanda:              estornarDemanda,
-        reabrirDemanda:               reabrirDemanda,
+        autoMatchDemanda: autoMatchDemanda,
+        vincularItemMapeamento: vincularItemMapeamento,
+        excluirDemanda: excluirDemanda,
+        estornarDemanda: estornarDemanda,
+        reabrirDemanda: reabrirDemanda,
         // Devolutiva Compras
-        _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
-        _confirmarDevolutiva:     _confirmarDevolutiva,
+        _abrirDevolutivaCompras: _abrirDevolutivaCompras,
+        _confirmarDevolutiva: _confirmarDevolutiva,
         // Preço Concorrente & Concorrentes
-        loadConcorrente:              loadConcorrente,
-        vincularConcorrenteDemanda:   vincularConcorrenteDemanda,
-        onConcorrenteChange:          onConcorrenteChange,
-        onConfConcorrenteChange:      onConfConcorrenteChange,
-        abrirModalNovoConcorrente:    abrirModalNovoConcorrente,
-        salvarNovoConcorrenteModal:   salvarNovoConcorrenteModal,
-        updateItemPrecoConc:          updateItemPrecoConc,
-        switchConcSubTab:             switchConcSubTab,
-        filtrarPrecosMapeados:        filtrarPrecosMapeados,
-        filtrarPorConcorrente:        filtrarPorConcorrente,
-        carregarConcorrentes:         _carregarConcorrentesAsync,
-        _concAddItem:                 _concAddItem,
-        _concRemoveItem:              _concRemoveItem,
-        _concUpdateItem:              _concUpdateItem,
-        _salvarCotacaoConcorrente:    _salvarCotacaoConcorrente,
-        setFilialCotacao:             setFilialCotacao,
-        definirFilialPadrao:          definirFilialPadrao,
-        filtrarPorFilialPrecos:       filtrarPorFilialPrecos,
-        _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
-        _toggleConcCard:              _toggleConcCard,
-        _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
-        _excluirCotacaoConcorrente:   _excluirCotacaoConcorrente,
-        _excluirItemMapeamento:       _excluirItemMapeamento,
-        _limparMapeamentoOrfao:       _limparMapeamentoOrfao,
+        loadConcorrente: loadConcorrente,
+        vincularConcorrenteDemanda: vincularConcorrenteDemanda,
+        onConcorrenteChange: onConcorrenteChange,
+        onConfConcorrenteChange: onConfConcorrenteChange,
+        abrirModalNovoConcorrente: abrirModalNovoConcorrente,
+        salvarNovoConcorrenteModal: salvarNovoConcorrenteModal,
+        updateItemPrecoConc: updateItemPrecoConc,
+        switchConcSubTab: switchConcSubTab,
+        filtrarPrecosMapeados: filtrarPrecosMapeados,
+        filtrarPorConcorrente: filtrarPorConcorrente,
+        carregarConcorrentes: _carregarConcorrentesAsync,
+        _concAddItem: _concAddItem,
+        _concRemoveItem: _concRemoveItem,
+        _concUpdateItem: _concUpdateItem,
+        _salvarCotacaoConcorrente: _salvarCotacaoConcorrente,
+        setFilialCotacao: setFilialCotacao,
+        definirFilialPadrao: definirFilialPadrao,
+        filtrarPorFilialPrecos: filtrarPorFilialPrecos,
+        _loadHistoricoConcorrente: _loadHistoricoConcorrente,
+        _toggleConcCard: _toggleConcCard,
+        _arquivarCotacaoConcorrente: _arquivarCotacaoConcorrente,
+        _excluirCotacaoConcorrente: _excluirCotacaoConcorrente,
+        _excluirItemMapeamento: _excluirItemMapeamento,
+        _limparMapeamentoOrfao: _limparMapeamentoOrfao,
         // Cadastro de Produtos (ERP Maxdata)
-        loadProdutosErp:              loadProdutosErp,
-        onErpBuscaInput:              onErpBuscaInput,
-        onErpBuscaRemota:             onErpBuscaRemota,
-        irParaPaginaErp:              irParaPaginaErp,
-        filtrarProdutosErp:           filtrarProdutosErp,
-        toggleErpRow:                 toggleErpRow,
-        cotarProdutoErp:              cotarProdutoErp,
-        abrirModalImportarEnriquecimento: function() {
+        loadProdutosErp: loadProdutosErp,
+        onErpBuscaInput: onErpBuscaInput,
+        onErpBuscaRemota: onErpBuscaRemota,
+        irParaPaginaErp: irParaPaginaErp,
+        filtrarProdutosErp: filtrarProdutosErp,
+        toggleErpRow: toggleErpRow,
+        cotarProdutoErp: cotarProdutoErp,
+        abrirModalImportarEnriquecimento: function () {
             if (window.DemandaEnrichment && window.DemandaEnrichment.abrirModal) {
                 DemandaEnrichment.abrirModal();
             } else {
                 alert("Módulo de enriquecimento não carregado.");
             }
         },
-        atualizarAposEnriquecimento: function(enriquecidos) {
+        atualizarAposEnriquecimento: function (enriquecidos) {
             if (!Array.isArray(enriquecidos) || enriquecidos.length === 0) return;
             var mapa = {};
-            enriquecidos.forEach(function(e) { mapa[String(e.codigo)] = e; });
-            _produtosErpList.forEach(function(p) {
+            enriquecidos.forEach(function (e) { mapa[String(e.codigo)] = e; });
+            _produtosErpList.forEach(function (p) {
                 var cod = String(p.codigoErp || p.id || "");
                 if (mapa[cod]) {
                     var e = mapa[cod];
@@ -8449,29 +8635,29 @@ const DemandaApp = (function() {
             });
             filtrarProdutosErp();
         },
-        _setProdutosErpList:          function(lista) { _produtosErpList = lista || []; filtrarProdutosErp(); },
+        _setProdutosErpList: function (lista) { _produtosErpList = lista || []; filtrarProdutosErp(); },
         // Base Técnica Hierárquica (Prompt 2)
-        loadBaseTecnica:              loadBaseTecnica,
-        onBtFiltroChange:             onBtFiltroChange,
-        filtrarBaseTecnica:           filtrarBaseTecnica,
-        getGrauConfiancaBadge:        getGrauConfiancaBadge,
-        abrirBaseTecnica:             abrirBaseTecnica,
-        syncMaxdataTechbase:          syncMaxdataTechbase,
-        importarCatalogoPDF:          importarCatalogoPDF,
-        setBtViewMode:                setBtViewMode,
-        toggleBtDetalhes:             toggleBtDetalhes,
-        onBtBuscaGeral:               onBtBuscaGeral,
-        abrirModalImportarCatalogo:   abrirModalImportarCatalogo,
-        fecharModalImportarCatalogo:  fecharModalImportarCatalogo,
-        processarImportacaoCatalogo:  processarImportacaoCatalogo,
-        sincronizarTodasCotacoes:     sincronizarTodasCotacoes,
-        buscarErpItemCotacao:         buscarErpItemCotacao,
-        desvincularItemCotacao:       desvincularItemCotacao,
+        loadBaseTecnica: loadBaseTecnica,
+        onBtFiltroChange: onBtFiltroChange,
+        filtrarBaseTecnica: filtrarBaseTecnica,
+        getGrauConfiancaBadge: getGrauConfiancaBadge,
+        abrirBaseTecnica: abrirBaseTecnica,
+        syncMaxdataTechbase: syncMaxdataTechbase,
+        importarCatalogoPDF: importarCatalogoPDF,
+        setBtViewMode: setBtViewMode,
+        toggleBtDetalhes: toggleBtDetalhes,
+        onBtBuscaGeral: onBtBuscaGeral,
+        abrirModalImportarCatalogo: abrirModalImportarCatalogo,
+        fecharModalImportarCatalogo: fecharModalImportarCatalogo,
+        processarImportacaoCatalogo: processarImportacaoCatalogo,
+        sincronizarTodasCotacoes: sincronizarTodasCotacoes,
+        buscarErpItemCotacao: buscarErpItemCotacao,
+        desvincularItemCotacao: desvincularItemCotacao,
         reexecutarAutoMatchConferencia: reexecutarAutoMatchConferencia,
-        desvincularTodosConferencia:  desvincularTodosConferencia,
-        adicionarProdutoDoErp:        adicionarProdutoDoErp,
-        adicionarItemManualBusca:     adicionarItemManualBusca,
-        executarBuscaManualImediata:  executarBuscaManualImediata,
+        desvincularTodosConferencia: desvincularTodosConferencia,
+        adicionarProdutoDoErp: adicionarProdutoDoErp,
+        adicionarItemManualBusca: adicionarItemManualBusca,
+        executarBuscaManualImediata: executarBuscaManualImediata,
     };
 
     async function sincronizarTodasCotacoes() {
@@ -8483,18 +8669,22 @@ const DemandaApp = (function() {
         }
         _toast("Sincronizando e conferindo totalizadores de todas as cotações...", "info");
         try {
-            var demandas = await DemandaDB.listDemandas({});
+            var demandas = await DemandaDB.listDemandas({ force: true });
+            // Aquece o cache versionado (só relê itens de cotações alteradas) antes de recalcular
+            if (typeof DemandaDB.getItensMany === "function") {
+                await DemandaDB.getItensMany(demandas, 6).catch(function () { });
+            }
             var cont = 0;
             for (var i = 0; i < demandas.length; i++) {
                 var dItem = demandas[i];
                 if (dItem && dItem.id) {
-                    await DemandaDB.recalcTotals(dItem.id).catch(function(){});
+                    await DemandaDB.recalcTotals(dItem.id).catch(function () { });
                     cont++;
                 }
             }
             _toast("Totalizadores de " + cont + " cotações conferidos e sincronizados com sucesso!", "success");
             loadDemandasLista(_filterAtual);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             _toast("Erro ao sincronizar: " + (e.message || e), "error");
         } finally {
@@ -8512,7 +8702,7 @@ if (typeof window !== "undefined") window.DemandaApp = DemandaApp;
 // ── Bootstrap: aguarda ParreiraAuth antes de inicializar ─────
 function _bootDemandaApp() {
     var attempts = 0;
-    var t = setInterval(function() {
+    var t = setInterval(function () {
         attempts++;
         if (typeof ParreiraAuth !== "undefined") {
             clearInterval(t);
@@ -8521,8 +8711,9 @@ function _bootDemandaApp() {
         }
         if (attempts >= 25) {
             clearInterval(t);
-            console.warn("[DemandaApp] ParreiraAuth indisponível após 2.5s — iniciando sem auth guard.");
-            DemandaApp.init();
+            console.error("[DemandaApp] ParreiraAuth indisponível após 2.5s — redirecionando para login.");
+            var destPath = encodeURIComponent("modules/demanda/index.html");
+            window.location.href = "/platform/login.html?module=demanda&redirect=" + destPath;
         }
     }, 100);
 }
