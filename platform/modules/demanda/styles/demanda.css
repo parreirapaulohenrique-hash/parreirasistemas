@@ -1837,3 +1837,64 @@ body {
     background: rgba(16,185,129,0.18);
     color: #10b981;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3.5.2: Navegação com Voltar, Edição Inline e Ações de Linha
+   ═══════════════════════════════════════════════════════════════════ */
+.mpd-btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #f1f5f9;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.mpd-btn-voltar:hover {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+    color: #38bdf8;
+}
+.mpd-rn-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.mpd-row-btn {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #94a3b8;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.12s ease;
+}
+.mpd-row-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+    color: #38bdf8;
+    border-color: #38bdf8;
+}
+.mpd-grid tbody td.mpd-cell-editable {
+    cursor: text;
+    transition: background 0.15s, box-shadow 0.15s;
+    outline: none;
+    position: relative;
+}
+.mpd-grid tbody td.mpd-cell-editable:hover {
+    background: rgba(56, 189, 248, 0.1) !important;
+}
+.mpd-grid tbody td.mpd-cell-editable:focus {
+    background: rgba(15, 23, 42, 0.95) !important;
+    box-shadow: inset 0 0 0 1.5px #38bdf8, 0 0 8px rgba(56, 189, 248, 0.3);
+    color: #fff !important;
+    white-space: normal;
+    z-index: 5;
+}

@@ -42,6 +42,9 @@ const DemandaImagemDemarcador = (() => {
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem">
+                        <button class="did-btn did-btn-sec did-btn-sm" id="didBtnVoltarMapeador" style="display:none;padding:.3rem .65rem;font-weight:600;gap:4px" title="Voltar ao Mapeador de Colunas sem perder a imagem ou demarcação">
+                            <span class="material-icons-round" style="font-size:1.05rem">arrow_back</span> Voltar ao Mapeador
+                        </button>
                         <button class="did-btn did-btn-ghost did-btn-sm" id="didBtnFechar" title="Fechar">
                             <span class="material-icons-round" style="font-size:1.1rem">close</span>
                         </button>
@@ -172,7 +175,26 @@ const DemandaImagemDemarcador = (() => {
             yBottomPct: opts.yBottomPct != null ? opts.yBottomPct : 0.88, // 88% corta rodapé
             cortesPct: opts.cortesPct && opts.cortesPct.length ? opts.cortesPct.slice() : [0.15, 0.45, 0.62, 0.76, 0.88], // 5 cortes = 6 colunas típicas
             onConfirm: onConfirm,
+            onVoltar: opts.onVoltar || null,
             toast: toast
+        };
+
+        const btnVoltarMpd = $('didBtnVoltarMapeador');
+        if (btnVoltarMpd) {
+            btnVoltarMpd.style.display = _st.onVoltar ? 'inline-flex' : 'none';
+            btnVoltarMpd.onclick = () => {
+                fechar();
+                if (typeof _st.onVoltar === 'function') _st.onVoltar();
+            };
+        }
+
+        $('didBtnFechar').onclick = () => {
+            if (_st && typeof _st.onVoltar === 'function') {
+                fechar();
+                _st.onVoltar();
+            } else {
+                fechar();
+            }
         };
 
         if (dataUrl) {

@@ -860,11 +860,13 @@ const DemandaApp = (function () {
     // ════════════════════════════════════════════════════════
 
     var _pdfBlobUrl = null;
+    var _ultimoArquivoImportado = null; // v3.5.2: Preserva arquivo em memória para voltar sem perder dados
 
     function _abrirImportPDF(fileParam) {
         function _processarPDF(file) {
             if (!file) return;
 
+            _ultimoArquivoImportado = { file: file, nome: file.name || "Cotação PDF", fonte: "pdf" };
             // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
             _toast("Renderizando página do PDF para demarcação visual...", "info");
             (async function () {
@@ -877,14 +879,40 @@ const DemandaApp = (function () {
                                 dataUrl: rend.dataUrl,
                                 nome: file.name || "Cotação PDF",
                                 toast: _toast,
+                                onVoltar: function () { openImportModal("pdf"); },
                                 onConfirm: function (grade, estadoDemarcador) {
                                     if (window.DemandaMapeador) {
                                         DemandaMapeador.abrir({
                                             rows: grade,
                                             fonte: "pdf",
                                             nome: file.name || "Cotação PDF",
+                                            file: file,
+                                            dataUrl: rend.dataUrl,
                                             estadoDemarcador: estadoDemarcador,
                                             toast: _toast,
+                                            onVoltar: function () {
+                                                DemandaImagemDemarcador.abrir({
+                                                    file: file,
+                                                    dataUrl: rend.dataUrl,
+                                                    cortesPct: estadoDemarcador ? estadoDemarcador.cortesPct : null,
+                                                    yTopPct: estadoDemarcador ? estadoDemarcador.yTopPct : null,
+                                                    yBottomPct: estadoDemarcador ? estadoDemarcador.yBottomPct : null,
+                                                    nome: file.name || "Cotação PDF",
+                                                    toast: _toast,
+                                                    onConfirm: function (novaGrade, novoEstado) {
+                                                        DemandaMapeador.abrir({
+                                                            rows: novaGrade,
+                                                            fonte: "pdf",
+                                                            nome: file.name || "Cotação PDF",
+                                                            file: file,
+                                                            dataUrl: rend.dataUrl,
+                                                            estadoDemarcador: novoEstado,
+                                                            toast: _toast,
+                                                            onConfirm: function (its) { _showConferencia(DemandaImport.validateItens(its)); }
+                                                        });
+                                                    }
+                                                });
+                                            },
                                             onConfirm: function (itens) {
                                                 _showConferencia(DemandaImport.validateItens(itens));
                                             }
@@ -1060,6 +1088,7 @@ const DemandaApp = (function () {
     function _abrirImportFoto(fileParam) {
         function _processarFoto(file) {
             if (!file) return;
+            _ultimoArquivoImportado = { file: file, nome: file.name || "Foto / Print", fonte: "foto" };
 
             // Se o Demarcador de Imagem estiver disponível, abre diretamente a imagem para demarcação antes do OCR!
             if (window.DemandaImagemDemarcador) {
@@ -1067,13 +1096,39 @@ const DemandaApp = (function () {
                     file: file,
                     nome: file.name || "Foto / Print",
                     toast: _toast,
+                    onVoltar: function () { openImportModal("foto"); },
                     onConfirm: function (grade, estadoDemarcador) {
                         DemandaMapeador.abrir({
                             rows: grade,
                             fonte: "foto",
                             nome: file.name || "Foto / Print",
+                            file: file,
+                            dataUrl: estadoDemarcador ? estadoDemarcador.dataUrl : '',
                             estadoDemarcador: estadoDemarcador,
                             toast: _toast,
+                            onVoltar: function () {
+                                DemandaImagemDemarcador.abrir({
+                                    file: file,
+                                    dataUrl: estadoDemarcador ? estadoDemarcador.dataUrl : '',
+                                    cortesPct: estadoDemarcador ? estadoDemarcador.cortesPct : null,
+                                    yTopPct: estadoDemarcador ? estadoDemarcador.yTopPct : null,
+                                    yBottomPct: estadoDemarcador ? estadoDemarcador.yBottomPct : null,
+                                    nome: file.name || "Foto / Print",
+                                    toast: _toast,
+                                    onConfirm: function (novaGrade, novoEstado) {
+                                        DemandaMapeador.abrir({
+                                            rows: novaGrade,
+                                            fonte: "foto",
+                                            nome: file.name || "Foto / Print",
+                                            file: file,
+                                            dataUrl: novoEstado ? novoEstado.dataUrl : '',
+                                            estadoDemarcador: novoEstado,
+                                            toast: _toast,
+                                            onConfirm: function (its) { _showConferencia(DemandaImport.validateItens(its)); }
+                                        });
+                                    }
+                                });
+                            },
                             onConfirm: function (itens) {
                                 _showConferencia(DemandaImport.validateItens(itens));
                             }
@@ -1460,6 +1515,7 @@ const DemandaApp = (function () {
         }
         if (area) area.style.display = "none";
 
+        _ultimoArquivoImportado = { file: file, nome: file.name, fonte: "excel" };
         // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
         if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
             DemandaImport.lerGradeArquivo(file).then(function (rows) {
@@ -1467,7 +1523,8 @@ const DemandaApp = (function () {
                 if (area) area.style.display = "";
                 if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
                 DemandaMapeador.abrir({
-                    rows: rows, fonte: "excel", nome: file.name, toast: _toast,
+                    rows: rows, fonte: "excel", nome: file.name, file: file, toast: _toast,
+                    onVoltar: function () { openImportModal("excel"); },
                     onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
                     onAutomatico: function () {
                         DemandaImport.parseExcel(file).then(function (r) {
