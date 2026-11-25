@@ -1,3 +1,9 @@
+### Versão 3.5.3 (Build 225) - 25/11/2026
+- **Abas Modo Mapeamento <---> Modo Edição de Dados**: O Mapeador de Colunas agora conta com abas superiores permitindo alternar instantaneamente entre a definição das colunas e a grade completa de edição de dados da planilha/arquivo, com ferramentas de +Linha, +Coluna e exclusão.
+- **Botão Voltar Inteligente**: Clicar em "Voltar" agora direciona para a tela de edição dos dados (se planilha/texto) ou para o demarcador visual (se foto/PDF), impedindo o fechamento acidental para a tela inicial da Central de Cotação.
+- **Banner de Retomada na Central de Cotação**: Se o operador fechar a tela, um banner persistente no topo da Central de Cotação exibe o arquivo ativo e permite retomar o mapeamento/edição com 1 clique sem perda de dados.
+
+
 ### Versão 3.5.2 (Build 224) - 25/11/2026
 - **Navegação com Voltar sem Perder Arquivo**: Adicionado botão proeminente "Voltar" no Mapeador de Colunas e no Demarcador de Imagem. O operador pode alternar livremente entre a tela de demarcação de colunas na foto e o mapeador de colunas sem perder o arquivo carregado, os cortes feitos ou os mapeamentos já atribuídos.
 - **Edição Direta de Células na Grade do Mapeador**: Células tornadas editáveis in-place (`contenteditable="true"`), permitindo corrigir números, códigos ou descrições na hora com recálculo instantâneo do preview de conferência e Live ERP Match, sem sair da tela.

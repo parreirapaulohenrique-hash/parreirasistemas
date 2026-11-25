@@ -402,16 +402,23 @@ const DemandaMapeador = (() => {
           <div class="mpd-shell" role="dialog" aria-modal="true" aria-labelledby="mpdTitulo">
             <header class="mpd-head">
               <div class="mpd-head-l">
-                <button class="mpd-btn-voltar" id="mpdBtnVoltar" title="Voltar sem perder o arquivo (para ajustar cortes na imagem ou escolher outro arquivo)">
+                <button class="mpd-btn-voltar" id="mpdBtnVoltar" title="Voltar para a tela de edição ou reajuste de cortes sem perder o arquivo">
                   <span class="material-icons-round" style="font-size:1.15rem">arrow_back</span>
-                  <span>Voltar</span>
+                  <span id="mpdTxtVoltar">Voltar para Edição</span>
                 </button>
-                <span class="material-icons-round mpd-ico">view_column</span>
+                <div class="mpd-tabs-modo" style="display:inline-flex;background:rgba(15,23,42,.7);border:1px solid rgba(148,163,184,.22);border-radius:6px;padding:3px;gap:3px">
+                  <button class="mpd-tab-btn active" id="mpdTabMapear" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;font-size:.78rem;font-weight:700;border:none;border-radius:4px;cursor:pointer;background:#2563eb;color:#fff">
+                    <span class="material-icons-round" style="font-size:1rem">view_column</span> Mapear Colunas
+                  </button>
+                  <button class="mpd-tab-btn" id="mpdTabEditar" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;font-size:.78rem;font-weight:700;border:none;border-radius:4px;cursor:pointer;background:transparent;color:#94a3b8">
+                    <span class="material-icons-round" style="font-size:1rem">edit_note</span> Editar Dados do Arquivo
+                  </button>
+                </div>
                 <div>
-                  <h3 id="mpdTitulo">Mapear colunas da importação</h3>
+                  <h3 id="mpdTitulo" style="display:none">Mapear colunas da importação</h3>
                   <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
                     <div class="mpd-sub" id="mpdArquivo"></div>
-                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .5rem;font-size:.72rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador Visual para reajustar colunas e limites no documento">
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .5rem;font-size:.72rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador Visual para reajustar colunas e limites na foto">
                         <span class="material-icons-round" style="font-size:.9rem">crop</span> Reajustar Linhas na Foto
                     </button>
                     <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .5rem;font-size:.72rem;border-color:#38bdf8;color:#38bdf8" title="Abrir Assistente de Linhas de Divisão com Régua interativa">
@@ -427,11 +434,12 @@ const DemandaMapeador = (() => {
                 <label class="mpd-lbl" for="mpdSelModelo">Modelo</label>
                 <select id="mpdSelModelo" class="mpd-sel"></select>
                 <button class="mpd-btn mpd-btn-ghost" id="mpdBtnExcluirModelo" title="Excluir o modelo selecionado"><span class="material-icons-round">delete_outline</span></button>
-                <button class="mpd-btn mpd-btn-ghost" id="mpdBtnFechar" title="Cancelar importação"><span class="material-icons-round">close</span></button>
+                <button class="mpd-btn mpd-btn-ghost" id="mpdBtnFechar" title="Fechar importação"><span class="material-icons-round">close</span></button>
               </div>
             </header>
             <div class="mpd-aviso" id="mpdAviso"></div>
-            <div class="mpd-body">
+            <!-- Painel 1: Mapear Colunas -->
+            <div class="mpd-body" id="mpdPainelMapear">
               <section class="mpd-doc">
                 <div class="mpd-tray-wrap">
                   <span class="mpd-tray-tit">Colunas disponíveis</span>
@@ -453,15 +461,65 @@ const DemandaMapeador = (() => {
                 </div>
               </aside>
             </div>
+
+            <!-- Painel 2: Edição dos Dados do Arquivo -->
+            <div class="mpd-edicao-body" id="mpdPainelEdicao" style="display:none;flex:1;flex-direction:column;overflow:hidden;padding:1rem;background:#0b1120">
+              <div class="mpd-edicao-toolbar" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.8rem;border-bottom:1px solid rgba(148,163,184,.15);flex-wrap:wrap;gap:.6rem">
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                  <button class="mpd-btn mpd-btn-sec mpd-btn-sm" id="mpdEdBtnAddLinha" title="Adiciona uma linha no final da grade"><span class="material-icons-round">add</span> + Nova Linha</button>
+                  <button class="mpd-btn mpd-btn-sec mpd-btn-sm" id="mpdEdBtnAddColuna" title="Adiciona uma nova coluna à direita"><span class="material-icons-round">view_week</span> + Nova Coluna</button>
+                  <button class="mpd-btn mpd-btn-sec mpd-btn-sm" id="mpdEdBtnLimparVazias" title="Remove linhas vazias"><span class="material-icons-round">cleaning_services</span> Limpar Vazias</button>
+                  <span style="font-size:.78rem;color:#38bdf8;margin-left:.5rem;display:inline-flex;align-items:center;gap:4px">
+                    <span class="material-icons-round" style="font-size:1rem">info</span>
+                    <b>Modo Edição:</b> edite qualquer texto diretamente nas células abaixo. Seus dados e arquivo continuam salvos.
+                  </span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.6rem">
+                  <button class="mpd-btn mpd-btn-pri" id="mpdEdBtnSalvar" style="font-weight:700;padding:.45rem 1.1rem;background:#10b981;border-color:#10b981">
+                    <span class="material-icons-round">check_circle</span> Concluir Edição e Ir para Mapeamento
+                  </button>
+                </div>
+              </div>
+              <div class="mpd-edicao-grid-wrap" id="mpdEdicaoGridWrap" style="flex:1;overflow:auto;margin-top:.8rem;border:1px solid rgba(148,163,184,.18);border-radius:6px;background:#090e17"></div>
+            </div>
           </div>`;
         document.body.appendChild(el);
-        $('mpdBtnFechar').onclick = fechar;
+        $('mpdBtnFechar').onclick = () => {
+            if (confirm('Deseja cancelar o mapeamento deste arquivo? (O arquivo continuará salvo em memória na Central de Cotação)')) {
+                fechar();
+            }
+        };
         $('mpdBtnConfirmar').onclick = _confirmar;
         $('mpdBtnAuto').onclick = () => { const s = _st; fechar(); if (s && s.onAutomatico) s.onAutomatico(); };
         $('mpdSelModelo').onchange = (e) => _trocarModelo(e.target.value);
         $('mpdBtnExcluirModelo').onclick = _excluirSelecionado;
         $('mpdChkSalvar').onchange = (e) => { $('mpdNomeModelo').style.display = e.target.checked ? '' : 'none'; if (e.target.checked) $('mpdNomeModelo').focus(); };
         document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && _st && $('mpdOverlay').classList.contains('open')) fechar(); });
+
+        // Alternância de abas: Mapear Colunas <---> Editar Dados
+        $('mpdTabMapear').onclick = () => _setModoTela('mapear');
+        $('mpdTabEditar').onclick = () => _setModoTela('edicao');
+        $('mpdEdBtnSalvar').onclick = () => _setModoTela('mapear');
+
+        // Toolbar de Edição
+        $('mpdEdBtnAddLinha').onclick = () => {
+            if (!_st || !_st.rows) return;
+            const nCols = _nCols(_st.rows) || 5;
+            _st.rows.push(new Array(nCols).fill(''));
+            _renderEdicaoGrade();
+        };
+        $('mpdEdBtnAddColuna').onclick = () => {
+            if (!_st || !_st.rows) return;
+            _st.rows.forEach(r => r.push(''));
+            if (_st.cfg && _st.cfg.slots) _st.cfg.slots.push(_novoSlot());
+            _renderEdicaoGrade();
+        };
+        $('mpdEdBtnLimparVazias').onclick = () => {
+            if (!_st || !_st.rows) return;
+            _st.rows = _st.rows.filter(r => r.some(c => String(c || '').trim() !== ''));
+            _renderEdicaoGrade();
+            if (typeof _st.toast === 'function') _st.toast('Linhas vazias removidas.', 'info');
+        };
     }
 
     function _chip(campo, origem) {
@@ -501,6 +559,107 @@ const DemandaMapeador = (() => {
                   ${slot.campos.length ? `<div class="mpd-juntar" data-juntar="${i}">+ juntar</div>` : ''}
                   ${extra}
                 </th>`;
+    }
+
+    function _setModoTela(modo) {
+        if (!_st) return;
+        _st.modoTela = modo;
+        const tabMap = $('mpdTabMapear');
+        const tabEd = $('mpdTabEditar');
+        const pMap = $('mpdPainelMapear');
+        const pEd = $('mpdPainelEdicao');
+        const txtVoltar = $('mpdTxtVoltar');
+
+        if (modo === 'edicao') {
+            if (tabMap) { tabMap.style.background = 'transparent'; tabMap.style.color = '#94a3b8'; }
+            if (tabEd) { tabEd.style.background = '#2563eb'; tabEd.style.color = '#fff'; }
+            if (pMap) pMap.style.display = 'none';
+            if (pEd) pEd.style.display = 'flex';
+            if (txtVoltar) txtVoltar.textContent = 'Voltar ao Mapeamento';
+            _renderEdicaoGrade();
+        } else {
+            if (tabEd) { tabEd.style.background = 'transparent'; tabEd.style.color = '#94a3b8'; }
+            if (tabMap) { tabMap.style.background = '#2563eb'; tabMap.style.color = '#fff'; }
+            if (pEd) pEd.style.display = 'none';
+            if (pMap) pMap.style.display = 'flex';
+            if (txtVoltar) {
+                txtVoltar.textContent = (_st.estadoDemarcador && window.DemandaImagemDemarcador)
+                    ? 'Voltar ao Demarcador'
+                    : 'Voltar para Edição';
+            }
+            _render();
+        }
+    }
+
+    function _renderEdicaoGrade() {
+        if (!_st || !_st.rows) return;
+        const rows = _st.rows;
+        const nCols = _nCols(rows) || 5;
+        const wrap = $('mpdEdicaoGridWrap');
+        if (!wrap) return;
+
+        let h = '<table class="mpd-ed-table" style="width:100%;border-collapse:collapse;font-size:.8rem;color:#e2e8f0">';
+        h += '<thead><tr style="position:sticky;top:0;background:#1e293b;z-index:2;border-bottom:2px solid #3b82f6">';
+        h += '<th style="width:50px;padding:.5rem;text-align:center;border-right:1px solid rgba(148,163,184,.2)">#</th>';
+        h += '<th style="width:110px;padding:.5rem;text-align:center;border-right:1px solid rgba(148,163,184,.2)">Ações</th>';
+        for (let c = 0; c < nCols; c++) {
+            const letra = String.fromCharCode(65 + (c % 26)) + (c >= 26 ? Math.floor(c / 26) : '');
+            h += `<th style="padding:.5rem;text-align:left;min-width:140px;border-right:1px solid rgba(148,163,184,.2)">Coluna ${letra}</th>`;
+        }
+        h += '</tr></thead><tbody>';
+
+        rows.forEach((r, rIdx) => {
+            h += `<tr style="border-bottom:1px solid rgba(148,163,184,.1)">`;
+            h += `<td style="padding:.4rem;text-align:center;background:rgba(15,23,42,.6);color:#94a3b8;font-weight:700;border-right:1px solid rgba(148,163,184,.2)">${rIdx + 1}</td>`;
+            h += `<td style="padding:.4rem;text-align:center;white-space:nowrap;border-right:1px solid rgba(148,163,184,.2)">`;
+            h += `<button class="mpd-row-btn" data-ed-shift="${rIdx}" data-dir="1" title="Deslocar linha para a direita">⇥</button> `;
+            h += `<button class="mpd-row-btn" data-ed-shift="${rIdx}" data-dir="-1" title="Deslocar linha para a esquerda">⇤</button> `;
+            h += `<button class="mpd-row-btn" data-ed-del="${rIdx}" title="Excluir esta linha" style="color:#ef4444;border-color:rgba(239,68,68,.3)">✕</button>`;
+            h += `</td>`;
+            for (let c = 0; c < nCols; c++) {
+                const val = r[c] != null ? String(r[c]) : '';
+                h += `<td style="padding:.25rem;border-right:1px solid rgba(148,163,184,.1)">`;
+                h += `<input type="text" class="mpd-ed-inp" data-r="${rIdx}" data-c="${c}" value="${_esc(val)}" style="width:100%;box-sizing:border-box;background:rgba(15,23,42,.8);border:1px solid rgba(148,163,184,.2);border-radius:4px;color:#fff;padding:.3rem .5rem;font-size:.78rem;outline:none" onfocus="this.style.borderColor='#38bdf8';this.style.background='#020617'" onblur="this.style.borderColor='rgba(148,163,184,.2)';this.style.background='rgba(15,23,42,.8)'">`;
+                h += `</td>`;
+            }
+            h += `</tr>`;
+        });
+        h += '</tbody></table>';
+        wrap.innerHTML = h;
+
+        wrap.querySelectorAll('.mpd-ed-inp').forEach(inp => {
+            inp.addEventListener('input', () => {
+                const r = Number(inp.dataset.r);
+                const c = Number(inp.dataset.c);
+                if (_st && _st.rows && _st.rows[r]) {
+                    while (_st.rows[r].length <= c) _st.rows[r].push('');
+                    _st.rows[r][c] = inp.value;
+                }
+            });
+        });
+        wrap.querySelectorAll('[data-ed-shift]').forEach(b => {
+            b.onclick = () => {
+                const r = Number(b.dataset.edShift);
+                const dir = Number(b.dataset.dir);
+                if (_st && _st.rows && _st.rows[r]) {
+                    if (dir === 1) _st.rows[r].unshift('');
+                    else if (dir === -1) {
+                        if (_st.rows[r].length > 1) _st.rows[r].shift();
+                        else _st.rows[r][0] = '';
+                    }
+                    _renderEdicaoGrade();
+                }
+            };
+        });
+        wrap.querySelectorAll('[data-ed-del]').forEach(b => {
+            b.onclick = () => {
+                const r = Number(b.dataset.edDel);
+                if (_st && _st.rows) {
+                    _st.rows.splice(r, 1);
+                    _renderEdicaoGrade();
+                }
+            };
+        });
     }
 
     function _renderGrid() {
@@ -862,13 +1021,16 @@ const DemandaMapeador = (() => {
         $('mpdNomeModelo').value = '';
         $('mpdNomeModelo').style.display = 'none';
 
-        // Botão de Voltar geral
+        // Botão de Voltar inteligente: alterna para edição ou para o demarcador de imagem, NUNCA fecha para a tela inicial
         const btnVoltar = $('mpdBtnVoltar');
         if (btnVoltar) {
             btnVoltar.onclick = () => {
-                if (_st && typeof _st.onVoltar === 'function') {
-                    _st.onVoltar(_st);
-                } else if (_st && _st.estadoDemarcador && window.DemandaImagemDemarcador) {
+                if (_st && _st.modoTela === 'edicao') {
+                    _setModoTela('mapear');
+                    return;
+                }
+                // Se estiver no modo mapear:
+                if (_st && _st.estadoDemarcador && window.DemandaImagemDemarcador) {
                     const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
                     fechar();
                     DemandaImagemDemarcador.abrir({
@@ -882,11 +1044,9 @@ const DemandaMapeador = (() => {
                         onVoltar: () => abrir({ rows: rws, nome, fonte, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
                         onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
                     });
-                } else if (_st && window.DemandaApp && typeof DemandaApp.openImportModal === 'function') {
-                    fechar();
-                    DemandaApp.openImportModal(_st.fonte || 'excel');
                 } else {
-                    fechar();
+                    // Arquivo Excel/Texto ou sem foto: abre diretamente a tela de edição de dados!
+                    _setModoTela('edicao');
                 }
             };
         }

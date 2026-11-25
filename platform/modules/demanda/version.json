@@ -1,9 +1,9 @@
 {
-  "version": "3.5.2",
-  "build": "20261125-v3.5.2",
+  "version": "3.5.3",
+  "build": "20261125-v3.5.3",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-25",
-  "change": "v3.5.2: Opção de Voltar sem perder o arquivo importado em todas as etapas de importação (Foto, PDF, Excel e Texto), retorno dinâmico entre o Mapeador de Colunas e o Demarcador de Imagem preservando cortes e mapeamentos existentes, e edição direta de células na grade de mapeamento com deslocamento de linhas (⇥/⇤) e adição de linha (+ Linha) sem sair da tela.",
-  "releaseDate": "2026-11-25T16:55:00-03:00"
+  "change": "v3.5.3: Alternância inteligente entre Mapeamento e Modo Edição de Dados direta no Mapeador (abas no topo), botão Voltar com retorno garantido para edição/demarcação sem fechar para a tela inicial, e banner de retomada rápida do arquivo na Central de Cotação.",
+  "releaseDate": "2026-11-25T17:30:00-03:00"
 }
