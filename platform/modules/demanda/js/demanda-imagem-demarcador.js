@@ -197,15 +197,26 @@ const DemandaImagemDemarcador = (() => {
             }
         };
 
+        DemandaImagemDemarcador._ultimoEstado = _st;
+
         if (dataUrl) {
             imgEl.src = dataUrl;
-            imgEl.onload = () => _aoCarregarImagem(imgEl);
+            if (imgEl.complete && imgEl.naturalWidth > 0) {
+                _aoCarregarImagem(imgEl);
+            } else {
+                imgEl.onload = () => _aoCarregarImagem(imgEl);
+            }
         } else if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 _st.imgUrl = e.target.result;
+                DemandaImagemDemarcador._ultimoEstado = _st;
                 imgEl.src = _st.imgUrl;
-                imgEl.onload = () => _aoCarregarImagem(imgEl);
+                if (imgEl.complete && imgEl.naturalWidth > 0) {
+                    _aoCarregarImagem(imgEl);
+                } else {
+                    imgEl.onload = () => _aoCarregarImagem(imgEl);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -852,6 +863,7 @@ const DemandaImagemDemarcador = (() => {
     }
 
     return {
+        _ultimoEstado: null,
         abrir,
         fechar
     };

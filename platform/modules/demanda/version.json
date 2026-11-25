@@ -1,9 +1,9 @@
 {
-  "version": "3.5.3",
-  "build": "20261125-v3.5.3",
+  "version": "3.5.4",
+  "build": "20261125-v3.5.4",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-25",
-  "change": "v3.5.3: Alternância inteligente entre Mapeamento e Modo Edição de Dados direta no Mapeador (abas no topo), botão Voltar com retorno garantido para edição/demarcação sem fechar para a tela inicial, e banner de retomada rápida do arquivo na Central de Cotação.",
-  "releaseDate": "2026-11-25T17:30:00-03:00"
+  "change": "v3.5.4: Correção crítica no botão Reajustar Linhas na Foto e Voltar ao Demarcador — escopo de variáveis preservado antes de fechar a sessão do mapeador e detecção imediata de imagem já carregada (imgEl.complete) no Demarcador de Imagem.",
+  "releaseDate": "2026-11-25T17:50:00-03:00"
 }
