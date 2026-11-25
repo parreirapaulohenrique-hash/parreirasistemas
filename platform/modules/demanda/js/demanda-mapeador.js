@@ -402,16 +402,23 @@ const DemandaMapeador = (() => {
           <div class="mpd-shell" role="dialog" aria-modal="true" aria-labelledby="mpdTitulo">
             <header class="mpd-head">
               <div class="mpd-head-l">
+                <button class="mpd-btn-voltar" id="mpdBtnVoltar" title="Voltar sem perder o arquivo (para ajustar cortes na imagem ou escolher outro arquivo)">
+                  <span class="material-icons-round" style="font-size:1.15rem">arrow_back</span>
+                  <span>Voltar</span>
+                </button>
                 <span class="material-icons-round mpd-ico">view_column</span>
                 <div>
                   <h3 id="mpdTitulo">Mapear colunas da importação</h3>
-                  <div style="display:flex;align-items:center;gap:.5rem">
+                  <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
                     <div class="mpd-sub" id="mpdArquivo"></div>
-                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador Visual para reajustar colunas e limites no documento">
-                        <span class="material-icons-round" style="font-size:.9rem">crop</span> Demarcação Visual
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .5rem;font-size:.72rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador Visual para reajustar colunas e limites no documento">
+                        <span class="material-icons-round" style="font-size:.9rem">crop</span> Reajustar Linhas na Foto
                     </button>
-                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#38bdf8;color:#38bdf8" title="Abrir Assistente de Linhas de Divisão com Régua interativa">
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .5rem;font-size:.72rem;border-color:#38bdf8;color:#38bdf8" title="Abrir Assistente de Linhas de Divisão com Régua interativa">
                         <span class="material-icons-round" style="font-size:.9rem">straighten</span> Linhas de Divisão (Régua)
+                    </button>
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAddLinha" style="padding:.15rem .5rem;font-size:.72rem;border-color:#10b981;color:#10b981" title="Adicionar nova linha vazia para produto">
+                        <span class="material-icons-round" style="font-size:.9rem">add</span> + Linha
                     </button>
                   </div>
                 </div>
@@ -506,8 +513,9 @@ const DemandaMapeador = (() => {
         let h = '<div class="mpd-grid-info-bar">' +
             `<div class="mpd-limite-tag ini"><span class="mpd-dot ini"></span> Início: <strong>Linha ${cfg.inicio + 1}</strong></div>` +
             `<div class="mpd-limite-tag fim"><span class="mpd-dot fim"></span> Fim: <strong>Linha ${fim + 1}</strong></div>` +
-            `<div class="mpd-limite-tag col"><span class="mpd-dot col"></span> <strong>${n}</strong> Colunas de Divisão</div>` +
-            `<div class="mpd-limite-dica">Clique no número para definir o Início 🟢 ou no botão ⏹ para definir o Fim 🔴</div>` +
+            `<div class="mpd-limite-tag col"><span class="mpd-dot col"></span> <strong>${n}</strong> Colunas</div>` +
+            `<div class="mpd-limite-tag dica" style="background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.3);color:#38bdf8"><span class="material-icons-round" style="font-size:13px">edit</span> <b>Células editáveis:</b> clique em qualquer texto para editar na hora</div>` +
+            `<div class="mpd-limite-dica">Início 🟢 · Fim 🔴 · ⇥/⇤ Deslocar linha · ✕ Excluir</div>` +
             '</div>';
 
         h += '<table class="mpd-grid"><thead><tr><th class="mpd-rn-h">Linha</th>' + cfg.slots.map(_slotHtml).join('') + '</tr></thead><tbody>';
@@ -526,16 +534,19 @@ const DemandaMapeador = (() => {
 
             h += `<tr class="${classesLinha}">` +
                 `<td class="mpd-rn">` +
+                `<div class="mpd-rn-actions">` +
                 `<button class="mpd-rn-b ${antes ? 'mpd-rn-zero' : ''} ${r === cfg.inicio ? 'is-ini' : ''}" data-ini="${r}" title="${antes ? 'Linha ' + (r + 1) + ' (cabeçalho). Clique para iniciar produtos aqui' : 'Definir INÍCIO dos produtos na Linha ' + (r + 1)}">${numExibicao}</button>` +
                 `<button class="mpd-rn-fim-b ${r === fim ? 'is-fim' : ''} ${depois ? 'mpd-rn-zero' : ''}" data-fim="${r}" title="${r === fim ? 'Linha de FIM das peças (clique para remover corte)' : 'Definir FIM dos produtos na Linha ' + (r + 1) + ' (linhas abaixo são ignoradas)'}"><span class="material-icons-round" style="font-size:13px">vertical_align_bottom</span></button>` +
+                `<button class="mpd-row-btn" data-shift-r="${r}" data-dir="1" title="Deslocar células para a DIREITA (insere célula vazia no início desta linha)">⇥</button>` +
+                `<button class="mpd-row-btn" data-shift-r="${r}" data-dir="-1" title="Deslocar células para a ESQUERDA (puxa células para esquerda)">⇤</button>` +
                 (antes || depois ? '' : `<button class="mpd-exc-b ${excl.has(r) ? 'is-fora' : ''}" data-exc="${r}" title="${excl.has(r) ? 'Restaurar linha ' + numExibicao : 'Excluir linha ' + numExibicao + ' da importação'}">` +
                     `<span class="material-icons-round" style="font-size:14px;vertical-align:middle">${excl.has(r) ? 'undo' : 'delete_outline'}</span>` +
                     (excl.has(r) ? '<span class="mpd-exc-lbl">Restaurar</span>' : '') +
                 `</button>`) +
-                `</td>`;
+                `</div></td>`;
             for (let c = 0; c < n; c++) {
                 const v = _cel(rows[r], c);
-                h += `<td class="${cfg.slots[c].campos.length ? 'map' : ''}">${_esc(typeof v === 'number' ? String(v).replace('.', ',') : v)}</td>`;
+                h += `<td class="${cfg.slots[c].campos.length ? 'map' : ''} mpd-cell-editable" contenteditable="true" data-r="${r}" data-c="${c}" title="Clique para editar este valor diretamente">${_esc(typeof v === 'number' ? String(v).replace('.', ',') : v)}</td>`;
             }
             h += '</tr>';
         }
@@ -722,6 +733,57 @@ const DemandaMapeador = (() => {
             const r = Number(b.dataset.exc); const ex = new Set(_st.cfg.excluidas);
             ex.has(r) ? ex.delete(r) : ex.add(r); _st.cfg.excluidas = Array.from(ex); _render();
         });
+
+        // Deslocamento de linha ⇥ / ⇤ (shift)
+        root.querySelectorAll('[data-shift-r]').forEach(b => {
+            b.onclick = () => {
+                const r = Number(b.dataset.shiftR);
+                const dir = Number(b.dataset.dir);
+                if (_st && _st.rows && _st.rows[r]) {
+                    if (dir === 1) {
+                        _st.rows[r].unshift('');
+                    } else if (dir === -1) {
+                        if (_st.rows[r].length > 1) _st.rows[r].shift();
+                        else _st.rows[r][0] = '';
+                    }
+                    _render();
+                }
+            };
+        });
+
+        // Edição direta de células na grade
+        root.querySelectorAll('.mpd-cell-editable').forEach(td => {
+            td.addEventListener('blur', () => {
+                const r = Number(td.dataset.r);
+                const c = Number(td.dataset.c);
+                if (_st && _st.rows && _st.rows[r]) {
+                    while (_st.rows[r].length <= c) _st.rows[r].push('');
+                    _st.rows[r][c] = td.innerText.trim();
+                    _renderPreview();
+                }
+            });
+            td.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    td.blur();
+                }
+            });
+        });
+
+        // Botão + Linha
+        const btnAdd = $('mpdBtnAddLinha');
+        if (btnAdd) {
+            btnAdd.onclick = () => {
+                if (!_st || !_st.rows) return;
+                const nCols = (_st.cfg && _st.cfg.slots && _st.cfg.slots.length) || 5;
+                const novaLinha = new Array(nCols).fill('');
+                const pos = (_st.cfg.inicio != null && _st.cfg.inicio >= 0) ? _st.cfg.inicio + 1 : _st.rows.length;
+                _st.rows.splice(pos, 0, novaLinha);
+                if (_st.cfg.fim != null) _st.cfg.fim++;
+                _render();
+                if (typeof _st.toast === 'function') _st.toast('Linha adicionada! Clique nas células para preencher.', 'info');
+            };
+        }
     }
 
     function _trocarModelo(id) {
@@ -776,18 +838,64 @@ const DemandaMapeador = (() => {
         _garantirDOM();
         const rows = (opts.rows || []).filter(r => Array.isArray(r) && r.some(c => _str(c) !== ''));
         if (!rows.length) { (opts.toast || console.warn)('Documento sem linhas legíveis.', 'error'); return; }
-        _st = { rows, fonte: opts.fonte || 'excel', nome: opts.nome || '', rawText: opts.rawText || '', estadoDemarcador: opts.estadoDemarcador || null, onConfirm: opts.onConfirm, onAutomatico: opts.onAutomatico, toast: opts.toast,
-                cfg: sugerir(rows), modeloId: null, modeloNome: '', modeloScore: null, removidos: new Set() };
+        const cfgSugerida = opts.cfg || sugerir(rows);
+        _st = {
+            rows,
+            fonte: opts.fonte || 'excel',
+            nome: opts.nome || '',
+            rawText: opts.rawText || '',
+            file: opts.file || (opts.estadoDemarcador ? opts.estadoDemarcador.file : null),
+            dataUrl: opts.dataUrl || (opts.estadoDemarcador ? opts.estadoDemarcador.dataUrl : ''),
+            estadoDemarcador: opts.estadoDemarcador || null,
+            onConfirm: opts.onConfirm,
+            onAutomatico: opts.onAutomatico,
+            onVoltar: opts.onVoltar || null,
+            toast: opts.toast,
+            cfg: cfgSugerida,
+            modeloId: null,
+            modeloNome: '',
+            modeloScore: null,
+            removidos: new Set()
+        };
         $('mpdArquivo').textContent = (_st.nome ? _st.nome + ' · ' : '') + rows.length + ' linhas · ' + _nCols(rows) + ' colunas';
         $('mpdChkSalvar').checked = false;
         $('mpdNomeModelo').value = '';
         $('mpdNomeModelo').style.display = 'none';
 
+        // Botão de Voltar geral
+        const btnVoltar = $('mpdBtnVoltar');
+        if (btnVoltar) {
+            btnVoltar.onclick = () => {
+                if (_st && typeof _st.onVoltar === 'function') {
+                    _st.onVoltar(_st);
+                } else if (_st && _st.estadoDemarcador && window.DemandaImagemDemarcador) {
+                    const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
+                    fechar();
+                    DemandaImagemDemarcador.abrir({
+                        file: est.file,
+                        dataUrl: est.dataUrl,
+                        cortesPct: est.cortesPct,
+                        yTopPct: est.yTopPct,
+                        yBottomPct: est.yBottomPct,
+                        nome: nome,
+                        toast: _st.toast,
+                        onVoltar: () => abrir({ rows: rws, nome, fonte, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
+                        onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
+                    });
+                } else if (_st && window.DemandaApp && typeof DemandaApp.openImportModal === 'function') {
+                    fechar();
+                    DemandaApp.openImportModal(_st.fonte || 'excel');
+                } else {
+                    fechar();
+                }
+            };
+        }
+
         const btnFoto = $('mpdBtnDemarcarFoto');
         if (btnFoto) {
             btnFoto.style.display = (_st.estadoDemarcador && window.DemandaImagemDemarcador) ? 'inline-flex' : 'none';
             btnFoto.onclick = () => {
-                const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm;
+                const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
                 fechar();
                 DemandaImagemDemarcador.abrir({
                     file: est.file,
@@ -797,7 +905,8 @@ const DemandaMapeador = (() => {
                     yBottomPct: est.yBottomPct,
                     nome: nome,
                     toast: _st.toast,
-                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte: fonte, estadoDemarcador: novoEst, onConfirm: onConf, toast: _st.toast })
+                    onVoltar: () => abrir({ rows: rws, nome, fonte, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
+                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
                 });
             };
         }
@@ -807,11 +916,12 @@ const DemandaMapeador = (() => {
             btnCortes.style.display = (!_st.estadoDemarcador && window.DemandaTextoColunas) ? 'inline-flex' : 'none';
             btnCortes.onclick = () => {
                 const raw = _st.rawText || (rows ? rows.map(r => Array.isArray(r) ? r.join('   ') : String(r)).join('\n') : '');
-                const nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm;
+                const nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
                 fechar();
                 DemandaTextoColunas.abrir({
                     text: raw, nome, fonte,
-                    onConfirm: (g) => abrir({ rows: g, nome, fonte, rawText: raw, onConfirm: onConf, toast: _st.toast })
+                    onVoltar: () => abrir({ rows: rws, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
+                    onConfirm: (g) => abrir({ rows: g, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
                 });
             };
         }

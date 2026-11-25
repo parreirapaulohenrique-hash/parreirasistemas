@@ -1,9 +1,9 @@
 {
-  "version": "3.5.1",
-  "build": "20261125-v3.5.1",
+  "version": "3.5.2",
+  "build": "20261125-v3.5.2",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-25",
-  "change": "v3.5.1: Exclusão das linhas de coluna corrigida no Demarcador de Colunas na Imagem (botão ✕ em cada linha, duplo-clique ou botão direito sobre a linha em qualquer altura) e na régua do Texto em Colunas — antes a tela era recriada a cada clique/tremida do mouse e o duplo-clique nunca era reconhecido. Inclui v3.5.0: correção de bugs críticos e redução do consumo de cota do Firestore.",
-  "releaseDate": "2026-11-25T11:15:00-03:00"
+  "change": "v3.5.2: Opção de Voltar sem perder o arquivo importado em todas as etapas de importação (Foto, PDF, Excel e Texto), retorno dinâmico entre o Mapeador de Colunas e o Demarcador de Imagem preservando cortes e mapeamentos existentes, e edição direta de células na grade de mapeamento com deslocamento de linhas (⇥/⇤) e adição de linha (+ Linha) sem sair da tela.",
+  "releaseDate": "2026-11-25T16:55:00-03:00"
 }

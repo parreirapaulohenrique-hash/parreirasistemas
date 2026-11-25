@@ -1,3 +1,10 @@
+### Versão 3.5.2 (Build 224) - 25/11/2026
+- **Navegação com Voltar sem Perder Arquivo**: Adicionado botão proeminente "Voltar" no Mapeador de Colunas e no Demarcador de Imagem. O operador pode alternar livremente entre a tela de demarcação de colunas na foto e o mapeador de colunas sem perder o arquivo carregado, os cortes feitos ou os mapeamentos já atribuídos.
+- **Edição Direta de Células na Grade do Mapeador**: Células tornadas editáveis in-place (`contenteditable="true"`), permitindo corrigir números, códigos ou descrições na hora com recálculo instantâneo do preview de conferência e Live ERP Match, sem sair da tela.
+- **Ferramentas de Linha**: Adicionados botões de Shift (`⇥` e `⇤`) em cada linha para corrigir colunas desalinhadas pelo OCR, e botão `+ Linha` para inserção manual de produtos.
+- **Preservação em Memória**: `_ultimoArquivoImportado` armazena o arquivo ativo em memória evitando que o operador precise fazer upload novamente caso deseje reajustar opções.
+
+
 - **2026-11-03** (v3.4.0 / Plataforma v3.21.121 - Build 221): Melhorias no Módulo Cotação & Demanda — Auto-Match aprimorado (prefixos de montadoras OEM, zeros à esquerda, correção de OCR e detecção de códigos CNH na descrição), priorização de colunas tabulares, Live Match no Mapeador de Colunas e ações diretas de Vincular/Desvincular ERP na tabela de Cotação e Conferência.
 # NOVO AGENTE: Guia Fundamental do ParreiraLog
 
