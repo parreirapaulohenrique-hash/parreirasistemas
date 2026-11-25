@@ -1031,18 +1031,27 @@ const DemandaMapeador = (() => {
                 }
                 // Se estiver no modo mapear:
                 if (_st && _st.estadoDemarcador && window.DemandaImagemDemarcador) {
-                    const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
+                    const est = _st.estadoDemarcador || {};
+                    const nome = _st.nome;
+                    const fonte = _st.fonte;
+                    const onConf = _st.onConfirm;
+                    const onVolt = _st.onVoltar;
+                    const cfgAtual = _st.cfg;
+                    const rws = _st.rows;
+                    const tst = _st.toast || (window.DemandaApp && DemandaApp._toast) || console.log;
+                    const fl = est.file || _st.file || (window.DemandaImagemDemarcador._ultimoEstado && window.DemandaImagemDemarcador._ultimoEstado.file);
+                    const dUrl = est.dataUrl || _st.dataUrl || (window.DemandaImagemDemarcador._ultimoEstado && window.DemandaImagemDemarcador._ultimoEstado.imgUrl);
                     fechar();
                     DemandaImagemDemarcador.abrir({
-                        file: est.file,
-                        dataUrl: est.dataUrl,
+                        file: fl,
+                        dataUrl: dUrl,
                         cortesPct: est.cortesPct,
                         yTopPct: est.yTopPct,
                         yBottomPct: est.yBottomPct,
                         nome: nome,
-                        toast: _st.toast,
-                        onVoltar: () => abrir({ rows: rws, nome, fonte, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
-                        onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
+                        toast: tst,
+                        onVoltar: () => abrir({ rows: rws, nome, fonte, file: fl, dataUrl: dUrl, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst }),
+                        onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, file: fl, dataUrl: dUrl, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst })
                     });
                 } else {
                     // Arquivo Excel/Texto ou sem foto: abre diretamente a tela de edição de dados!
@@ -1055,18 +1064,27 @@ const DemandaMapeador = (() => {
         if (btnFoto) {
             btnFoto.style.display = (_st.estadoDemarcador && window.DemandaImagemDemarcador) ? 'inline-flex' : 'none';
             btnFoto.onclick = () => {
-                const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
+                const est = (_st && _st.estadoDemarcador) || {};
+                const nome = _st.nome;
+                const fonte = _st.fonte;
+                const onConf = _st.onConfirm;
+                const onVolt = _st.onVoltar;
+                const cfgAtual = _st.cfg;
+                const rws = _st.rows;
+                const tst = _st.toast || (window.DemandaApp && DemandaApp._toast) || console.log;
+                const fl = est.file || _st.file || (window.DemandaImagemDemarcador._ultimoEstado && window.DemandaImagemDemarcador._ultimoEstado.file);
+                const dUrl = est.dataUrl || _st.dataUrl || (window.DemandaImagemDemarcador._ultimoEstado && window.DemandaImagemDemarcador._ultimoEstado.imgUrl);
                 fechar();
                 DemandaImagemDemarcador.abrir({
-                    file: est.file,
-                    dataUrl: est.dataUrl,
+                    file: fl,
+                    dataUrl: dUrl,
                     cortesPct: est.cortesPct,
                     yTopPct: est.yTopPct,
                     yBottomPct: est.yBottomPct,
                     nome: nome,
-                    toast: _st.toast,
-                    onVoltar: () => abrir({ rows: rws, nome, fonte, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
-                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
+                    toast: tst,
+                    onVoltar: () => abrir({ rows: rws, nome, fonte, file: fl, dataUrl: dUrl, estadoDemarcador: est, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst }),
+                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte, file: fl, dataUrl: dUrl, estadoDemarcador: novoEst, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst })
                 });
             };
         }
@@ -1077,11 +1095,12 @@ const DemandaMapeador = (() => {
             btnCortes.onclick = () => {
                 const raw = _st.rawText || (rows ? rows.map(r => Array.isArray(r) ? r.join('   ') : String(r)).join('\n') : '');
                 const nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm, onVolt = _st.onVoltar, cfgAtual = _st.cfg, rws = _st.rows;
+                const tst = _st.toast || (window.DemandaApp && DemandaApp._toast) || console.log;
                 fechar();
                 DemandaTextoColunas.abrir({
                     text: raw, nome, fonte,
-                    onVoltar: () => abrir({ rows: rws, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast }),
-                    onConfirm: (g) => abrir({ rows: g, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: _st.toast })
+                    onVoltar: () => abrir({ rows: rws, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst }),
+                    onConfirm: (g) => abrir({ rows: g, nome, fonte, rawText: raw, cfg: cfgAtual, onConfirm: onConf, onVoltar: onVolt, toast: tst })
                 });
             };
         }

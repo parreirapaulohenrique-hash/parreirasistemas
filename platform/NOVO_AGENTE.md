@@ -1,3 +1,8 @@
+### Versão 3.5.4 (Build 226) - 25/11/2026
+- **Correção no Retorno ao Demarcador de Imagem**: Corrigido erro de escopo de variáveis que impedia a reabertura da tela de demarcação da imagem ao clicar em "Reajustar Linhas na Foto" ou "Voltar ao Demarcador".
+- **Carregamento Imediato de Imagem em Cache**: No Demarcador Visual, adicionada checagem direta `imgEl.complete` para disparar instantaneamente a renderização das linhas e cortes na foto quando a imagem já estiver em memória, garantindo retorno suave e sem tela em branco.
+
+
 ### Versão 3.5.3 (Build 225) - 25/11/2026
 - **Abas Modo Mapeamento <---> Modo Edição de Dados**: O Mapeador de Colunas agora conta com abas superiores permitindo alternar instantaneamente entre a definição das colunas e a grade completa de edição de dados da planilha/arquivo, com ferramentas de +Linha, +Coluna e exclusão.
 - **Botão Voltar Inteligente**: Clicar em "Voltar" agora direciona para a tela de edição dos dados (se planilha/texto) ou para o demarcador visual (se foto/PDF), impedindo o fechamento acidental para a tela inicial da Central de Cotação.
