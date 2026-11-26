@@ -1,3 +1,10 @@
+### Versão 3.5.6 (Build 228) - 26/11/2026
+- **Edição e Organização de Texto / WhatsApp no Modal de Importação**: O modal *Colar Texto / WhatsApp* agora conta com ferramentas completas de organização e edição antes de processar os itens.
+- **Botão Organizar por Linha**: Processamento inteligente que detecta múltiplos produtos colados na mesma linha, quebra por marcadores (`•`, `-`, `*`, `1.`, `2.`), barras (`/`) e vírgulas, além de remover automaticamente carimbos de data/hora do WhatsApp (ex: `[10:15, 26/11/2026] Cliente:`) e saudações (`Bom dia`, `Segue cotação`, `Obrigado`).
+- **Quebras Rápidas por Separador**: Atalhos de 1 clique para quebrar por Barra (`/`), Vírgula (`,`), Ponto e Vírgula (`;`) ou Limpar WhatsApp.
+- **Editor Linha a Linha Interativo**: Aba *Editar por Linhas* permitindo editar cada produto individualmente com numeração `#1`, `#2`..., excluir linhas irrelevantes com `✕` e incluir novas linhas com `+ Nova Linha`, sincronizado em tempo real com o texto livre.
+- **Ações Claras**: Botão direto *Processar e Revisar* (envia produtos direto para conferência com validação de códigos) e *Mapear em Colunas* (abre no assistente de tabela para estruturar colunas).
+
 ### Versão 3.5.5 (Build 227) - 26/11/2026
 - **Barra de Ajuste de Enquadramento no Demarcador de Imagem**: Adicionada ferramenta retrátil no Demarcador Visual (`[Ajustar Enquadramento]`) para fotos e digitalizações de documentos tortos, inclinados ou com orientação invertida.
 - **Rotação Rápida em Passos de 90° e 180°**: Permite girar a imagem para a esquerda, para a direita ou inverter de ponta cabeça, reconfigurando os limites da tabela automaticamente para o novo formato.

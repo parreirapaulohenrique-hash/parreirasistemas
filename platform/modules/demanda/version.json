@@ -1,9 +1,9 @@
 {
-  "version": "3.5.5",
-  "build": "20261126-v3.5.5",
+  "version": "3.5.6",
+  "build": "20261126-v3.5.6",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-26",
-  "change": "v3.5.5: Barra de ferramentas de Enquadramento e Ajuste de Imagem no Demarcador de Imagem — Rotação 90° e 180°, ajuste fino de inclinação (deskew -15° a +15° com slider e botões ±0.5°), filtros de contraste e preto & branco, linhas de grade guia e sincronização com canvas de OCR.",
-  "releaseDate": "2026-11-26T09:15:00-03:00"
+  "change": "v3.5.6: Ferramentas de edição e organização de texto no modal Colar Texto / WhatsApp — Botão 'Organizar por Linha' com limpeza inteligente de carimbos e saudações, quebras rápidas por barra (/), vírgula (,) e ponto e vírgula (;), abas de Texto Livre e Editor por Linhas interativo com exclusão e adição de linhas.",
+  "releaseDate": "2026-11-26T10:55:00-03:00"
 }
