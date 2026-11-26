@@ -220,7 +220,7 @@
             // Carrega itens da entry para alimentar a conferência no coletor e WMS
             try {
                 const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${match.id}/items`) : `${_maxdataCfg().baseUrl.replace(/\/$/, '')}/entry/${match.id}/items`;
-                const itemsResp = await fetch(itemsUrl, {
+                const itemsResp = await _maxdataFetch(itemsUrl, {
                     method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(8000)
                 });
                 if (itemsResp.ok) {
@@ -408,7 +408,7 @@
                     const nf = _maxdataNorm(match);
                     try {
                         const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${match.id}/items`) : `${_maxdataCfg().baseUrl.replace(/\/$/, '')}/entry/${match.id}/items`;
-                        const itemsResp = await fetch(itemsUrl, {
+                        const itemsResp = await _maxdataFetch(itemsUrl, {
                             method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(8000)
                         });
                         if (itemsResp.ok) {
@@ -522,7 +522,7 @@
                     operador:       payload.operador || '',
                     dataCheckin:    payload.dataConferencia || new Date().toISOString()
                 };
-                const resp = await fetch(`${base}/entry/checkin`, {
+                const resp = await _maxdataFetch(_maxdataBuildUrl('entry/checkin'), {
                     method: 'PUT',
                     headers: _maxdataHdrs(token),
                     body: JSON.stringify(body),
@@ -658,20 +658,21 @@
 
     // ─── MAXDATA HELPERS ─────────────────────────────────────────────────────
 
+    // Token, URL e retry 401 centralizados em window.WmsMaxdataAuth (wms-integration.js).
     function _maxdataCfg() {
+        if (window.WmsMaxdataAuth) return window.WmsMaxdataAuth.cfg();
         const ic = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
         const cc = ic.connectorConfig || {};
         return {
             baseUrl:  cc.baseUrl  || 'http://rds.skytins.com.br:8720/v2',
             empId:    cc.empId    || 1,
-            terminal: cc.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
-            _maxdataToken: cc._maxdataToken || null
+            terminal: cc.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
         };
     }
 
     function _maxdataBuildUrl(endpoint, params = {}) {
-        const cfg  = _maxdataCfg();
-        const base = (cfg.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+        if (window.WmsMaxdataAuth) return window.WmsMaxdataAuth.buildUrl(endpoint, params);
+        const base = String(_maxdataCfg().baseUrl).replace(/\/$/, '');
         const isHttps = typeof location !== 'undefined' && location.protocol === 'https:';
         if (isHttps && base.startsWith('http://')) {
             const qs = new URLSearchParams({ _path: endpoint, _apiUrl: base, ...params }).toString();
@@ -682,32 +683,13 @@
     }
 
     async function _maxdataGetToken() {
-        const cfg  = _maxdataCfg();
-        const cached = cfg._maxdataToken;
-        if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000)) return cached.value;
-        const base = (cfg.baseUrl || '').replace(/\/$/, '');
-        if (!base || !cfg.empId || !cfg.terminal)
-            throw new Error('Maxdata não configurado. Acesse Configurações → Integração.');
-        const authUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('auth') : `${base}/auth`;
-        const resp = await fetch(authUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type':            'application/json',
-                'application_name':        cfg.appName || '5ea6149f-e123-4847-82a2-d5fc6e157aeb',
-                'application_key':         cfg.appKey || '249b6fc7-4312-48e3-9155-0c48d92b098637255f1b-95a4-4c91-a06a-c51d0dd062d2',
-                'application_description': cfg.appDescription || 'CENTRALPECAS_APP_COTACAO'
-            },
-            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal, idUser: 0 }),
-            signal: AbortSignal.timeout(10000)
-        });
-        if (!resp.ok) throw new Error(`Maxdata Auth HTTP ${resp.status}`);
-        const data = await resp.json();
-        if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
-        const ic = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
-        if (!ic.connectorConfig) ic.connectorConfig = {};
-        ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
-        localStorage.setItem('wms_integration_config' + _ts(), JSON.stringify(ic));
-        return data.token;
+        if (!window.WmsMaxdataAuth) throw new Error('WmsMaxdataAuth indisponível (wms-integration.js não carregado).');
+        return window.WmsMaxdataAuth.getToken();
+    }
+
+    // fetch autenticado com renovação automática do token em HTTP 401
+    function _maxdataFetch(url, options = {}) {
+        return window.WmsMaxdataAuth.fetch(url, options);
     }
 
     function _maxdataHdrs(token) {
@@ -735,7 +717,7 @@
     // GET /entry e retorna lista de entradas
     async function _maxdataGetEntries(token) {
         const entryUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('entry') : `${cfg.baseUrl.replace(/\/$/, '')}/entry`;
-        const resp = await fetch(entryUrl, {
+        const resp = await _maxdataFetch(entryUrl, {
             method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
         });
         if (!resp.ok) throw new Error(`Maxdata GET /entry HTTP ${resp.status}`);
@@ -953,7 +935,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                     return { found: false, mensagem: 'NF não localizada no Maxdata.' };
                 }
                 const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${entry.id}/items`) : `${cfg2.baseUrl.replace(/\/$/, '')}/entry/${entry.id}/items`;
-                const itemsResp = await fetch(itemsUrl, {
+                const itemsResp = await _maxdataFetch(itemsUrl, {
                     method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
                 });
                 if (!itemsResp.ok) throw new Error(`Maxdata /items HTTP ${itemsResp.status}`);
@@ -1102,7 +1084,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                     }))
                 };
                 const markUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('entry/markaschecked') : `${base}/entry/markaschecked`;
-                const resp = await fetch(markUrl, {
+                const resp = await _maxdataFetch(markUrl, {
                     method: 'PUT', headers: _maxdataHdrs(token),
                     body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
                 });
@@ -1112,7 +1094,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                 // Se houver ID da entrada, chama também update de status direto para garantir alteração de PENDENTE -> CONCLUIDO na Tela 102
                 const entryId = payload._maxdataEntryId || payload._maxdataId;
                 if (entryId) {
-                    await fetch(`${base}/entry/${entryId}`, {
+                    await _maxdataFetch(_maxdataBuildUrl(`entry/${entryId}`), {
                         method: 'PUT', headers: _maxdataHdrs(token),
                         body: JSON.stringify({ status: 'CONCLUIDO', situacao: 'CONCLUIDO' }),
                         signal: AbortSignal.timeout(8000)
