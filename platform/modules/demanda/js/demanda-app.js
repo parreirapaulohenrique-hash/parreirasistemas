@@ -841,7 +841,10 @@ const DemandaApp = (function () {
 
     function openImportModal(type) {
         if (type === "texto") {
-            var ta = document.getElementById("textareaImport"); if (ta) ta.value = "";
+            var ta = document.getElementById("textareaImport");
+            if (ta && !ta.value.trim()) ta.value = "";
+            _setModoTexto('texto');
+            _atualizarContadorLinhasTexto();
             _openModal("modalTexto");
         } else if (type === "excel") {
             var prev = document.getElementById("excelPreviewArea"); if (prev) prev.style.display = "none";
@@ -1469,23 +1472,305 @@ const DemandaApp = (function () {
     function addItemFromDetails() { closeModal("modalItemDetalhes"); }
 
     // ════════════════════════════════════════════════════════
-    // IMPORTAÇÃO TEXTO / WHATSAPP
+    // IMPORTAÇÃO TEXTO / WHATSAPP (v3.5.6: Organização por Linha e Edição)
     // ════════════════════════════════════════════════════════
+
+    var _modoTextoAtual = 'texto'; // 'texto' | 'linhas'
+
+    function _setModoTexto(modo) {
+        _modoTextoAtual = modo;
+        var btnTexto = document.getElementById("txtTabModoTexto");
+        var btnLinhas = document.getElementById("txtTabModoLinhas");
+        var pTexto = document.getElementById("txtPainelTexto");
+        var pLinhas = document.getElementById("txtPainelLinhas");
+
+        if (modo === 'linhas') {
+            if (btnTexto) { btnTexto.style.background = 'transparent'; btnTexto.style.color = '#94a3b8'; }
+            if (btnLinhas) { btnLinhas.style.background = '#2563eb'; btnLinhas.style.color = '#fff'; }
+            if (pTexto) pTexto.style.display = 'none';
+            if (pLinhas) pLinhas.style.display = 'block';
+            _renderizarListaLinhasTexto();
+        } else {
+            if (btnTexto) { btnTexto.style.background = '#2563eb'; btnTexto.style.color = '#fff'; }
+            if (btnLinhas) { btnLinhas.style.background = 'transparent'; btnLinhas.style.color = '#94a3b8'; }
+            if (pTexto) pTexto.style.display = 'block';
+            if (pLinhas) pLinhas.style.display = 'none';
+        }
+        _atualizarContadorLinhasTexto();
+    }
+
+    function _atualizarContadorLinhasTexto() {
+        var ta = document.getElementById("textareaImport");
+        var raw = ta ? ta.value : '';
+        var linhas = raw.split(/\r?\n/).filter(function (l) { return l.trim().length > 0; });
+        var badge = document.getElementById("txtQtdLinhasBadge");
+        if (badge) badge.textContent = linhas.length;
+        var info = document.getElementById("txtInfoLinhas");
+        if (info) info.innerHTML = '<b style="color:#38bdf8">' + linhas.length + '</b> linha(s) detectada(s)';
+    }
+
+    function _renderizarListaLinhasTexto() {
+        var container = document.getElementById("txtListaLinhasContainer");
+        var ta = document.getElementById("textareaImport");
+        if (!container || !ta) return;
+
+        var raw = ta.value;
+        var linhas = raw.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+
+        container.innerHTML = '';
+        if (linhas.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#64748b;padding:2rem;font-size:.85rem">Nenhuma linha de texto encontrada. Digite ou cole o texto acima ou clique em <b>+ Nova Linha</b>.</div>';
+            _atualizarContadorLinhasTexto();
+            return;
+        }
+
+        linhas.forEach(function (linha, idx) {
+            var row = document.createElement('div');
+            row.className = 'txt-linha-row';
+            row.dataset.idx = idx;
+
+            var num = document.createElement('span');
+            num.className = 'txt-linha-num';
+            num.textContent = '#' + (idx + 1);
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'txt-linha-input';
+            input.value = linha;
+            input.placeholder = 'Conteúdo da linha ' + (idx + 1) + '...';
+            input.oninput = function () {
+                _aoEditarLinhaInput(idx, this.value);
+            };
+
+            var btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'txt-linha-del';
+            btnDel.innerHTML = '✕';
+            btnDel.title = 'Excluir linha ' + (idx + 1);
+            btnDel.onclick = function () {
+                _excluirLinhaTexto(idx);
+            };
+
+            row.appendChild(num);
+            row.appendChild(input);
+            row.appendChild(btnDel);
+            container.appendChild(row);
+        });
+        _atualizarContadorLinhasTexto();
+    }
+
+    function _aoEditarLinhaInput(idx, novoValor) {
+        var ta = document.getElementById("textareaImport");
+        if (!ta) return;
+        var linhas = ta.value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+        if (idx >= 0 && idx < linhas.length) {
+            linhas[idx] = novoValor;
+            ta.value = linhas.join('\n');
+            _atualizarContadorLinhasTexto();
+        }
+    }
+
+    function _excluirLinhaTexto(idx) {
+        var ta = document.getElementById("textareaImport");
+        if (!ta) return;
+        var linhas = ta.value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+        if (idx >= 0 && idx < linhas.length) {
+            linhas.splice(idx, 1);
+            ta.value = linhas.join('\n');
+            _renderizarListaLinhasTexto();
+            _toast('Linha ' + (idx + 1) + ' removida.', 'info');
+        }
+    }
+
+    function _adicionarLinhaTexto() {
+        var ta = document.getElementById("textareaImport");
+        if (!ta) return;
+        var linhas = ta.value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+        linhas.push('');
+        ta.value = linhas.join('\n');
+        _renderizarListaLinhasTexto();
+        var container = document.getElementById("txtListaLinhasContainer");
+        if (container) {
+            var inputs = container.querySelectorAll('.txt-linha-input');
+            if (inputs.length) {
+                var last = inputs[inputs.length - 1];
+                last.focus();
+            }
+        }
+    }
+
+    function _organizarTextoInteligente() {
+        var ta = document.getElementById("textareaImport");
+        if (!ta || !ta.value.trim()) {
+            _toast("Cole um texto antes de organizar.", "warning");
+            return;
+        }
+        var raw = ta.value;
+        var linhas = raw.split(/\r?\n/);
+        var linhasTratadas = [];
+
+        var reRuido = /^(bom dia|boa tarde|boa noite|ola|olá|opa|tudo bem|amigo|segue|segue a|segue lista|cotar|cotacao|cotação|favor|por favor|ve pra mim|vê pra mim|orcamento|orçamento|obrigado|valeu|att|grato|aguardo)[\s\.,!?:-]*$/i;
+        var reWhatsAppHeader = /^(?:\[\d{1,2}:\d{2}(?::\d{2})?(?:,\s*\d{1,2}\/\d{1,2}\/\d{2,4})?\]|\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*-\s*)[^:]+:\s*/i;
+
+        linhas.forEach(function (l) {
+            var limpa = l.replace(reWhatsAppHeader, '').trim();
+            if (!limpa) return;
+            if (reRuido.test(limpa.toLowerCase())) return;
+
+            var partes = [];
+            if (limpa.includes(' / ') || (limpa.includes('/') && !/\d+\/\d+/.test(limpa))) {
+                partes = limpa.split(/\s*\/\s*/);
+            } else if (limpa.includes(';')) {
+                partes = limpa.split(/\s*;\s*/);
+            } else if (limpa.includes(' | ')) {
+                partes = limpa.split(/\s*\|\s*/);
+            } else if (/[•\*\-]\s+/.test(limpa) && (limpa.match(/[•\*\-]\s+/g) || []).length > 1) {
+                partes = limpa.split(/\s*[•\*\-]\s+/);
+            } else if (/\b\d+\s*[-–]\s+/.test(limpa) && (limpa.match(/\b\d+\s*[-–]\s+/g) || []).length > 1) {
+                partes = limpa.split(/(?=\b\d+\s*[-–]\s+)/);
+            } else if (limpa.includes(',') && (limpa.match(/,/g) || []).length >= 2 && /\d+\s+[A-Za-z]+/.test(limpa)) {
+                partes = limpa.split(/\s*,\s*/);
+            } else {
+                partes = [limpa];
+            }
+
+            partes.forEach(function (p) {
+                var item = p.trim()
+                    .replace(/^[•\*\-\+]\s*/, '')
+                    .replace(/^\d+[\.\)\-]\s*/, '')
+                    .trim();
+                if (item && item.length > 1 && !reRuido.test(item.toLowerCase())) {
+                    linhasTratadas.push(item);
+                }
+            });
+        });
+
+        if (!linhasTratadas.length) {
+            _toast("Nenhum item válido identificado no texto.", "warning");
+            return;
+        }
+
+        ta.value = linhasTratadas.join('\n');
+        _atualizarContadorLinhasTexto();
+        if (_modoTextoAtual === 'linhas') _renderizarListaLinhasTexto();
+        _toast(linhasTratadas.length + ' linha(s) organizada(s) com sucesso!', 'success');
+    }
+
+    function _quebrarTextoPor(sep) {
+        var ta = document.getElementById("textareaImport");
+        if (!ta || !ta.value.trim()) return;
+        var raw = ta.value;
+        var partes = [];
+        if (sep === '/') {
+            partes = raw.split(/\s*\/\s*/);
+        } else if (sep === ';') {
+            partes = raw.split(/\s*;\s*/);
+        } else if (sep === ',') {
+            partes = raw.split(/\s*,\s*/);
+        } else {
+            partes = raw.split(sep);
+        }
+        var limpas = partes.map(function (p) { return p.trim(); }).filter(Boolean);
+        ta.value = limpas.join('\n');
+        _atualizarContadorLinhasTexto();
+        if (_modoTextoAtual === 'linhas') _renderizarListaLinhasTexto();
+        _toast('Texto quebrado por "' + sep + '" em ' + limpas.length + ' linha(s).', 'info');
+    }
+
+    function _limparWhatsAppTexto() {
+        var ta = document.getElementById("textareaImport");
+        if (!ta || !ta.value.trim()) return;
+        var linhas = ta.value.split(/\r?\n/);
+        var reRuido = /^(bom dia|boa tarde|boa noite|ola|olá|opa|tudo bem|amigo|segue|segue a|cotar|favor|por favor|obrigado|valeu|att|grato)[\s\.,!?:-]*$/i;
+        var reWhatsAppHeader = /^(?:\[\d{1,2}:\d{2}(?::\d{2})?(?:,\s*\d{1,2}\/\d{1,2}\/\d{2,4})?\]|\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*-\s*)[^:]+:\s*/i;
+
+        var limpas = [];
+        linhas.forEach(function (l) {
+            var limpa = l.replace(reWhatsAppHeader, '').trim();
+            if (limpa && !reRuido.test(limpa.toLowerCase())) {
+                limpas.push(limpa);
+            }
+        });
+        ta.value = limpas.join('\n');
+        _atualizarContadorLinhasTexto();
+        if (_modoTextoAtual === 'linhas') _renderizarListaLinhasTexto();
+        _toast('Cabeçalhos de WhatsApp removidos.', 'info');
+    }
+
+    function _removerLinhasVaziasTexto() {
+        var ta = document.getElementById("textareaImport");
+        if (!ta || !ta.value.trim()) return;
+        var limpas = ta.value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+        ta.value = limpas.join('\n');
+        _atualizarContadorLinhasTexto();
+        if (_modoTextoAtual === 'linhas') _renderizarListaLinhasTexto();
+        _toast('Linhas vazias removidas.', 'info');
+    }
+
+    function processImportTextoMapeador() {
+        var ta = document.getElementById("textareaImport");
+        if (!ta || !ta.value.trim()) { _toast("Cole um texto antes de processar.", "error"); return; }
+        var texto = ta.value;
+        closeModal("modalTexto");
+        if (window.DemandaTextoColunas) {
+            DemandaTextoColunas.abrir({
+                text: texto,
+                fonte: "texto",
+                nome: "Texto colado",
+                toast: _toast,
+                onConfirm: function (grade) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        rawText: texto,
+                        fonte: "texto",
+                        nome: "Texto colado",
+                        toast: _toast,
+                        onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); }
+                    });
+                }
+            });
+        } else if (window.DemandaMapeador) {
+            var grade = DemandaImport.textoParaGrade(texto);
+            DemandaMapeador.abrir({
+                rows: grade,
+                rawText: texto,
+                fonte: "texto",
+                nome: "Texto colado",
+                toast: _toast,
+                onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); }
+            });
+        }
+    }
 
     function processImportTexto() {
         var ta = document.getElementById("textareaImport");
         if (!ta || !ta.value.trim()) { _toast("Cole um texto antes de processar.", "error"); return; }
         if (typeof DemandaImport === "undefined") { _toast("DemandaImport não disponível.", "error"); return; }
         var texto = ta.value;
-        var leituraAutomatica = function () {
-            var parsed = DemandaImport.parseText(texto);
-            var validados = DemandaImport.validateItens(parsed);
-            if (validados.length === 0) { _toast("Nenhum item encontrado no texto.", "error"); return false; }
+
+        // 1. Tenta leitura inteligente direta de texto/WhatsApp
+        var parsed = DemandaImport.parseText(texto);
+        var validados = DemandaImport.validateItens(parsed);
+        if (validados && validados.length > 0) {
             closeModal("modalTexto");
             _showConferencia(validados);
-            return true;
-        };
-        // Texto em colunas -> Assistente Texto em Colunas (Excel) / Mapeador
+            return;
+        }
+
+        // 2. Se for texto em colunas tabuladas (ex: copiado de Excel ou grade com 2+ colunas)
+        if (window.DemandaMapeador && typeof DemandaImport.textoParaGrade === "function") {
+            var grade = DemandaImport.textoParaGrade(texto);
+            if (grade.length && grade.some(function (r) { return r.length >= 2; })) {
+                closeModal("modalTexto");
+                DemandaMapeador.abrir({
+                    rows: grade, rawText: texto, fonte: "texto", nome: "Texto colado", toast: _toast,
+                    onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); }
+                });
+                return;
+            }
+        }
+
+        // 3. Fallback: abre no assistente de colunas de texto
         if (window.DemandaTextoColunas && texto.trim().includes('\n')) {
             closeModal("modalTexto");
             DemandaTextoColunas.abrir({
@@ -1500,28 +1785,14 @@ const DemandaApp = (function () {
                         fonte: "texto",
                         nome: "Texto colado",
                         toast: _toast,
-                        onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
-                        onAutomatico: function () { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
+                        onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); }
                     });
                 }
             });
             return;
         }
 
-        if (window.DemandaMapeador && typeof DemandaImport.textoParaGrade === "function") {
-            var grade = DemandaImport.textoParaGrade(texto);
-            var multi = grade.filter(function (r) { return r.length >= 2; }).length;
-            if (grade.length && multi >= grade.length * 0.4) {
-                closeModal("modalTexto");
-                DemandaMapeador.abrir({
-                    rows: grade, rawText: texto, fonte: "texto", nome: "Texto colado", toast: _toast,
-                    onConfirm: function (itens) { _showConferencia(DemandaImport.validateItens(itens)); },
-                    onAutomatico: function () { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
-                });
-                return;
-            }
-        }
-        leituraAutomatica();
+        _toast("Nenhum item reconhecido no texto. Use 'Organizar por Linha' ou 'Mapear em Colunas'.", "warning");
     }
 
     // ════════════════════════════════════════════════════════
@@ -8601,6 +8872,16 @@ const DemandaApp = (function () {
         closeModal: closeModal,
         addItemFromDetails: addItemFromDetails,
         processImportTexto: processImportTexto,
+        processImportTextoMapeador: processImportTextoMapeador,
+        _setModoTexto: _setModoTexto,
+        _atualizarContadorLinhasTexto: _atualizarContadorLinhasTexto,
+        _aoEditarLinhaInput: _aoEditarLinhaInput,
+        _excluirLinhaTexto: _excluirLinhaTexto,
+        _adicionarLinhaTexto: _adicionarLinhaTexto,
+        _organizarTextoInteligente: _organizarTextoInteligente,
+        _quebrarTextoPor: _quebrarTextoPor,
+        _limparWhatsAppTexto: _limparWhatsAppTexto,
+        _removerLinhasVaziasTexto: _removerLinhasVaziasTexto,
         // Import PDF
         _abrirImportPDF: _abrirImportPDF,
         _fecharImportPDF: _fecharImportPDF,
