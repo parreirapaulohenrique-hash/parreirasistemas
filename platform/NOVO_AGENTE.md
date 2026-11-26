@@ -1,3 +1,10 @@
+### Versão 3.5.5 (Build 227) - 26/11/2026
+- **Barra de Ajuste de Enquadramento no Demarcador de Imagem**: Adicionada ferramenta retrátil no Demarcador Visual (`[Ajustar Enquadramento]`) para fotos e digitalizações de documentos tortos, inclinados ou com orientação invertida.
+- **Rotação Rápida em Passos de 90° e 180°**: Permite girar a imagem para a esquerda, para a direita ou inverter de ponta cabeça, reconfigurando os limites da tabela automaticamente para o novo formato.
+- **Ajuste Fino de Inclinação (Deskew -15° a +15°)**: Slider de ajuste fino com precisão de 0.2° e botões de passo `－0.5°`, `＋0.5°` e `0° Zerar`, com pré-visualização fluida a 60 FPS e linhas de grade guia horizontais para alinhamento perfeito das tabelas com as colunas verticais.
+- **Filtros de Nitidez e Preto & Branco**: Botões de ampliação de contraste (Normal, +35%, +60%) e conversão P&B em escala de cinza para realçar textos e dígitos apagados antes do reconhecimento OCR.
+- **Sincronização 1:1 com OCR**: As transformações de rotação, inclinação e contraste são renderizadas matematicamente no canvas de recorte enviado à API `/api/ocr`, garantindo correspondência exata entre o que o operador vê e o texto extraído.
+
 ### Versão 3.5.4 (Build 226) - 25/11/2026
 - **Correção no Retorno ao Demarcador de Imagem**: Corrigido erro de escopo de variáveis que impedia a reabertura da tela de demarcação da imagem ao clicar em "Reajustar Linhas na Foto" ou "Voltar ao Demarcador".
 - **Carregamento Imediato de Imagem em Cache**: No Demarcador Visual, adicionada checagem direta `imgEl.complete` para disparar instantaneamente a renderização das linhas e cortes na foto quando a imagem já estiver em memória, garantindo retorno suave e sem tela em branco.
