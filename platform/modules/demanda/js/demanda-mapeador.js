@@ -137,15 +137,37 @@ const DemandaMapeador = (() => {
                 if (best >= 0 && bestSc >= amostra.length * 0.5) { cfg.slots[best].campos = ['ref']; mapa.ref = best; }
             }
         }
-        // 4. Qtde pelo conteúdo (números pequenos)
+        // 4. Qtde pelo conteúdo (apenas números inteiros ou decimais típicos de quantidade)
+        // Só sugere se NÃO tiver formato de NCM (xxxx.xx.xx ou 8 dígitos), código ou data,
+        // e se pelo menos 75% dos valores forem estritamente numéricos pequenos (1 a 999)
         if (mapa.qtde == null) {
             let best = -1, bestSc = 0;
             for (let c = 0; c < n; c++) {
                 if (usadas().has(c)) continue;
-                const sc = amostra.filter(r => { const v = _cel(r, c); const x = _num(v); return _str(v) !== '' && x > 0 && x < 10000 && /^[\d.,\s]+$/.test(_str(v)); }).length;
-                if (sc > bestSc) { bestSc = sc; best = c; }
+                let ehNcmOuCodigo = 0;
+                let ehQtdeValida = 0;
+                let preenchidos = 0;
+                amostra.forEach(r => {
+                    const v = _str(_cel(r, c)).trim();
+                    if (!v) return;
+                    preenchidos++;
+                    if (/^\d{4}\.\d{2}\.\d{2}$|^\d{8}$|^\d{1,2}\/\d{1,2}/.test(v) || /[A-Za-z]{2,}/.test(v)) {
+                        ehNcmOuCodigo++;
+                    } else {
+                        const numLimpo = v.replace(/\b(?:un|und|pç|pc|cx|jg|mts?|kg)\b/gi, '').trim();
+                        const x = _num(numLimpo);
+                        if (x > 0 && x <= 999 && /^[\d.,\s]+$/.test(numLimpo)) {
+                            ehQtdeValida++;
+                        }
+                    }
+                });
+                if (preenchidos > 0 && ehNcmOuCodigo === 0 && (ehQtdeValida / preenchidos) >= 0.75) {
+                    if (ehQtdeValida > bestSc) { bestSc = ehQtdeValida; best = c; }
+                }
             }
-            if (best >= 0 && bestSc >= amostra.length * 0.6) cfg.slots[best].campos = ['qtde'];
+            if (best >= 0 && bestSc >= Math.max(2, amostra.length * 0.5)) {
+                cfg.slots[best].campos = ['qtde'];
+            }
         }
         // 5. Detectar linhas de rodapé/totais no final do documento para pré-definir FIM ou pré-excluir
         const PADRAO_RODAPE = /^(servi[çc]os?:?|frete:?|outras\s+despesas:?|nro\s+itens:?|n[°º]?\s+itens:?|total\s+de\s+itens:?|total\s+geral:?|sub-?total:?|condi[çc][ãa]o\s+de\s+pagamento:?|forma\s+de\s+pagamento:?|vendedor:?|dados\s+banc[áa]rios:?|chave\s+pix:?|observa[çc][õo]es?:?)\b/i;
@@ -248,12 +270,14 @@ const DemandaMapeador = (() => {
             // Filtro defensivo contra rodapés típicos caso não tenham sido excluídos manualmente
             if (/^(servi[çc]os?:?|frete:?|nro\s+itens:?|total\s+de\s+itens:?|condi[çc][ãa]o\s+de\s+pagamento:?)/i.test(ref)) continue;
 
-            // v3.4.0: Tratamento de quantidade com unidades de medida e formatação BR
+            // Tratamento de quantidade com unidades de medida e formatação BR
             const qStr = _str(v.qtde).toLowerCase().replace(/\b(?:un|und|pç|pc|cx|jg|mts?|kg)\b/gi, '').trim();
             const qRaw = qStr;
             const qtdeInformada = qStr !== '';
             let qtde = _num(qStr);
             const qtdeInvalida = qtdeInformada && !(qtde > 0);
+            const semQtdeNaOrigem = !qtdeInformada;
+            // Se a foto original não trouxe quantidade para esta linha, usa 1 como padrão operacional sem inventar dados
             if (!(qtde > 0)) qtde = 1;
             let unit = _num(v.unit);
             const total = _num(v.total);
@@ -265,16 +289,17 @@ const DemandaMapeador = (() => {
             if (alternativas.length) obsPartes.push('Ref. alternativas: ' + alternativas.join(', '));
 
             const item = {
-                refOriginal:    ref,
-                descOriginal:   desc || ref,
-                qtdeSolicitada: Math.round(qtde * 1000) / 1000,
-                marca:          _str(v.marca),
-                obs:            obsPartes.join(' | '),
-                incerteza:      !ref,
-                _rowNum:        r - (cfg.inicio || 0) + 1,
-                _docLine:       r + 1,
-                _rawIndex:      r,
-                _qtdeInvalida:  qtdeInvalida,
+                refOriginal:      ref,
+                descOriginal:     desc || ref,
+                qtdeSolicitada:   Math.round(qtde * 1000) / 1000,
+                marca:            _str(v.marca),
+                obs:              obsPartes.join(' | '),
+                incerteza:        !ref,
+                _rowNum:          r - (cfg.inicio || 0) + 1,
+                _docLine:         r + 1,
+                _rawIndex:        r,
+                _qtdeInvalida:    qtdeInvalida,
+                _semQtdeNaOrigem: semQtdeNaOrigem,
             };
             if (unit > 0) item.precoConcorrente = unit;
             itens.push(item);
@@ -763,10 +788,15 @@ const DemandaMapeador = (() => {
                 refDisplay += ` <span style="display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:1px 4px;border-radius:4px;background:rgba(245,158,11,.15);color:#f59e0b;" title="Código novo / sem vínculo automático">⚪ Novo</span>`;
             }
 
+            const qtdeTxt = _esc(String(it.qtdeSolicitada).replace('.', ','));
+            const qtdeCellHtml = it._semQtdeNaOrigem
+                ? `<span style="color:#94a3b8;font-style:italic" title="Esta linha não continha quantidade legível na imagem original; entrará com 1 como padrão operacional se confirmada">${qtdeTxt} <small style="font-size:9px;opacity:0.8">(padrão)</small></span>`
+                : qtdeTxt;
+
             const val = {
                 ref: refDisplay,
                 desc: _esc(it.descOriginal),
-                qtde: _esc(String(it.qtdeSolicitada).replace('.', ',')),
+                qtde: qtdeCellHtml,
                 marca: _esc(it.marca),
                 preco: it.precoConcorrente ? _esc(it.precoConcorrente.toFixed(2).replace('.', ',')) : '',
                 obs: _esc(it.obs)

@@ -1,9 +1,9 @@
 {
-  "version": "3.5.6",
-  "build": "20261126-v3.5.6",
+  "version": "3.5.7",
+  "build": "20261126-v3.5.7",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-26",
-  "change": "v3.5.6: Ferramentas de edição e organização de texto no modal Colar Texto / WhatsApp — Botão 'Organizar por Linha' com limpeza inteligente de carimbos e saudações, quebras rápidas por barra (/), vírgula (,) e ponto e vírgula (;), abas de Texto Livre e Editor por Linhas interativo com exclusão e adição de linhas.",
-  "releaseDate": "2026-11-26T10:55:00-03:00"
+  "change": "v3.5.7: Aprimoramento da clareza e fidelidade na digitalização de fotos de peças e documentos — Resolução e nitidez otimizadas para OCR de alta precisão (sem artefatos de bloco em dígitos finos), clusterização vertical robusta de linhas horizontais por sobreposição geométrica (sem colisão de linhas vizinhas nem engolimento de itens), consolidação inteligente de continuações descritivas multiline e blindagem de quantidade (eliminação de quantidades inexistentes e diferenciação explícita de itens sem quantidade na imagem original).",
+  "releaseDate": "2026-11-26T15:20:00-03:00"
 }

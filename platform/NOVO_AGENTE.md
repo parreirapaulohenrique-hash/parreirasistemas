@@ -1,3 +1,12 @@
+### Versão 3.5.7 (Build 229) - 26/11/2026
+- **Clareza e Alta Resolução na Digitalização OCR**: Canvas de pré-processamento otimizado com densidade ótica balanceada (mínimo de ~2400px de largura) e interpolação de alta fidelidade sem artefatos JPEG de bloco, preservando nitidez de números finos, vírgulas e pontos decimais.
+- **Clusterização Geométrica das Linhas Horizontais no Demarcador**: Substituído o cálculo de centróide móvel por agrupamento robusto baseado na altura mediana `H` e sobreposição vertical (`vertical overlap`), impedindo que números da coluna de identificação/Item sejam engolidos pela linha vizinha ou que linhas colidam.
+- **Consolidação Inteligente de Quebras de Descrição (Multiline Merge)**: Quando a descrição de uma peça ocupa mais de uma linha física na tabela impressa, as palavras secundárias são automaticamente consolidadas na descrição do item principal, eliminando a criação de linhas fantasmas vazias.
+- **Blindagem e Fidelidade de Quantidade**:
+  - Eliminação de inserção artificial de quantidade: itens secundários e quebras de linha não recebem mais quantidade inventada.
+  - No Mapeador de Colunas, colunas de NCM, datas e códigos internos deixam de ser sugeridas erroneamente como quantidade.
+  - Quando a imagem original não possuir quantidade legível ou não tiver coluna de quantidade demarcada, a prévia do mapeador indica explicitamente `1 (padrão)` com transparência total ao operador, diferenciando dados da imagem de valores padrão.
+
 ### Versão 3.5.6 (Build 228) - 26/11/2026
 - **Edição e Organização de Texto / WhatsApp no Modal de Importação**: O modal *Colar Texto / WhatsApp* agora conta com ferramentas completas de organização e edição antes de processar os itens.
 - **Botão Organizar por Linha**: Processamento inteligente que detecta múltiplos produtos colados na mesma linha, quebra por marcadores (`•`, `-`, `*`, `1.`, `2.`), barras (`/`) e vírgulas, além de remover automaticamente carimbos de data/hora do WhatsApp (ex: `[10:15, 26/11/2026] Cliente:`) e saudações (`Bom dia`, `Segue cotação`, `Obrigado`).

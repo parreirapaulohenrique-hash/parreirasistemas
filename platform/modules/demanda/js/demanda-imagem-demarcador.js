@@ -885,20 +885,20 @@ const DemandaImagemDemarcador = (() => {
             const natH = _st.naturalH;
             const fonteImg = _st.canvasAjustado || imgEl;
 
-            // Folga de segurança vertical de ~12px no topo e base para que as linhas de Início/Fim nunca decepem topos ou pés de números
-            const padY = Math.max(12, Math.round(natH * 0.015));
+            // Folga de segurança vertical no topo e base para nunca decepar topos ou pés de números
+            const padY = Math.max(16, Math.round(natH * 0.02));
             const yTopPx = Math.max(0, Math.round(_st.yTopPct * natH) - padY);
             const yBottomPx = Math.min(natH, Math.round(_st.yBottomPct * natH) + padY);
             const cropH = Math.max(50, yBottomPx - yTopPx);
 
-            // Canvas da tabela limpa com resolução e contraste otimizados para OCR de precisão
+            // Canvas da tabela limpa com resolução e clareza ótica otimizadas para OCR de precisão
             const cv = document.createElement('canvas');
             let scale = 1.0;
-            // Se a imagem/recorte for menor que 1800px, amplia (até 2x) para nitidez de dígitos isolados (1, 2, 3...)
-            if (natW < 1800 && cropH < 1800) {
-                scale = Math.min(2.0, 2200 / Math.max(natW, cropH));
-            } else if (natW > 2600 || cropH > 2600) {
-                scale = Math.min(2600 / natW, 2600 / cropH);
+            // Garante densidade ótica ideal (2200px a 2600px de largura) para separar dígitos pequenos e decimais
+            if (natW < 2200) {
+                scale = Math.min(2.5, 2400 / Math.max(natW, 600));
+            } else if (natW > 2800) {
+                scale = 2800 / natW;
             }
             cv.width = Math.round(natW * scale);
             cv.height = Math.round(cropH * scale);
@@ -906,12 +906,16 @@ const DemandaImagemDemarcador = (() => {
             const ctx = cv.getContext('2d');
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            // Aumenta o contraste levemente para separar caracteres de bordas e linhas da tabela
-            try {
-                ctx.filter = 'contrast(120%) brightness(102%)';
-            } catch (e) { }
+            // Se o usuário já ajustou contraste ou PB manualmente no painel de enquadramento, não duplica o filtro
+            const jaAjustado = (_st.contraste && _st.contraste !== 100) || _st.pb;
+            if (!jaAjustado) {
+                try {
+                    ctx.filter = 'contrast(115%) brightness(102%)';
+                } catch (e) { }
+            }
             ctx.drawImage(fonteImg, 0, yTopPx, natW, cropH, 0, 0, cv.width, cv.height);
-            const croppedBase64 = cv.toDataURL('image/jpeg', 0.95);
+            // Qualidade JPEG 0.98 preserva contornos finos de números sem artefatos de bloco
+            const croppedBase64 = cv.toDataURL('image/jpeg', 0.98);
 
             // 2. Chama a API de OCR
             loadingMsg.textContent = 'Lendo e identificando texto nas coordenadas demarcadas...';
@@ -1012,6 +1016,7 @@ const DemandaImagemDemarcador = (() => {
                     l: l,
                     t: t,
                     r: l + wd,
+                    b: t + h,
                     h: h,
                     cx: l + wd / 2,
                     cy: t + h / 2
@@ -1021,73 +1026,143 @@ const DemandaImagemDemarcador = (() => {
 
         if (!palavras.length) return [];
 
-        // 1. Estima inclinação (desentorta o papel) para fotos com leve ângulo
         const median = arr => { const s = arr.slice().sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
         const H = median(palavras.filter(w => w.h > 0).map(w => w.h)) || 14;
 
-        const slopes = [];
-        palavras.forEach(a => {
-            let best = null, bestGap = Infinity;
-            palavras.forEach(b => {
-                if (b === a) return;
-                const gap = b.l - a.r;
-                if (gap < -2 || gap > H * 2.5) return;
-                if (Math.abs(b.cy - a.cy) > H * 0.6) return;
-                if (gap < bestGap) { bestGap = gap; best = b; }
+        // 1. Estimação de inclinação: se o usuário já ajustou rotação ou inclinação manual no Demarcador, o alinhamento já foi calibrado
+        let slope = 0;
+        const usuarioAjustouAngulo = _st && (_st.rotacao !== 0 || _st.inclinacao !== 0);
+        if (!usuarioAjustouAngulo) {
+            const slopes = [];
+            palavras.forEach(a => {
+                let best = null, bestGap = Infinity;
+                palavras.forEach(b => {
+                    if (b === a) return;
+                    const gap = b.l - a.r;
+                    if (gap < -2 || gap > H * 2.2) return;
+                    if (Math.abs(b.cy - a.cy) > H * 0.5) return;
+                    if (gap < bestGap) { bestGap = gap; best = b; }
+                });
+                if (best) {
+                    const dx = best.cx - a.cx;
+                    if (dx > H * 1.5) slopes.push((best.cy - a.cy) / dx);
+                }
             });
-            if (best) {
-                const dx = best.cx - a.cx;
-                if (dx > H) slopes.push((best.cy - a.cy) / dx);
+            if (slopes.length >= 8) {
+                const slMed = median(slopes);
+                if (Math.abs(slMed) <= 0.08) slope = slMed;
             }
-        });
-        let slope = slopes.length >= 5 ? median(slopes) : 0;
-        if (Math.abs(slope) > 0.15) slope = 0;
+        }
 
         palavras.forEach(w => { w.yd = w.cy - slope * w.cx; });
 
-        // 2. Agrupa palavras em Linhas pela coordenada vertical desentortada (yd)
-        const gruposLinhas = [];
-        palavras.slice().sort((a, b) => a.yd - b.yd).forEach(w => {
-            const last = gruposLinhas[gruposLinhas.length - 1];
-            if (last && Math.abs(w.yd - last.y) <= H * 0.55) {
-                last.ws.push(w);
-                last.y += (w.yd - last.y) / last.ws.length;
-            } else {
-                gruposLinhas.push({ y: w.yd, ws: [w] });
-            }
-        });
-
-        // 3. Distribui cada palavra na sua respectiva coluna pelas coordenadas X
-        // Se o operador colocou cortes muito próximos das bordas externas (< 4.5% na esquerda ou > 95.5% na direita)
-        // para "marcar o início/fim da tabela", funde com 0 e imgW para que a 1ª coluna e a última coluna
-        // cheguem até as bordas absolutas da imagem sem perigo de fatiar números de borda!
-        const cortesLimpos = (cortesPct || []).filter(p => p >= 0.045 && p <= 0.955);
+        // 2. Delimitação das colunas com base nos cortes demarcados
+        // Permite cortes próximos da borda (a partir de 1.5%) para preservar colunas estreitas de início (ex: Item/Seq)
+        const cortesLimpos = (cortesPct || []).filter(p => p >= 0.015 && p <= 0.985);
         const borders = [0, ...cortesLimpos, 1].map(pct => pct * imgW);
         const numCols = borders.length - 1;
 
-        let grade = [];
+        // Atribui a coluna demarcada a cada palavra
+        palavras.forEach(w => {
+            let colIdx = numCols - 1;
+            for (let c = 0; c < numCols; c++) {
+                if (w.cx >= borders[c] && w.cx < borders[c + 1]) {
+                    colIdx = c;
+                    break;
+                }
+            }
+            w.col = colIdx;
+        });
 
+        // 3. Agrupamento em Linhas Horizontais Robusto por Coordenada Y
+        // Ordena palavras por Y corrigido
+        const ordenadas = palavras.slice().sort((a, b) => a.yd - b.yd);
+        const gruposLinhas = [];
+
+        ordenadas.forEach(w => {
+            let matchedGroup = null;
+            // Procura linha compatível mais recente (dentre as últimas 3 linhas abertas)
+            for (let i = gruposLinhas.length - 1; i >= Math.max(0, gruposLinhas.length - 3); i--) {
+                const g = gruposLinhas[i];
+                const diffY = Math.abs(w.yd - g.y);
+                const jaTemMesmaColuna = g.colsOcupadas.has(w.col);
+
+                // Se já tem palavra na MESMA coluna:
+                // Se for coluna de identificação (Item / Seq / Código) numérico curto, não funde na mesma linha
+                if (jaTemMesmaColuna) {
+                    const ehColIdentificacao = (w.col === 0 || w.col === 1) && /^\d{1,4}$/.test(w.text);
+                    if (ehColIdentificacao || diffY > H * 0.40) {
+                        continue;
+                    }
+                }
+
+                if (diffY <= H * 0.48) {
+                    matchedGroup = g;
+                    break;
+                }
+            }
+
+            if (matchedGroup) {
+                matchedGroup.ws.push(w);
+                matchedGroup.colsOcupadas.add(w.col);
+                // Atualiza média Y suavemente
+                matchedGroup.y += (w.yd - matchedGroup.y) * 0.15;
+            } else {
+                const s = new Set();
+                s.add(w.col);
+                gruposLinhas.push({
+                    y: w.yd,
+                    ws: [w],
+                    colsOcupadas: s
+                });
+            }
+        });
+
+        // 4. Monta a Grade Tabular Inicial
+        let grade = [];
         gruposLinhas.forEach(grupo => {
             const cols = new Array(numCols).fill('');
             grupo.ws.sort((a, b) => a.l - b.l);
-
             grupo.ws.forEach(p => {
-                let colIdx = numCols - 1;
-                for (let c = 0; c < numCols; c++) {
-                    if (p.cx >= borders[c] && p.cx < borders[c + 1]) {
-                        colIdx = c;
-                        break;
-                    }
-                }
-                cols[colIdx] = (cols[colIdx] ? cols[colIdx] + ' ' : '') + p.text;
+                cols[p.col] = (cols[p.col] ? cols[p.col] + ' ' : '') + p.text;
             });
-
             if (cols.some(c => c.trim().length > 0)) {
                 grade.push(cols);
             }
         });
 
-        // 4. Remove colunas de borda que estejam 100% vazias (ex: margem esquerda antes do primeiro corte ou margem direita)
+        // 5. CONSOLIDAÇÃO DE QUEBRAS DE LINHA (Multiline Consolidation):
+        // Detecta quando uma descrição quebrou em 2 linhas físicas na tabela impressa.
+        // Se a linha R tem a coluna de identificação/código VAZIA e apenas texto na coluna de descrição/obs,
+        // funde o texto na linha R-1 correspondente em vez de criar uma linha com quantidade fantasma!
+        if (grade.length > 1 && numCols >= 2) {
+            const gradeConsolidada = [];
+            for (let r = 0; r < grade.length; r++) {
+                const row = grade[r];
+                const prevRow = gradeConsolidada[gradeConsolidada.length - 1];
+
+                if (prevRow) {
+                    const col0Vazia = !(row[0] && row[0].trim());
+                    const col1Vazia = !(row[1] && row[1].trim());
+                    const qtdeVazia = numCols >= 4 ? !(row[numCols - 1] && /\d/.test(row[numCols - 1])) : true;
+                    const colsPreenchidas = row.map((v, idx) => ({ v: (v || '').trim(), idx })).filter(x => x.v.length > 0);
+
+                    const ehContinuacao = col0Vazia && (col1Vazia || !/^[A-Z0-9\.\-\/]{4,}$/i.test(row[1].trim())) && qtdeVazia && colsPreenchidas.length <= 2;
+
+                    if (ehContinuacao && colsPreenchidas.length > 0) {
+                        colsPreenchidas.forEach(({ v, idx }) => {
+                            prevRow[idx] = (prevRow[idx] ? prevRow[idx] + ' ' : '') + v;
+                        });
+                        continue;
+                    }
+                }
+
+                gradeConsolidada.push(row);
+            }
+            grade = gradeConsolidada;
+        }
+
+        // 6. Remove colunas de borda que estejam 100% vazias
         const colunasComDados = [];
         for (let c = 0; c < numCols; c++) {
             const temDado = grade.some(row => (row[c] || '').trim().length > 0);
@@ -1120,25 +1195,23 @@ const DemandaImagemDemarcador = (() => {
             gradeBruta.push(partes);
         });
 
-        // Detecta se linhas mais abaixo começam com índice numérico (10, 11...)
-        // enquanto as primeiras linhas tiveram o SEQ ignorado pelo OCR
-        const linhasComIndice = gradeBruta.filter(r => /^\d{1,3}$/.test(r[0] || ''));
-        const proporcaoIndices = linhasComIndice.length / (gradeBruta.length || 1);
-
-        const grade = gradeBruta.map(r => {
+        const grade = [];
+        gradeBruta.forEach(r => {
             let partes = r.slice();
-            // Se a maioria das linhas tem índice numérico no início, mas esta linha começa com texto descritivo
-            if (proporcaoIndices > 0.4 && !/^\d{1,3}$/.test(partes[0] || '') && partes.length < numCols) {
-                partes.unshift(''); // Desloca para a direita para alinhar com SEQ
-            }
-
             while (partes.length < numCols) partes.push('');
             if (partes.length > numCols) {
                 const prim = partes.slice(0, numCols - 1);
                 prim.push(partes.slice(numCols - 1).join(' '));
                 partes = prim;
             }
-            return partes;
+
+            // Se for continuação de linha descritiva sem número/código, funde com a anterior
+            const prev = grade[grade.length - 1];
+            if (prev && !partes[0] && partes[1] && !partes[partes.length - 1]) {
+                prev[1] = (prev[1] ? prev[1] + ' ' : '') + partes[1];
+            } else {
+                grade.push(partes);
+            }
         });
 
         return grade;
