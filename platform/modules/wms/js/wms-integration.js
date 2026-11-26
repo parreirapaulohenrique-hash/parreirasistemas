@@ -4,6 +4,9 @@
 // O WMS opera de forma autônoma; conectores são opcionais.
 // =============================================================
 
+// O token JWT do MaxData (cache, renovação e retry 401) fica em
+// js/wms-maxdata-auth.js → window.WmsMaxdataAuth (carregado antes deste arquivo).
+
 (function () {
     'use strict';
 
@@ -252,34 +255,9 @@
             { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: '364F64E6539974C1D75C8A46C14B2D3D',   required: true  },
         ],
 
-        // ── Token JWT: busca cached ou faz novo POST /auth ────
+        // ── Token JWT: centralizado em window.WmsMaxdataAuth (cache + renovação + retry 401) ──
         async _getToken(config) {
-            const cached = config._maxdataToken;
-            if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000)) {
-                return cached.value; // válido por mais de 1 min
-            }
-            const base = (config.baseUrl || '').replace(/\/$/, '');
-            const resp = await fetch(`${base}/auth`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ empId: Number(config.empId), terminal: config.terminal }),
-                signal: AbortSignal.timeout(10000)
-            });
-            if (!resp.ok) throw new Error(`Maxdata Auth: HTTP ${resp.status}`);
-            const data = await resp.json();
-            if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
-            // Persiste token no connectorConfig para reutilização
-            const saved = JSON.parse(localStorage.getItem(_iKey()) || '{}');
-            if (!saved.connectorConfig) saved.connectorConfig = {};
-            const tokenCache = { value: data.token, expiresAt: data.expiration };
-            saved.connectorConfig._maxdataToken = tokenCache;
-            config._maxdataToken = tokenCache;
-            localStorage.setItem(_iKey(), JSON.stringify(saved));
-            return data.token;
-        },
-
-        _hdrs(token) {
-            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+            return window.WmsMaxdataAuth.getToken();
         },
 
         async init(config) {
@@ -290,15 +268,15 @@
 
         async sync(entity, config) {
             try {
-                const token = await this._getToken(config);
-                const base  = config.baseUrl.replace(/\/$/, '');
-                const map   = { 'purchase-orders': `${base}/entry`, 'products': `${base}/product` };
-                const url   = map[entity];
-                if (!url) return { status: 'skip', message: `"${entity}" não suportado no pull Maxdata.` };
-                const resp = await fetch(url, { method: 'GET', headers: this._hdrs(token), signal: AbortSignal.timeout(15000) });
+                const map = { 'purchase-orders': 'entry', 'products': 'product' };
+                const ep  = map[entity];
+                if (!ep) return { status: 'skip', message: `"${entity}" não suportado no pull Maxdata.` };
+                const resp = await window.WmsMaxdataAuth.fetch(window.WmsMaxdataAuth.buildUrl(ep), {
+                    method: 'GET', signal: AbortSignal.timeout(15000)
+                });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const data    = await resp.json();
-                const records = Array.isArray(data) ? data : (data.data || data.results || []);
+                const records = Array.isArray(data) ? data : (data.docs || data.data || data.results || []);
                 _addSyncLog(entity, 'erp→wms', 'ok', `${records.length} registros do Maxdata`);
                 return { status: 'ok', data: records, message: `${records.length} registros.` };
             } catch (err) {
@@ -309,16 +287,14 @@
 
         async push(entity, payload, config) {
             try {
-                const token = await this._getToken(config);
-                const base  = config.baseUrl.replace(/\/$/, '');
-                const map   = {
-                    'receipts':     { url: `${base}/entry/markaschecked`, method: 'PUT'  },
-                    'stock-levels': { url: `${base}/adjustmentstock`,     method: 'POST' },
+                const map = {
+                    'receipts':     { ep: 'entry/markaschecked', method: 'PUT'  },
+                    'stock-levels': { ep: 'adjustmentstock',     method: 'POST' },
                 };
-                const ep = map[entity];
-                if (!ep) return { status: 'skip', message: `Push de "${entity}" não suportado no Maxdata.` };
-                const resp = await fetch(ep.url, {
-                    method: ep.method, headers: this._hdrs(token),
+                const target = map[entity];
+                if (!target) return { status: 'skip', message: `Push de "${entity}" não suportado no Maxdata.` };
+                const resp = await window.WmsMaxdataAuth.fetch(window.WmsMaxdataAuth.buildUrl(target.ep), {
+                    method: target.method,
                     body: JSON.stringify(payload), signal: AbortSignal.timeout(15000)
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -334,8 +310,9 @@
             if (!config.baseUrl || !config.empId || !config.terminal)
                 return { status: 'error', message: 'Configure URL Base, empId e Terminal.' };
             try {
-                await this._getToken(config);
-                return { status: 'ok', message: `✅ Autenticação Maxdata OK. Token ativo.` };
+                // Autentica com os valores informados (mesmo antes de salvar) — não grava o token
+                await window.WmsMaxdataAuth.getToken(false, config);
+                return { status: 'ok', message: `✅ Autenticação Maxdata OK (empId ${config.empId}). Token ativo.` };
             } catch (err) {
                 return { status: 'error', message: `Falha: ${err.message}` };
             }
@@ -584,32 +561,14 @@ window.WmsMaxdataPoller = (function () {
     let _intervalId  = null;
     let _isActive    = false;
 
-    // ── Auth helper (copia _getToken do conector) ─────────────
+    // ── Auth helper: delega ao WmsMaxdataAuth (cache + renovação + retry 401) ──
     async function _token() {
         const ic  = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
         const cfg = ic.connectorConfig || {};
-        const cached = cfg._maxdataToken;
-        if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000))
-            return { token: cached.value, ic, cfg };
-
-        const base = (cfg.baseUrl || '').replace(/\/$/, '');
-        if (!base || !cfg.empId || !cfg.terminal)
+        if (!cfg.baseUrl || !cfg.empId || !cfg.terminal)
             throw new Error('Maxdata não configurado.');
-
-        const resp = await fetch(`${base}/auth`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal }),
-            signal: AbortSignal.timeout(10000)
-        });
-        if (!resp.ok) throw new Error(`Auth HTTP ${resp.status}`);
-        const data = await resp.json();
-        if (!data.token) throw new Error('Token vazio.');
-
-        if (!ic.connectorConfig) ic.connectorConfig = {};
-        ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
-        localStorage.setItem(IC_KEY(), JSON.stringify(ic));
-        return { token: data.token, ic, cfg: ic.connectorConfig };
+        const token = await window.WmsMaxdataAuth.getToken();
+        return { token, ic, cfg };
     }
 
     // ── Um ciclo de polling ───────────────────────────────────
@@ -618,17 +577,15 @@ window.WmsMaxdataPoller = (function () {
             const ic = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             if (ic.connectorId !== 'maxdata') return;
 
-            const { token, cfg } = await _token();
-            const base = cfg.baseUrl.replace(/\/$/, '');
+            await _token();
 
-            const resp = await fetch(`${base}/entry`, {
+            const resp = await window.WmsMaxdataAuth.fetch(window.WmsMaxdataAuth.buildUrl('entry'), {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 signal: AbortSignal.timeout(12000)
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const raw = await resp.json();
-            const entries = Array.isArray(raw) ? raw : (raw.data || raw.results || []);
+            const entries = Array.isArray(raw) ? raw : (raw.docs || raw.data || raw.results || []);
 
             // Detectar NFs novas
             const knownIds  = new Set(JSON.parse(localStorage.getItem(KNOWN_KEY()) || '[]'));

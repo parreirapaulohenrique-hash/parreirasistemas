@@ -18,15 +18,29 @@
 class MaxDataAdapter extends ErpAdapter {
 
     // ─────────────────────────────────────────────────────────
-    //  AUTENTICAÇÃO — JWT com cache de sessão
+    //  AUTENTICAÇÃO — JWT com renovação automática e cache
     // ─────────────────────────────────────────────────────────
 
-    async _getToken() {
-        if (this._tokenCache?.value &&
-            new Date(this._tokenCache.expiresAt) > new Date(Date.now() + 120000)) {
-            return this._tokenCache.value;
+    async _getToken(forceRefresh = false) {
+        const curEmp  = Number(this.config.empId || 1);
+        const curTerm = (this.config.terminal || '364F64E6539974C1D75C8A46C14B2D3D').trim();
+        // Token amarrado à filial: trocar empId/terminal nunca reaproveita token de outra filial
+        if (!forceRefresh && this._tokenCache?.value &&
+            this._tokenCache.empId === curEmp && this._tokenCache.terminal === curTerm) {
+            // Se ainda faltam mais de 3 minutos para expirar, reutiliza o token atual
+            const safeBufferMs = 180000; // 3 minutos de margem preventiva
+            if (new Date(this._tokenCache.expiresAt).getTime() - Date.now() > safeBufferMs) {
+                return this._tokenCache.value;
+            }
         }
 
+        // Deduplica renovações simultâneas (ex.: Promise.all com várias chamadas recebendo 401 juntas)
+        if (this._tokenInflight) return this._tokenInflight;
+        this._tokenInflight = this._requestNewToken().finally(() => { this._tokenInflight = null; });
+        return this._tokenInflight;
+    }
+
+    async _requestNewToken() {
         const empId    = Number(this.config.empId || 1);
         const terminal = (this.config.terminal || '364F64E6539974C1D75C8A46C14B2D3D').trim();
 
@@ -34,9 +48,10 @@ class MaxDataAdapter extends ErpAdapter {
 
         this._log('info', `Autenticando no MaxData — empId: ${empId}`);
 
-        const appName        = (this.config.appName || '5ea6149f-e123-4847-82a2-d5fc6e157aeb').trim();
-        const appKey         = (this.config.appKey || '249b6fc7-4312-48e3-9155-0c48d92b098637255f1b-95a4-4c91-a06a-c51d0dd062d2').trim();
-        const appDescription = (this.config.appDescription || 'CENTRALPECAS_APP_COTACAO').trim();
+        // Credenciais oficiais CENTRALROLAMENTOS
+        const appName        = (this.config.appName || '5ca47be1-418b-4051-b490-830486f27f05').trim();
+        const appKey         = (this.config.appKey || 'fa2314d0-4a4d-4133-b577-34b14bb9d85d75471f51-0855-4e50-aa36-3c8ad5d8a0a1').trim();
+        const appDescription = (this.config.appDescription || 'CENTRALROLAMENTOS').trim();
 
         const url  = this._buildUrl('auth');
         const resp = await fetch(url, {
@@ -59,18 +74,82 @@ class MaxDataAdapter extends ErpAdapter {
         const data = await resp.json();
         if (!data.token) throw new Error('Token JWT não retornado pelo MaxData. Verifique o terminal.');
 
+        // Extrai a expiração exata do JWT (expiresAt / exp) ou do retorno do MaxData.
+        // O MaxData envia nanossegundos (ex.: 16:33:20.747474302-03:00) — reduz para milissegundos.
+        const parseDate = (v) => new Date(typeof v === 'string' ? v.replace(/(\.\d{3})\d+/, '$1') : v);
+        let expiresAt = null;
+        try {
+            const payloadPart = data.token.split('.')[1];
+            if (payloadPart) {
+                const b64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonStr = decodeURIComponent(atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const payload = JSON.parse(jsonStr);
+                if (payload.expiresAt) {
+                    expiresAt = parseDate(payload.expiresAt);
+                } else if (payload.exp) {
+                    expiresAt = new Date(payload.exp * 1000);
+                }
+            }
+        } catch (_) {}
+
+        // Fallbacks caso o payload não contenha o campo
+        if (!expiresAt || isNaN(expiresAt.getTime())) {
+            if (data.expiresAt) expiresAt = parseDate(data.expiresAt);
+            else if (data.expiration) expiresAt = parseDate(data.expiration);
+            if (!expiresAt || isNaN(expiresAt.getTime())) {
+                // Tokens MaxData duram 1 hora; assume 50 minutos por segurança
+                expiresAt = new Date(Date.now() + 50 * 60 * 1000);
+            }
+        }
+
         this._tokenCache = {
             value:     data.token,
-            expiresAt: new Date(data.expiration || Date.now() + 86400000)
+            expiresAt: expiresAt,
+            empId:     empId,
+            terminal:  terminal
         };
 
-        this._log('success', `✅ Token JWT obtido — expira: ${new Date(this._tokenCache.expiresAt).toLocaleString('pt-BR')}`);
+        this._log('success', `✅ Token JWT obtido/renovado — expira em: ${this._tokenCache.expiresAt.toLocaleTimeString('pt-BR')} (${new Date(this._tokenCache.expiresAt).toLocaleDateString('pt-BR')})`);
         return data.token;
     }
 
     async _authHeaders() {
         const token = await this._getToken();
         return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    /**
+     * Wrapper de requisições autenticadas com auto-renovação de token em caso de HTTP 401.
+     */
+    async _fetchWithAuth(url, options = {}) {
+        // Remove qualquer Authorization antigo vindo do chamador — o token é sempre resolvido aqui
+        const extraHeaders = { ...(options.headers || {}) };
+        delete extraHeaders.Authorization;
+        delete extraHeaders.authorization;
+        options = { ...options, headers: extraHeaders };
+
+        let headers = await this._authHeaders();
+        let resp = await fetch(url, {
+            ...options,
+            headers: { ...headers, ...(options.headers || {}) }
+        });
+
+        // Se o token expirou no ERP (HTTP 401), descarta o cache, renova via /auth e repete a chamada
+        if (resp.status === 401) {
+            this._log('warning', '⚠️ Token JWT expirou no ERP (HTTP 401). Renovando automaticamente via /auth...');
+            this._tokenCache = null;
+            const newToken = await this._getToken(true);
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${newToken}`
+            };
+            resp = await fetch(url, {
+                ...options,
+                headers: { ...headers, ...(options.headers || {}) }
+            });
+        }
+
+        return resp;
     }
 
     /**
@@ -173,7 +252,6 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     async _fetchAllClients() {
-        const headers = await this._authHeaders();
         const limit   = 100;
         let page      = 1;
         const all     = [];
@@ -182,7 +260,7 @@ class MaxDataAdapter extends ErpAdapter {
             const url = this._buildUrl('client', { page, limit });
             this._log('info', `Buscando página ${page} de clientes...`);
 
-            const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
+            const resp = await this._fetchWithAuth(url, { method: 'GET', signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
             if (!resp.ok) throw new Error(`GET /client pág ${page}: HTTP ${resp.status}`);
 
             const data  = await resp.json();
@@ -238,7 +316,6 @@ class MaxDataAdapter extends ErpAdapter {
      * Busca vendas do Maxdata emitidas a partir de 28/08/2026 e consulta o número da NF-e na rota /fiscal/venda/{id}.
      */
     async fetchRecentSales(params = {}) {
-        const headers = await this._authHeaders();
         const INCEPTION_DATE = '2026-08-28';
         const limit   = 50;
         let page      = 1;
@@ -247,7 +324,7 @@ class MaxDataAdapter extends ErpAdapter {
         try {
             while (true) {
                 const url = this._buildUrl('sale', { page, limit, ...params });
-                const resp = await fetch(url, { method: 'GET', headers });
+                const resp = await this._fetchWithAuth(url, { method: 'GET' });
                 if (!resp.ok) throw new Error(`GET /sale pág ${page} HTTP ${resp.status}`);
 
                 const data = await resp.json();
@@ -287,7 +364,7 @@ class MaxDataAdapter extends ErpAdapter {
                 let fiscalData = null;
                 try {
                     const fUrl = this._buildUrl(`fiscal/venda/${sale.id}`);
-                    const fResp = await fetch(fUrl, { method: 'GET', headers });
+                    const fResp = await this._fetchWithAuth(fUrl, { method: 'GET' });
                     if (fResp.ok) {
                         fiscalData = await fResp.json();
                     }
@@ -312,9 +389,9 @@ class MaxDataAdapter extends ErpAdapter {
         const headers = await this._authHeaders();
         try {
             const [saleResp, itemsResp, fiscalResp] = await Promise.all([
-                fetch(this._buildUrl(`sale/${saleId}`), { method: 'GET', headers }),
-                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null),
-                fetch(this._buildUrl(`fiscal/venda/${saleId}`), { method: 'GET', headers }).catch(() => null)
+                this._fetchWithAuth(this._buildUrl(`sale/${saleId}`), { method: 'GET', headers }),
+                this._fetchWithAuth(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null),
+                this._fetchWithAuth(this._buildUrl(`fiscal/venda/${saleId}`), { method: 'GET', headers }).catch(() => null)
             ]);
 
             if (!saleResp.ok) throw new Error(`Venda #${saleId} não encontrada (HTTP ${saleResp.status})`);
@@ -431,7 +508,7 @@ class MaxDataAdapter extends ErpAdapter {
                 let retries = 0;
                 while (retries < 2) {
                     try {
-                        resp = await fetch(url, {
+                        resp = await this._fetchWithAuth(url, {
                             method: 'GET',
                             headers,
                             signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
@@ -697,7 +774,7 @@ class MaxDataAdapter extends ErpAdapter {
         const url = this._buildUrl(`entry/${entryId}/markaschecked`);
         this._log('info', `Marcando NF de entrada #${entryId} como conferida no MaxData...`);
 
-        const resp = await fetch(url, { method: 'PUT', headers });
+        const resp = await this._fetchWithAuth(url, { method: 'PUT', headers });
         if (!resp.ok) {
             const errTxt = await resp.text().catch(() => resp.statusText);
             throw new Error(`Falha ao marcar entrada como conferida (HTTP ${resp.status}): ${errTxt}`);
@@ -717,11 +794,11 @@ class MaxDataAdapter extends ErpAdapter {
 
         try {
             const url = this._buildUrl('product/ean', { ean: cleanEan });
-            let resp = await fetch(url, { method: 'GET', headers });
+            let resp = await this._fetchWithAuth(url, { method: 'GET', headers });
 
             if (!resp.ok && resp.status === 405) {
                 const postUrl = this._buildUrl('product/ean');
-                resp = await fetch(postUrl, {
+                resp = await this._fetchWithAuth(postUrl, {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({ ean: cleanEan })
@@ -746,7 +823,7 @@ class MaxDataAdapter extends ErpAdapter {
     async listLoads(params = {}) {
         const headers = await this._authHeaders();
         const url = this._buildUrl('carga', params);
-        const resp = await fetch(url, { method: 'GET', headers });
+        const resp = await this._fetchWithAuth(url, { method: 'GET', headers });
         if (!resp.ok) throw new Error(`Falha ao consultar cargas (HTTP ${resp.status})`);
         const data = await resp.json();
         return Array.isArray(data) ? data : (data.docs || data.data || []);
@@ -760,8 +837,8 @@ class MaxDataAdapter extends ErpAdapter {
         if (!loadId) throw new Error('ID da carga obrigatório.');
         const headers = await this._authHeaders();
         const [cargaResp, itensResp] = await Promise.all([
-            fetch(this._buildUrl(`carga/${loadId}`), { method: 'GET', headers }),
-            fetch(this._buildUrl(`carga/${loadId}/itens`), { method: 'GET', headers }).catch(() => null)
+            this._fetchWithAuth(this._buildUrl(`carga/${loadId}`), { method: 'GET', headers }),
+            this._fetchWithAuth(this._buildUrl(`carga/${loadId}/itens`), { method: 'GET', headers }).catch(() => null)
         ]);
 
         if (!cargaResp.ok) throw new Error(`Carga #${loadId} não encontrada`);
@@ -782,7 +859,7 @@ class MaxDataAdapter extends ErpAdapter {
         const headers = await this._authHeaders();
 
         const createUrl = this._buildUrl('adjustmentstock');
-        const headResp = await fetch(createUrl, {
+        const headResp = await this._fetchWithAuth(createUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify({ usuarioId, motivo, data: new Date().toISOString() })
@@ -800,7 +877,7 @@ class MaxDataAdapter extends ErpAdapter {
             motivo: it.motivo || motivo
         }));
 
-        const itemsResp = await fetch(itemsUrl, {
+        const itemsResp = await this._fetchWithAuth(itemsUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify(itemsPayload)
@@ -808,7 +885,7 @@ class MaxDataAdapter extends ErpAdapter {
         if (!itemsResp.ok) throw new Error(`Falha ao inserir itens do ajuste (HTTP ${itemsResp.status})`);
 
         const concludeUrl = this._buildUrl('adjustmentstock/conclude');
-        await fetch(concludeUrl, {
+        await this._fetchWithAuth(concludeUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify({ id: adjustmentId })

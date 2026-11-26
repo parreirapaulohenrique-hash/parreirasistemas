@@ -1,6 +1,6 @@
 {
-  "version": "2.3.0",
+  "version": "2.3.1",
   "date": "2026-11-26",
-  "build": "20261126-1330",
-  "last_change": "Feat: Nomenclatura física real de vigas/porta-paletes (RUA, PRÉDIO, APTO em bloco invertido preto) com rótulos editáveis e campos customizados de endereço"
+  "build": "20261126-1710",
+  "last_change": "Fix: renovação automática do token JWT MaxData (expiração real do JWT, renovação preventiva 3 min, retry em HTTP 401, token por filial) centralizada em wms-maxdata-auth.js para WMS e Coletor"
 }
