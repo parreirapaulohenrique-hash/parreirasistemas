@@ -1216,6 +1216,36 @@ function renderCfgGalpao(container) {
                 `}
             </div>
         </div>
+
+        <!-- Card 3: Nomenclatura e Campos Customizados de Endereço (RUA / PRÉDIO / APTO) -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">sell</span>
+                    Nomenclatura e Campos Customizados de Endereço
+                </h3>
+                <button class="btn btn-primary" onclick="switchView('cad-end-cadastro'); setTimeout(() => { if (window.openCamposConfigModal) window.openCamposConfigModal(); }, 350);" style="font-size:.82rem;">
+                    <span class="material-icons-round" style="font-size:.9rem;">tune</span> Configurar Nomenclatura & Campos
+                </button>
+            </div>
+            <div style="padding:1rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:.75rem;line-height:1.5;">
+                    Padronize a codificação física das vigas e porta-paletes (<strong>RUA</strong>, <strong>PRÉDIO</strong>, <strong>APTO</strong> com destaque em fundo escuro e QR Code/ID) ou personalize os nomes dos campos (ex: Corredor, Bloco, Vão) e acrescente atributos específicos para integrar esquemas de endereçamento legados do cliente.
+                </p>
+                <div style="display:flex;align-items:center;gap:.75rem;background:var(--bg-hover);padding:.75rem 1rem;border-radius:8px;border:1px dashed var(--border-color);">
+                    <span class="material-icons-round" style="color:var(--primary-color,#3b82f6);font-size:1.5rem;">label</span>
+                    <div style="font-size:.78rem;color:var(--text-secondary);flex:1;">
+                        Rótulos ativos: <strong style="color:var(--text-primary);">${JSON.parse(localStorage.getItem('wms_enderecamento_config' + ts) || '{}').lblRua || 'RUA'}</strong>, 
+                        <strong style="color:var(--text-primary);">${JSON.parse(localStorage.getItem('wms_enderecamento_config' + ts) || '{}').lblPredio || 'PRÉDIO'}</strong>, 
+                        <strong style="color:var(--text-primary);">${JSON.parse(localStorage.getItem('wms_enderecamento_config' + ts) || '{}').lblApto || 'APTO'}</strong>
+                        ${(JSON.parse(localStorage.getItem('wms_enderecamento_config' + ts) || '{}').camposCustomizados || []).length > 0 ? ` &bull; <em>+${(JSON.parse(localStorage.getItem('wms_enderecamento_config' + ts) || '{}').camposCustomizados || []).length} campos customizados</em>` : ''}
+                    </div>
+                    <button class="btn btn-secondary" onclick="switchView('cad-end-cadastro'); setTimeout(() => { if (window.openCamposConfigModal) window.openCamposConfigModal(); }, 350);" style="padding:.3rem .75rem;font-size:.78rem;">
+                        Editar
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>`;
 
     // Draw preview
