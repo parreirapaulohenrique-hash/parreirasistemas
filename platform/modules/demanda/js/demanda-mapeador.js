@@ -1045,6 +1045,11 @@ const DemandaMapeador = (() => {
                     DemandaImagemDemarcador.abrir({
                         file: fl,
                         dataUrl: dUrl,
+                        rawImgUrl: est.rawImgUrl || dUrl,
+                        rotacao: est.rotacao,
+                        inclinacao: est.inclinacao,
+                        contraste: est.contraste,
+                        pb: est.pb,
                         cortesPct: est.cortesPct,
                         yTopPct: est.yTopPct,
                         yBottomPct: est.yBottomPct,
@@ -1078,6 +1083,11 @@ const DemandaMapeador = (() => {
                 DemandaImagemDemarcador.abrir({
                     file: fl,
                     dataUrl: dUrl,
+                    rawImgUrl: est.rawImgUrl || dUrl,
+                    rotacao: est.rotacao,
+                    inclinacao: est.inclinacao,
+                    contraste: est.contraste,
+                    pb: est.pb,
                     cortesPct: est.cortesPct,
                     yTopPct: est.yTopPct,
                     yBottomPct: est.yBottomPct,

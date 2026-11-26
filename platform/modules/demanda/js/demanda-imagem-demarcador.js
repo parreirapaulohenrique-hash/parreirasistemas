@@ -16,6 +16,7 @@ const DemandaImagemDemarcador = (() => {
     let _ultimoToqueCorte = null;      // { idx, t } — detecção de duplo clique/toque na alça
     let _ignorarProximoClique = false; // evita criar corte no "click" que encerra um arrasto
     let _bloqueioDblAte = 0;           // evita que o dblclick pós-exclusão apague uma linha vizinha
+    let _inclinacaoDebounceTimer = null; // timer para debounce do slider de inclinação fina
 
     const $ = (id) => document.getElementById(id);
 
@@ -63,6 +64,9 @@ const DemandaImagemDemarcador = (() => {
                         <button class="did-btn did-btn-sec did-btn-sm" id="didBtnLimpar" title="Remove todos os cortes verticais">
                             <span class="material-icons-round">clear_all</span> Limpar Cortes
                         </button>
+                        <button class="did-btn did-btn-sec did-btn-sm" id="didBtnToggleAjustes" title="Ajustar rotação, inclinação e nitidez da foto para alinhar às colunas" style="border-color:#38bdf8;color:#38bdf8">
+                            <span class="material-icons-round" style="color:#38bdf8;font-size:1.05rem">tune</span> Ajustar Enquadramento
+                        </button>
 
                         <div class="did-divider"></div>
 
@@ -90,11 +94,58 @@ const DemandaImagemDemarcador = (() => {
                     </div>
                 </div>
 
+                <!-- Barra de Enquadramento e Ajustes de Imagem (Deskew / Rotação / Nitidez) -->
+                <div class="did-adjust-bar" id="didAdjustBar" style="display:none">
+                    <div class="did-adjust-group">
+                        <span class="did-adjust-label"><span class="material-icons-round" style="font-size:.9rem;color:#38bdf8">rotate_90_degrees_ccw</span> Rotação:</span>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnRotEsq" title="Girar 90° para a Esquerda">↺ 90° Esq</button>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnRotDir" title="Girar 90° para a Direita">↻ 90° Dir</button>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnRot180" title="Inverter 180°">⇄ 180°</button>
+                    </div>
+
+                    <div class="did-divider"></div>
+
+                    <div class="did-adjust-group">
+                        <span class="did-adjust-label" title="Alinha tabelas inclinadas com as linhas verticais fixas de corte">
+                            <span class="material-icons-round" style="font-size:.9rem;color:#38bdf8">straighten</span> Inclinação:
+                            <b id="didInclinacaoVal" style="color:#38bdf8;min-width:44px;display:inline-block;text-align:right">0.0°</b>
+                        </span>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnIncMenos" title="Inclinar -0.5° à esquerda">－0.5°</button>
+                        <input type="range" id="didSliderInclinacao" min="-15" max="15" step="0.2" value="0" style="width:130px;accent-color:#38bdf8;cursor:pointer" title="Arraste para ajustar a inclinação e alinhar as linhas da tabela" />
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnIncMais" title="Inclinar +0.5° à direita">＋0.5°</button>
+                        <button class="did-btn did-btn-ghost did-btn-xs" id="didBtnIncZerar" title="Zerar inclinação">0°</button>
+                    </div>
+
+                    <div class="did-divider"></div>
+
+                    <div class="did-adjust-group">
+                        <span class="did-adjust-label"><span class="material-icons-round" style="font-size:.9rem;color:#38bdf8">contrast</span> Filtros:</span>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnContraste" title="Aumentar contraste dos textos e números para facilitar leitura">
+                            Contraste: <span id="didContrasteVal" style="color:#38bdf8">Normal</span>
+                        </button>
+                        <button class="did-btn did-btn-sec did-btn-xs" id="didBtnPB" title="Converter foto para Preto e Branco para melhor legibilidade">
+                            P&B: <span id="didPBVal">Desligado</span>
+                        </button>
+                    </div>
+
+                    <div class="did-adjust-group" style="margin-left:auto">
+                        <button class="did-btn did-btn-ghost did-btn-xs" id="didBtnToggleGrade" title="Mostrar/ocultar linhas guia horizontais para conferir alinhamento">
+                            <span class="material-icons-round" style="font-size:.9rem">grid_on</span> Linhas Guia
+                        </button>
+                        <button class="did-btn did-btn-ghost did-btn-xs" id="didBtnResetAjustes" style="color:#f87171" title="Restaurar imagem original sem rotação ou filtros">
+                            <span class="material-icons-round" style="font-size:.9rem">restart_alt</span> Restaurar Original
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Palco de Imagem e Demarcações -->
                 <div class="did-stage-scroll" id="didStageScroll">
                     <div class="did-stage" id="didStage">
                         <!-- Imagem do documento -->
                         <img id="didImage" alt="Documento para demarcação" draggable="false" />
+
+                        <!-- Grade de linhas guia para auxílio de alinhamento de inclinação -->
+                        <div id="didGridGuia" class="did-grid-guia" style="display:none"></div>
 
                         <!-- Máscara de Cabeçalho (tudo acima de yTop) -->
                         <div id="didMaskTop" class="did-mask did-mask-top"></div>
@@ -151,10 +202,11 @@ const DemandaImagemDemarcador = (() => {
 
         const file = opts.file;
         const dataUrl = opts.dataUrl;
+        const rawImgUrl = opts.rawImgUrl || dataUrl || '';
         const onConfirm = opts.onConfirm;
         const toast = opts.toast;
 
-        if (!file && !dataUrl) {
+        if (!file && !dataUrl && !rawImgUrl) {
             _toast('Nenhuma imagem fornecida para demarcação.', 'error');
             return;
         }
@@ -163,14 +215,22 @@ const DemandaImagemDemarcador = (() => {
         $('didOverlay').style.display = 'flex';
         $('didLoading').style.display = 'none';
 
-        // Estado inicial
+        // Estado inicial com suporte a enquadramento/ajuste de imagem
         _st = {
             file: file,
             nome: opts.nome || (file ? file.name : 'Foto / Print'),
-            imgUrl: dataUrl || '',
+            rawImgUrl: rawImgUrl,
+            rawImageObj: null,
+            canvasAjustado: null,
+            imgUrl: dataUrl || rawImgUrl,
             naturalW: 1000,
             naturalH: 1000,
             zoom: 1.0,
+            rotacao: Number(opts.rotacao) || 0,
+            inclinacao: Number(opts.inclinacao) || 0.0,
+            contraste: Number(opts.contraste) || 100,
+            pb: Boolean(opts.pb),
+            mostrarGradeGuia: false,
             yTopPct: opts.yTopPct != null ? opts.yTopPct : 0.18,      // 18% do topo corta cabeçalho comum
             yBottomPct: opts.yBottomPct != null ? opts.yBottomPct : 0.88, // 88% corta rodapé
             cortesPct: opts.cortesPct && opts.cortesPct.length ? opts.cortesPct.slice() : [0.15, 0.45, 0.62, 0.76, 0.88], // 5 cortes = 6 colunas típicas
@@ -199,35 +259,137 @@ const DemandaImagemDemarcador = (() => {
 
         DemandaImagemDemarcador._ultimoEstado = _st;
 
-        if (dataUrl) {
-            imgEl.src = dataUrl;
-            if (imgEl.complete && imgEl.naturalWidth > 0) {
-                _aoCarregarImagem(imgEl);
-            } else {
-                imgEl.onload = () => _aoCarregarImagem(imgEl);
+        const carregarObjetoImagem = (srcUrl) => {
+            _st.rawImgUrl = srcUrl;
+            const raw = new Image();
+            raw.onload = () => {
+                _st.rawImageObj = raw;
+                _st.naturalW = raw.naturalWidth || 1000;
+                _st.naturalH = raw.naturalHeight || 1000;
+                DemandaImagemDemarcador._ultimoEstado = _st;
+                if (_st.rotacao !== 0 || _st.inclinacao !== 0 || _st.contraste !== 100 || _st.pb) {
+                    _processarAjustesImagem(false);
+                } else {
+                    _st.imgUrl = srcUrl;
+                    imgEl.src = srcUrl;
+                    _atualizarControlesAjuste();
+                    _ajustarZoomFit();
+                    _renderizar();
+                }
+                _toast('Foto carregada! Posicione as colunas ou use "Ajustar Enquadramento" se a imagem estiver torta.', 'info');
+            };
+            raw.src = srcUrl;
+            if (raw.complete && raw.naturalWidth > 0) {
+                raw.onload();
             }
+        };
+
+        if (rawImgUrl || dataUrl) {
+            carregarObjetoImagem(rawImgUrl || dataUrl);
         } else if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                _st.imgUrl = e.target.result;
-                DemandaImagemDemarcador._ultimoEstado = _st;
-                imgEl.src = _st.imgUrl;
-                if (imgEl.complete && imgEl.naturalWidth > 0) {
-                    _aoCarregarImagem(imgEl);
-                } else {
-                    imgEl.onload = () => _aoCarregarImagem(imgEl);
-                }
+                carregarObjetoImagem(e.target.result);
             };
             reader.readAsDataURL(file);
         }
     }
 
-    function _aoCarregarImagem(imgEl) {
-        _st.naturalW = imgEl.naturalWidth || 1000;
-        _st.naturalH = imgEl.naturalHeight || 1000;
-        _ajustarZoomFit();
+    // ── Processamento de Ajuste de Imagem (Rotação / Deskew / Filtros) ──
+    function _processarAjustesImagem(redefinirCortes = false) {
+        if (!_st || !_st.rawImageObj) return;
+
+        const imgOrig = _st.rawImageObj;
+        const origW = imgOrig.naturalWidth || 1000;
+        const origH = imgOrig.naturalHeight || 1000;
+
+        const totalAngleDeg = ((_st.rotacao % 360) + _st.inclinacao);
+        const angleRad = totalAngleDeg * Math.PI / 180;
+
+        const cos = Math.abs(Math.cos(angleRad));
+        const sin = Math.abs(Math.sin(angleRad));
+        const newW = Math.max(10, Math.round(origW * cos + origH * sin));
+        const newH = Math.max(10, Math.round(origW * sin + origH * cos));
+
+        const cv = document.createElement('canvas');
+        cv.width = newW;
+        cv.height = newH;
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // Preenche com branco para o fundo do documento
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, newW, newH);
+
+        // Filtros de contraste e escala de cinza
+        const filtros = [];
+        if (_st.contraste > 100) {
+            filtros.push(`contrast(${_st.contraste}%)`);
+        }
+        if (_st.pb) {
+            filtros.push('grayscale(100%)');
+            if (_st.contraste <= 100) filtros.push('contrast(125%)');
+        }
+        if (filtros.length > 0) {
+            try {
+                ctx.filter = filtros.join(' ');
+            } catch (e) { }
+        }
+
+        ctx.translate(newW / 2, newH / 2);
+        ctx.rotate(angleRad);
+        ctx.drawImage(imgOrig, -origW / 2, -origH / 2);
+
+        const dataUrlAjustada = cv.toDataURL('image/jpeg', 0.94);
+        _st.imgUrl = dataUrlAjustada;
+        _st.canvasAjustado = cv;
+        _st.naturalW = newW;
+        _st.naturalH = newH;
+
+        const imgEl = $('didImage');
+        if (imgEl) {
+            imgEl.style.transform = '';
+            imgEl.src = dataUrlAjustada;
+        }
+
+        _atualizarControlesAjuste();
+
+        if (redefinirCortes) {
+            _st.cortesPct = [0.15, 0.45, 0.62, 0.76, 0.88];
+            _st.yTopPct = 0.18;
+            _st.yBottomPct = 0.88;
+            _ajustarZoomFit();
+        }
+
         _renderizar();
-        _toast('Foto carregada! Posicione as colunas e os limites da tabela e clique em Digitalizar.', 'info');
+    }
+
+    function _atualizarControlesAjuste() {
+        if (!_st) return;
+        const incValEl = $('didInclinacaoVal');
+        if (incValEl) incValEl.textContent = (_st.inclinacao > 0 ? '+' : '') + _st.inclinacao.toFixed(1) + '°';
+        const sliderInc = $('didSliderInclinacao');
+        if (sliderInc) sliderInc.value = _st.inclinacao;
+
+        const contrValEl = $('didContrasteVal');
+        if (contrValEl) contrValEl.textContent = _st.contraste === 100 ? 'Normal' : (_st.contraste === 135 ? 'Alto (+35%)' : 'Máximo (+60%)');
+
+        const pbValEl = $('didPBVal');
+        const btnPB = $('didBtnPB');
+        if (pbValEl) pbValEl.textContent = _st.pb ? 'Ligado' : 'Desligado';
+        if (btnPB) {
+            btnPB.style.borderColor = _st.pb ? '#38bdf8' : '';
+            btnPB.style.color = _st.pb ? '#38bdf8' : '';
+        }
+
+        const grid = $('didGridGuia');
+        if (grid) grid.style.display = _st.mostrarGradeGuia ? 'block' : 'none';
+        const btnGrid = $('didBtnToggleGrade');
+        if (btnGrid) {
+            btnGrid.style.color = _st.mostrarGradeGuia ? '#38bdf8' : '';
+            btnGrid.style.background = _st.mostrarGradeGuia ? 'rgba(56,189,248,0.18)' : '';
+        }
     }
 
     function fechar() {
@@ -475,6 +637,120 @@ const DemandaImagemDemarcador = (() => {
             _renderizar();
         };
 
+        // ── Controles de Enquadramento e Ajustes de Imagem ──
+        $('didBtnToggleAjustes').onclick = () => {
+            const bar = $('didAdjustBar');
+            if (!bar) return;
+            const visivel = bar.style.display !== 'none';
+            bar.style.display = visivel ? 'none' : 'flex';
+            const btn = $('didBtnToggleAjustes');
+            if (btn) {
+                btn.style.background = !visivel ? 'rgba(56,189,248,0.2)' : '';
+                btn.style.borderColor = !visivel ? '#38bdf8' : '';
+            }
+        };
+
+        $('didBtnRotEsq').onclick = () => {
+            if (!_st) return;
+            _st.rotacao = (_st.rotacao - 90 + 360) % 360;
+            _processarAjustesImagem(true);
+            _toast('Imagem girada 90° à esquerda.', 'info');
+        };
+
+        $('didBtnRotDir').onclick = () => {
+            if (!_st) return;
+            _st.rotacao = (_st.rotacao + 90) % 360;
+            _processarAjustesImagem(true);
+            _toast('Imagem girada 90° à direita.', 'info');
+        };
+
+        $('didBtnRot180').onclick = () => {
+            if (!_st) return;
+            _st.rotacao = (_st.rotacao + 180) % 360;
+            _processarAjustesImagem(true);
+            _toast('Imagem invertida 180°.', 'info');
+        };
+
+        const sliderInclinacao = $('didSliderInclinacao');
+        if (sliderInclinacao) {
+            sliderInclinacao.addEventListener('input', (e) => {
+                if (!_st || !_st.rawImageObj) return;
+                const val = parseFloat(e.target.value) || 0;
+                _st.inclinacao = val;
+                const incValEl = $('didInclinacaoVal');
+                if (incValEl) incValEl.textContent = (val > 0 ? '+' : '') + val.toFixed(1) + '°';
+
+                // Pré-visualização CSS instantânea ultra-suave
+                const imgEl = $('didImage');
+                if (imgEl) {
+                    imgEl.style.transformOrigin = 'center center';
+                    imgEl.style.transform = `rotate(${val}deg)`;
+                }
+
+                if (_inclinacaoDebounceTimer) clearTimeout(_inclinacaoDebounceTimer);
+                _inclinacaoDebounceTimer = setTimeout(() => {
+                    _processarAjustesImagem(false);
+                }, 120);
+            });
+
+            sliderInclinacao.addEventListener('change', () => {
+                if (_inclinacaoDebounceTimer) clearTimeout(_inclinacaoDebounceTimer);
+                _processarAjustesImagem(false);
+            });
+        }
+
+        $('didBtnIncMenos').onclick = () => {
+            if (!_st) return;
+            _st.inclinacao = Math.max(-15, Math.round((_st.inclinacao - 0.5) * 10) / 10);
+            _processarAjustesImagem(false);
+        };
+
+        $('didBtnIncMais').onclick = () => {
+            if (!_st) return;
+            _st.inclinacao = Math.min(15, Math.round((_st.inclinacao + 0.5) * 10) / 10);
+            _processarAjustesImagem(false);
+        };
+
+        $('didBtnIncZerar').onclick = () => {
+            if (!_st) return;
+            _st.inclinacao = 0;
+            _processarAjustesImagem(false);
+            _toast('Inclinação zerada (0.0°).', 'info');
+        };
+
+        $('didBtnContraste').onclick = () => {
+            if (!_st) return;
+            if (_st.contraste === 100) _st.contraste = 135;
+            else if (_st.contraste === 135) _st.contraste = 160;
+            else _st.contraste = 100;
+            _processarAjustesImagem(false);
+            _toast(`Contraste: ${_st.contraste === 100 ? 'Normal' : (_st.contraste === 135 ? 'Alto (+35%)' : 'Máximo (+60%)')}`, 'info');
+        };
+
+        $('didBtnPB').onclick = () => {
+            if (!_st) return;
+            _st.pb = !_st.pb;
+            _processarAjustesImagem(false);
+            _toast(_st.pb ? 'Modo Preto e Branco ativado.' : 'Modo Colorido restaurado.', 'info');
+        };
+
+        $('didBtnToggleGrade').onclick = () => {
+            if (!_st) return;
+            _st.mostrarGradeGuia = !_st.mostrarGradeGuia;
+            _atualizarControlesAjuste();
+        };
+
+        $('didBtnResetAjustes').onclick = () => {
+            if (!_st) return;
+            _st.rotacao = 0;
+            _st.inclinacao = 0;
+            _st.contraste = 100;
+            _st.pb = false;
+            _st.mostrarGradeGuia = false;
+            _processarAjustesImagem(true);
+            _toast('Imagem restaurada ao enquadramento original.', 'info');
+        };
+
         // Clique no palco para criar corte
         const stage = $('didStage');
         stage.onclick = (e) => {
@@ -607,6 +883,7 @@ const DemandaImagemDemarcador = (() => {
             const imgEl = $('didImage');
             const natW = _st.naturalW;
             const natH = _st.naturalH;
+            const fonteImg = _st.canvasAjustado || imgEl;
 
             // Folga de segurança vertical de ~12px no topo e base para que as linhas de Início/Fim nunca decepem topos ou pés de números
             const padY = Math.max(12, Math.round(natH * 0.015));
@@ -633,7 +910,7 @@ const DemandaImagemDemarcador = (() => {
             try {
                 ctx.filter = 'contrast(120%) brightness(102%)';
             } catch (e) { }
-            ctx.drawImage(imgEl, 0, yTopPx, natW, cropH, 0, 0, cv.width, cv.height);
+            ctx.drawImage(fonteImg, 0, yTopPx, natW, cropH, 0, 0, cv.width, cv.height);
             const croppedBase64 = cv.toDataURL('image/jpeg', 0.95);
 
             // 2. Chama a API de OCR
@@ -681,6 +958,11 @@ const DemandaImagemDemarcador = (() => {
             const estadoDemarcador = {
                 file: _st.file,
                 dataUrl: _st.imgUrl,
+                rawImgUrl: _st.rawImgUrl || _st.imgUrl,
+                rotacao: _st.rotacao,
+                inclinacao: _st.inclinacao,
+                contraste: _st.contraste,
+                pb: _st.pb,
                 yTopPct: _st.yTopPct,
                 yBottomPct: _st.yBottomPct,
                 cortesPct: _st.cortesPct.slice()

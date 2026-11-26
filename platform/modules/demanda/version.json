@@ -1,9 +1,9 @@
 {
-  "version": "3.5.4",
-  "build": "20261125-v3.5.4",
+  "version": "3.5.5",
+  "build": "20261126-v3.5.5",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-11-25",
-  "change": "v3.5.4: Correção crítica no botão Reajustar Linhas na Foto e Voltar ao Demarcador — escopo de variáveis preservado antes de fechar a sessão do mapeador e detecção imediata de imagem já carregada (imgEl.complete) no Demarcador de Imagem.",
-  "releaseDate": "2026-11-25T17:50:00-03:00"
+  "lastUpdate": "2026-11-26",
+  "change": "v3.5.5: Barra de ferramentas de Enquadramento e Ajuste de Imagem no Demarcador de Imagem — Rotação 90° e 180°, ajuste fino de inclinação (deskew -15° a +15° com slider e botões ±0.5°), filtros de contraste e preto & branco, linhas de grade guia e sincronização com canvas de OCR.",
+  "releaseDate": "2026-11-26T09:15:00-03:00"
 }
