@@ -29,18 +29,410 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(updateDashboardStats, 200);
 });
 
+// =============================================================================
+// Configuração Dinâmica de Nomenclatura e Campos de Endereçamento
+// Padrão Físico Oficial: Rua, Prédio, Apto (com QR Code + ID)
+// Permite ao cliente editar títulos e acrescentar campos adicionais personalizados.
+// =============================================================================
 
-// --- Main Entry Point ---
+window.getEnderecamentoConfig = function () {
+    try {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const raw = localStorage.getItem('wms_enderecamento_config' + suf);
+        if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return {
+        labels: {
+            rua: 'Rua',
+            predio: 'Prédio',
+            apto: 'Apto'
+        },
+        camposCustomizados: [
+            { id: 'c_deposito', key: 'deposito', label: 'Depósito', tipo: 'text', naTabela: true, naEtiqueta: false },
+            { id: 'c_area', key: 'area', label: 'Área', tipo: 'text', naTabela: true, naEtiqueta: false }
+        ]
+    };
+};
+
+window.saveEnderecamentoConfig = function (cfg) {
+    try {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        localStorage.setItem('wms_enderecamento_config' + suf, JSON.stringify(cfg));
+
+        // Também salva dentro do wms_config para redundância
+        const wmsCfg = JSON.parse(localStorage.getItem('wms_config' + suf) || '{}');
+        wmsCfg.enderecamento = cfg;
+        localStorage.setItem('wms_config' + suf, JSON.stringify(wmsCfg));
+
+        // Sincronização assíncrona no Firestore
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const sess = JSON.parse(sessionStorage.getItem('parreira_session') || '{}');
+            const tid = sess.tenantId || sess.tenant || 'centralpecas';
+            firebase.firestore().collection('tenants').doc(tid).collection('wms_config').doc('enderecamento')
+                .set(cfg, { merge: true }).catch(e => console.warn('[WMS] Sync enderecamento erro:', e));
+        }
+    } catch (e) {
+        console.warn('Erro ao salvar enderecamento_config:', e);
+    }
+};
+
+// --- Modal de Configuração de Nomenclatura e Campos ---
+let _tempCamposCustomizados = [];
+
+window.openCamposConfigModal = function () {
+    const cfg = window.getEnderecamentoConfig();
+    _tempCamposCustomizados = JSON.parse(JSON.stringify(cfg.camposCustomizados || []));
+
+    const inpRua = document.getElementById('cfgInputLabelRua');
+    const inpPredio = document.getElementById('cfgInputLabelPredio');
+    const inpApto = document.getElementById('cfgInputLabelApto');
+
+    if (inpRua) inpRua.value = cfg.labels?.rua || 'Rua';
+    if (inpPredio) inpPredio.value = cfg.labels?.predio || 'Prédio';
+    if (inpApto) inpApto.value = cfg.labels?.apto || 'Apto';
+
+    renderCamposCustomizadosTable();
+    atualizarPreviaEtiquetaConfig();
+
+    const m = document.getElementById('modalCamposConfig');
+    if (m) m.style.display = 'flex';
+};
+
+window.closeCamposConfigModal = function () {
+    const m = document.getElementById('modalCamposConfig');
+    if (m) m.style.display = 'none';
+};
+
+window.atualizarPreviaEtiquetaConfig = function () {
+    const rVal = (document.getElementById('cfgInputLabelRua')?.value || 'Rua').trim();
+    const pVal = (document.getElementById('cfgInputLabelPredio')?.value || 'Prédio').trim();
+    const aVal = (document.getElementById('cfgInputLabelApto')?.value || 'Apto').trim();
+
+    const elR = document.getElementById('prevEtqRuaLabel');
+    const elP = document.getElementById('prevEtqPredioLabel');
+    const elA = document.getElementById('prevEtqAptoLabel');
+
+    if (elR) elR.textContent = (rVal || 'Rua').toUpperCase();
+    if (elP) elP.textContent = (pVal || 'Prédio').toUpperCase();
+    if (elA) elA.textContent = (aVal || 'Apto').toUpperCase();
+};
+
+window.renderCamposCustomizadosTable = function () {
+    const tbody = document.getElementById('cfgCamposCustomizadosTableBody');
+    if (!tbody) return;
+
+    if (_tempCamposCustomizados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.25rem;color:var(--text-secondary);font-size:0.78rem;">Nenhum campo personalizado adicionado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = _tempCamposCustomizados.map((c, idx) => `
+        <tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:0.5rem 0.75rem;font-weight:600;">${c.label}</td>
+            <td style="padding:0.5rem;text-align:center;font-family:monospace;font-size:0.75rem;color:var(--text-secondary);">${c.key}</td>
+            <td style="padding:0.5rem;text-align:center;font-size:0.75rem;">${c.tipo === 'number' ? 'Número' : 'Texto'}</td>
+            <td style="padding:0.5rem;text-align:center;">
+                <input type="checkbox" ${c.naTabela !== false ? 'checked' : ''} onchange="_tempCamposCustomizados[${idx}].naTabela = this.checked;">
+            </td>
+            <td style="padding:0.5rem;text-align:center;">
+                <input type="checkbox" ${c.naEtiqueta ? 'checked' : ''} onchange="_tempCamposCustomizados[${idx}].naEtiqueta = this.checked;">
+            </td>
+            <td style="padding:0.5rem;text-align:center;">
+                <button type="button" onclick="removerCampoCustomizado(${idx})" style="background:none;border:none;cursor:pointer;color:#ef4444;" title="Remover Campo">
+                    <span class="material-icons-round" style="font-size:1.1rem;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+};
+
+window.adicionarCampoCustomizado = function () {
+    const inpNome = document.getElementById('novoCampoNomeInput');
+    const selTipo = document.getElementById('novoCampoTipoSelect');
+    if (!inpNome) return;
+
+    const nome = (inpNome.value || '').trim();
+    if (!nome) return alert('Por favor, digite o nome do campo.');
+
+    const key = nome.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+    if (!key) return alert('Nome de campo inválido.');
+
+    // Verificar duplicação
+    if (['id', 'rua', 'predio', 'apto', 'posicao', 'nivel', 'tipo', 'status'].includes(key) ||
+        _tempCamposCustomizados.some(c => c.key === key)) {
+        return alert(`O campo '${nome}' (${key}) já existe ou é um campo reservado.`);
+    }
+
+    _tempCamposCustomizados.push({
+        id: 'c_' + Date.now(),
+        key,
+        label: nome,
+        tipo: selTipo ? selTipo.value : 'text',
+        naTabela: true,
+        naEtiqueta: false
+    });
+
+    inpNome.value = '';
+    renderCamposCustomizadosTable();
+};
+
+window.removerCampoCustomizado = function (idx) {
+    if (confirm(`Remover o campo '${_tempCamposCustomizados[idx].label}' da configuração?`)) {
+        _tempCamposCustomizados.splice(idx, 1);
+        renderCamposCustomizadosTable();
+    }
+};
+
+window.salvarConfigCamposModal = function () {
+    const ruaLbl = (document.getElementById('cfgInputLabelRua')?.value || 'Rua').trim();
+    const predioLbl = (document.getElementById('cfgInputLabelPredio')?.value || 'Prédio').trim();
+    const aptoLbl = (document.getElementById('cfgInputLabelApto')?.value || 'Apto').trim();
+
+    const novaCfg = {
+        labels: {
+            rua: ruaLbl || 'Rua',
+            predio: predioLbl || 'Prédio',
+            apto: aptoLbl || 'Apto'
+        },
+        camposCustomizados: _tempCamposCustomizados
+    };
+
+    window.saveEnderecamentoConfig(novaCfg);
+    closeCamposConfigModal();
+
+    // Atualiza labels dos filtros se existirem
+    const lR = document.getElementById('lblFilterRua');
+    const lP = document.getElementById('lblFilterPredio');
+    const lA = document.getElementById('lblFilterApto');
+    if (lR) lR.textContent = novaCfg.labels.rua;
+    if (lP) lP.textContent = novaCfg.labels.predio;
+    if (lA) lA.textContent = novaCfg.labels.apto;
+
+    // Atualiza a tabela com os novos títulos e colunas
+    filterGrid();
+    if (typeof _showToast === 'function') {
+        _showToast('Configurações de nomenclatura e campos salvas com sucesso!', 'success');
+    } else {
+        alert('Configurações de nomenclatura e campos salvas com sucesso!');
+    }
+};
+
+// --- Modal de Novo / Editar Endereço Individual ---
+window.openNovoEnderecoModal = function () {
+    const cfg = window.getEnderecamentoConfig();
+    const titleEl = document.getElementById('modalEnderecoFormTitle');
+    if (titleEl) {
+        titleEl.innerHTML = '<span class="material-icons-round" style="color:var(--primary-color);">add_location_alt</span> Cadastrar Novo Endereço';
+    }
+
+    document.getElementById('endFormEditId').value = '';
+    document.getElementById('endFormRua').value = '';
+    document.getElementById('endFormPredio').value = '';
+    document.getElementById('endFormApto').value = '';
+    document.getElementById('endFormId').value = '';
+    document.getElementById('endFormId').readOnly = false;
+    document.getElementById('endFormTipo').value = 'Picking';
+    document.getElementById('endFormEquipamento').value = 'Prateleira';
+    document.getElementById('endFormStatus').value = 'LIVRE';
+
+    // Rótulos dinâmicos
+    const lR = document.getElementById('lblFormRua');
+    const lP = document.getElementById('lblFormPredio');
+    const lA = document.getElementById('lblFormApto');
+    if (lR) lR.textContent = (cfg.labels?.rua || 'Rua') + ' *';
+    if (lP) lP.textContent = (cfg.labels?.predio || 'Prédio') + ' *';
+    if (lA) lA.textContent = (cfg.labels?.apto || 'Apto') + ' *';
+
+    // Renderizar campos customizados
+    renderCamposCustomizadosNoForm({});
+
+    const m = document.getElementById('modalEnderecoForm');
+    if (m) m.style.display = 'flex';
+};
+
+window.openEditarEnderecoModal = function (id) {
+    const loc = locationsState.gridData.find(x => x.id === id);
+    if (!loc) return alert('Endereço não localizado.');
+
+    const cfg = window.getEnderecamentoConfig();
+    const titleEl = document.getElementById('modalEnderecoFormTitle');
+    if (titleEl) {
+        titleEl.innerHTML = `<span class="material-icons-round" style="color:#38bdf8;">edit</span> Editar Endereço [${loc.id}]`;
+    }
+
+    document.getElementById('endFormEditId').value = loc.id;
+    document.getElementById('endFormRua').value = loc.rua || '';
+    document.getElementById('endFormPredio').value = loc.predio || '';
+    document.getElementById('endFormApto').value = loc.apto || loc.posicao || '';
+    document.getElementById('endFormId').value = loc.id;
+    document.getElementById('endFormId').readOnly = true;
+    document.getElementById('endFormTipo').value = loc.tipo || 'Picking';
+    document.getElementById('endFormEquipamento').value = loc.equipamento || 'Prateleira';
+    document.getElementById('endFormStatus').value = loc.status || 'LIVRE';
+
+    // Rótulos dinâmicos
+    const lR = document.getElementById('lblFormRua');
+    const lP = document.getElementById('lblFormPredio');
+    const lA = document.getElementById('lblFormApto');
+    if (lR) lR.textContent = (cfg.labels?.rua || 'Rua') + ' *';
+    if (lP) lP.textContent = (cfg.labels?.predio || 'Prédio') + ' *';
+    if (lA) lA.textContent = (cfg.labels?.apto || 'Apto') + ' *';
+
+    // Renderizar campos customizados com os valores existentes
+    renderCamposCustomizadosNoForm(loc);
+
+    const m = document.getElementById('modalEnderecoForm');
+    if (m) m.style.display = 'flex';
+};
+
+window.closeEnderecoFormModal = function () {
+    const m = document.getElementById('modalEnderecoForm');
+    if (m) m.style.display = 'none';
+};
+
+function renderCamposCustomizadosNoForm(dadosLoc) {
+    const cfg = window.getEnderecamentoConfig();
+    const area = document.getElementById('endFormCamposCustomizadosArea');
+    const grid = document.getElementById('endFormCamposCustomizadosGrid');
+    if (!area || !grid) return;
+
+    const campos = cfg.camposCustomizados || [];
+    if (campos.length === 0) {
+        area.style.display = 'none';
+        grid.innerHTML = '';
+        return;
+    }
+
+    area.style.display = 'block';
+    grid.innerHTML = campos.map(c => {
+        const val = dadosLoc[c.key] != null ? dadosLoc[c.key] : '';
+        return `
+            <div>
+                <label style="font-size:0.73rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.25rem;text-transform:uppercase;">${c.label}</label>
+                <input type="${c.tipo === 'number' ? 'number' : 'text'}" id="custom_fld_${c.key}" class="form-input" style="width:100%;font-size:0.85rem;" value="${val}">
+            </div>
+        `;
+    }).join('');
+}
+
+window.calcularIdEnderecoAuto = function (forcar = false) {
+    const editId = document.getElementById('endFormEditId')?.value;
+    if (editId && !forcar) return; // Não altera ID de endereço já existente a menos que clique em auto
+
+    const r = (document.getElementById('endFormRua')?.value || '').trim();
+    const p = (document.getElementById('endFormPredio')?.value || '').trim();
+    const a = (document.getElementById('endFormApto')?.value || '').trim();
+
+    if (r && p && a) {
+        const rPad = r.length === 1 ? '0' + r : r;
+        const pPad = p.length === 1 ? '0' + p : p;
+        document.getElementById('endFormId').value = `${rPad}-${pPad}-${a}`;
+    }
+};
+
+window.salvarEnderecoFormModal = function () {
+    const editId = (document.getElementById('endFormEditId')?.value || '').trim();
+    const rua = (document.getElementById('endFormRua')?.value || '').trim();
+    const predio = (document.getElementById('endFormPredio')?.value || '').trim();
+    const apto = (document.getElementById('endFormApto')?.value || '').trim();
+    let id = (document.getElementById('endFormId')?.value || '').trim().toUpperCase();
+    const tipo = document.getElementById('endFormTipo')?.value || 'Picking';
+    const equipamento = document.getElementById('endFormEquipamento')?.value || 'Prateleira';
+    const status = document.getElementById('endFormStatus')?.value || 'LIVRE';
+
+    if (!rua || !predio || !apto) {
+        return alert('Por favor, preencha os campos obrigatórios (Rua, Prédio e Apto).');
+    }
+    if (!id) {
+        const rPad = rua.length === 1 ? '0' + rua : rua;
+        const pPad = predio.length === 1 ? '0' + predio : predio;
+        id = `${rPad}-${pPad}-${apto}`;
+    }
+
+    const cfg = window.getEnderecamentoConfig();
+    const extraData = {};
+    (cfg.camposCustomizados || []).forEach(c => {
+        const inp = document.getElementById(`custom_fld_${c.key}`);
+        if (inp) extraData[c.key] = inp.value.trim();
+    });
+
+    const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    let data = JSON.parse(localStorage.getItem(key) || '[]');
+
+    if (editId) {
+        // Atualizar endereço existente
+        const idx = data.findIndex(x => x.id === editId);
+        if (idx !== -1) {
+            data[idx] = {
+                ...data[idx],
+                rua,
+                predio,
+                apto,
+                posicao: apto,
+                tipo,
+                equipamento,
+                status,
+                ...extraData
+            };
+            if (window.WmsStore) WmsStore.atualizarEndereco(editId, data[idx]).catch(e => console.warn('[Sync]', e));
+        }
+    } else {
+        // Novo endereço
+        if (data.some(x => x.id === id)) {
+            return alert(`O endereço com código ${id} já existe no cadastro.`);
+        }
+        const novoItem = {
+            id,
+            rua,
+            predio,
+            apto,
+            posicao: apto,
+            nivel: (apto && apto.length >= 2) ? apto.substring(0, 1) : '1',
+            tipo,
+            equipamento,
+            status,
+            ...extraData
+        };
+        data.push(novoItem);
+        if (window.WmsStore) WmsStore.salvarEnderecosBatch([novoItem]).catch(e => console.warn('[Sync]', e));
+    }
+
+    localStorage.setItem(key, JSON.stringify(data));
+    locationsState.gridData = data;
+    closeEnderecoFormModal();
+    filterGrid();
+    if (window.updateDashboardStats) window.updateDashboardStats();
+
+    const msg = editId ? `Endereço ${editId} atualizado!` : `Endereço ${id} cadastrado com sucesso!`;
+    if (typeof _showToast === 'function') _showToast(msg, 'success');
+    else alert(msg);
+};
+
 // --- Main Entry Point ---
 window.loadLocationsView = async function () {
     const container = document.getElementById('view-locations');
 
     if (container.innerHTML.trim() === '') {
+        const endCfg = window.getEnderecamentoConfig();
+        const lblRua = endCfg.labels?.rua || 'Rua';
+        const lblPredio = endCfg.labels?.predio || 'Prédio';
+        const lblApto = endCfg.labels?.apto || 'Apto';
+
         container.innerHTML = `
             <div class="card" style="margin-bottom:1rem;">
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>Gestão de Endereços</h3>
-                    <div style="display:flex; gap:0.5rem;">
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" onclick="openCamposConfigModal()" title="Configurar Nomenclatura e Campos de Endereço">
+                            <span class="material-icons-round" style="color:#f59e0b;">tune</span> Campos & Nomenclatura
+                        </button>
+                        <button class="btn btn-secondary" onclick="openNovoEnderecoModal()" title="Cadastrar Novo Endereço Individual">
+                            <span class="material-icons-round" style="color:#0ea5e9;">add_location_alt</span> Novo Endereço
+                        </button>
                         <button class="btn btn-secondary" onclick="toggleViewMode()" id="btnToggleView" title="Alternar Visualização">
                             <span class="material-icons-round">view_module</span>
                         </button>
@@ -61,6 +453,211 @@ window.loadLocationsView = async function () {
                         </button>
                     </div>
                 </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 MODAL: CONFIGURAÇÃO DE NOMENCLATURA E CAMPOS
+                 ═══════════════════════════════════════════════════════════ -->
+            <div id="modalCamposConfig" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1250;align-items:center;justify-content:center;">
+                <div class="card" style="width:100%;max-width:760px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,.7);animation:slideUp .3s ease;">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                        <h3 style="display:flex;align-items:center;gap:.5rem;margin:0;">
+                            <span class="material-icons-round" style="color:#f59e0b;">tune</span>
+                            Configuração de Nomenclatura e Campos de Endereço
+                        </h3>
+                        <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);" onclick="closeCamposConfigModal()">close</span>
+                    </div>
+                    <div style="overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;">
+                        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:1rem;font-size:0.83rem;color:var(--text-primary);line-height:1.45;">
+                            <strong style="color:#f59e0b;">📌 Padrão de Identificação Física (Recomendado):</strong><br>
+                            Nosso padrão oficial de identificação física no armazém adota <strong>Rua</strong>, <strong>Prédio</strong> e <strong>Apto</strong> com QR Code de alta precisão (conforme etiqueta de vigas).
+                            Você pode renomear os títulos dos campos para atender à terminologia da sua empresa ou acrescentar campos exclusivos caso seu armazém utilize um padrão de endereçamento próprio que você não queira abrir mão.
+                        </div>
+
+                        <div>
+                            <h4 style="font-size:0.9rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+                                <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color);">badge</span>
+                                1. Títulos dos Campos Padrão
+                            </h4>
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Campo 1 (Padrão: Rua)</label>
+                                    <input type="text" id="cfgInputLabelRua" class="form-input" style="width:100%;font-weight:700;" placeholder="Rua, Corredor, Bloco..." oninput="atualizarPreviaEtiquetaConfig()">
+                                    <span style="font-size:0.7rem;color:var(--text-secondary);margin-top:2px;display:block;">Ex: Rua, Corredor, Ala</span>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Campo 2 (Padrão: Prédio)</label>
+                                    <input type="text" id="cfgInputLabelPredio" class="form-input" style="width:100%;font-weight:700;" placeholder="Prédio, Coluna, Módulo..." oninput="atualizarPreviaEtiquetaConfig()">
+                                    <span style="font-size:0.7rem;color:var(--text-secondary);margin-top:2px;display:block;">Ex: Prédio, Coluna, Módulo</span>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Campo 3 (Padrão: Apto)</label>
+                                    <input type="text" id="cfgInputLabelApto" class="form-input" style="width:100%;font-weight:700;" placeholder="Apto, Vão, Nível..." oninput="atualizarPreviaEtiquetaConfig()">
+                                    <span style="font-size:0.7rem;color:var(--text-secondary);margin-top:2px;display:block;">Ex: Apto, Nível, Vão</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="font-size:0.9rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.4rem;">
+                                <span class="material-icons-round" style="font-size:1.1rem;color:#10b981;">photo_camera</span>
+                                Prévia em Tempo Real da Etiqueta Física
+                            </h4>
+                            <div style="background:#f1f5f9;border-radius:10px;padding:1.25rem;display:flex;justify-content:center;align-items:center;">
+                                <div style="width:360px;height:120px;background:#fff;border-radius:12px;border:2px solid #cbd5e1;padding:10px 16px;box-shadow:0 4px 15px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;font-family:'Inter', Arial, sans-serif;">
+                                    <div style="text-align:center;flex:1;">
+                                        <div id="prevEtqRuaLabel" style="font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.5px;">RUA</div>
+                                        <div style="font-size:40px;font-weight:900;color:#000;line-height:1;margin-top:3px;">5</div>
+                                    </div>
+                                    <div style="text-align:center;flex:1;">
+                                        <div id="prevEtqPredioLabel" style="font-size:11px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.5px;">PRÉDIO</div>
+                                        <div style="font-size:40px;font-weight:900;color:#000;line-height:1;margin-top:3px;">2</div>
+                                    </div>
+                                    <div style="background:#000;color:#fff;border-radius:6px;padding:6px 12px;min-width:85px;height:84px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;box-sizing:border-box;">
+                                        <div id="prevEtqAptoLabel" style="width:100%;text-align:right;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#fff;">APTO</div>
+                                        <div style="font-size:36px;font-weight:900;color:#fff;line-height:1;margin:auto 0;">302</div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-left:10px;">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=05-02-302" style="width:64px;height:64px;display:block;" alt="QR">
+                                        <span style="font-family:'Courier New', monospace;font-size:11px;font-weight:700;color:#222;margin-top:2px;">4940</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="font-size:0.9rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+                                <span class="material-icons-round" style="font-size:1.1rem;color:#0ea5e9;">playlist_add</span>
+                                2. Campos Personalizados de Endereço (Legados / Específicos)
+                            </h4>
+                            <p style="font-size:0.78rem;color:var(--text-secondary);margin:0 0 0.75rem 0;">
+                                Adicione campos extras caso seu armazém já possua subdivisões como <strong>Área</strong>, <strong>Depósito</strong>, <strong>Galpão</strong>, <strong>Mezanino</strong>, <strong>Setor</strong>, etc.
+                            </p>
+                            <div style="border:1px solid var(--border-color);border-radius:8px;overflow:hidden;margin-bottom:1rem;">
+                                <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                                    <thead style="background:var(--bg-hover);">
+                                        <tr>
+                                            <th style="padding:0.5rem 0.75rem;text-align:left;">Nome do Campo</th>
+                                            <th style="padding:0.5rem;text-align:center;">Identificador</th>
+                                            <th style="padding:0.5rem;text-align:center;">Tipo</th>
+                                            <th style="padding:0.5rem;text-align:center;">Exibir na Tabela</th>
+                                            <th style="padding:0.5rem;text-align:center;">Exibir na Etiqueta</th>
+                                            <th style="padding:0.5rem;text-align:center;width:60px;">Remover</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cfgCamposCustomizadosTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03);border:1px dashed var(--border-color);border-radius:8px;padding:0.85rem;display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;">
+                                <div style="flex:2;min-width:180px;">
+                                    <label style="font-size:0.73rem;color:var(--text-secondary);display:block;margin-bottom:0.25rem;font-weight:600;">Novo Campo (Rótulo)</label>
+                                    <input type="text" id="novoCampoNomeInput" class="form-input" style="width:100%;" placeholder="Ex: Galpão, Setor, Mezanino, Lado...">
+                                </div>
+                                <div style="flex:1;min-width:120px;">
+                                    <label style="font-size:0.73rem;color:var(--text-secondary);display:block;margin-bottom:0.25rem;font-weight:600;">Tipo de Dado</label>
+                                    <select id="novoCampoTipoSelect" class="form-input" style="width:100%;">
+                                        <option value="text">Texto</option>
+                                        <option value="number">Número</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" onclick="adicionarCampoCustomizado()" style="height:35px;display:flex;align-items:center;gap:0.35rem;white-space:nowrap;">
+                                    <span class="material-icons-round" style="font-size:1rem;">add</span> Adicionar Campo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:0.75rem;background:rgba(0,0,0,0.15);flex-shrink:0;">
+                        <button class="btn btn-secondary" onclick="closeCamposConfigModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="salvarConfigCamposModal()" style="display:flex;align-items:center;gap:0.4rem;padding:0 1.5rem;">
+                            <span class="material-icons-round" style="font-size:1.1rem;">save</span> Salvar Configurações
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 MODAL: NOVO / EDITAR ENDEREÇO INDIVIDUAL
+                 ═══════════════════════════════════════════════════════════ -->
+            <div id="modalEnderecoForm" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1250;align-items:center;justify-content:center;">
+                <div class="card" style="width:100%;max-width:680px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,.7);animation:slideUp .3s ease;">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                        <h3 id="modalEnderecoFormTitle" style="display:flex;align-items:center;gap:.5rem;margin:0;">
+                            <span class="material-icons-round" style="color:var(--primary-color);">add_location_alt</span>
+                            Cadastrar Novo Endereço
+                        </h3>
+                        <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);" onclick="closeEnderecoFormModal()">close</span>
+                    </div>
+                    <div style="overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
+                        <input type="hidden" id="endFormEditId">
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+                            <div>
+                                <label id="lblFormRua" style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">${lblRua} *</label>
+                                <input type="text" id="endFormRua" class="form-input" style="width:100%;font-weight:700;" placeholder="Ex: 5" required oninput="calcularIdEnderecoAuto()">
+                            </div>
+                            <div>
+                                <label id="lblFormPredio" style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">${lblPredio} *</label>
+                                <input type="text" id="endFormPredio" class="form-input" style="width:100%;font-weight:700;" placeholder="Ex: 2" required oninput="calcularIdEnderecoAuto()">
+                            </div>
+                            <div>
+                                <label id="lblFormApto" style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">${lblApto} *</label>
+                                <input type="text" id="endFormApto" class="form-input" style="width:100%;font-weight:700;" placeholder="Ex: 302" required oninput="calcularIdEnderecoAuto()">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Identificador / Código do Endereço *</label>
+                            <div style="display:flex;gap:0.5rem;align-items:center;">
+                                <input type="text" id="endFormId" class="form-input" style="flex:1;font-family:monospace;font-weight:700;font-size:0.95rem;" placeholder="Ex: 05-02-302" required>
+                                <button type="button" class="btn btn-secondary" onclick="calcularIdEnderecoAuto(true)" title="Gerar código padrão baseado nos campos">
+                                    <span class="material-icons-round" style="font-size:1rem;">auto_fix_normal</span> Auto
+                                </button>
+                            </div>
+                            <span style="font-size:0.7rem;color:var(--text-secondary);margin-top:3px;display:block;">Identificador gravado no QR Code e no leitor de código de barras.</span>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+                            <div>
+                                <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Tipo</label>
+                                <select id="endFormTipo" class="form-input" style="width:100%;">
+                                    <option value="Picking">Picking</option>
+                                    <option value="Pulmão">Pulmão</option>
+                                    <option value="Palete">Palete</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Equipamento</label>
+                                <select id="endFormEquipamento" class="form-input" style="width:100%;">
+                                    <option value="Prateleira">Prateleira</option>
+                                    <option value="Porta-Palete">Porta-Palete</option>
+                                    <option value="Blocado">Blocado</option>
+                                    <option value="Gaveteiro">Gaveteiro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:0.35rem;text-transform:uppercase;">Status</label>
+                                <select id="endFormStatus" class="form-input" style="width:100%;">
+                                    <option value="LIVRE">LIVRE</option>
+                                    <option value="OCUPADO">OCUPADO</option>
+                                    <option value="BLOQUEADO">BLOQUEADO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="endFormCamposCustomizadosArea" style="display:none;background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:8px;padding:1rem;">
+                            <div style="font-size:0.75rem;font-weight:700;color:var(--primary-color);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">
+                                Campos Personalizados do Cliente
+                            </div>
+                            <div id="endFormCamposCustomizadosGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;"></div>
+                        </div>
+                    </div>
+                    <div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:0.75rem;background:rgba(0,0,0,0.15);flex-shrink:0;">
+                        <button class="btn btn-secondary" onclick="closeEnderecoFormModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="salvarEnderecoFormModal()" style="display:flex;align-items:center;gap:0.4rem;padding:0 1.5rem;">
+                            <span class="material-icons-round" style="font-size:1.1rem;">save</span> Salvar Endereço
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- ═══════════════════════════════════════════════════════════
                  MODAL: IMPORTAR DO EXCEL
@@ -221,7 +818,7 @@ window.loadLocationsView = async function () {
                     <div id="locationsTable" style="display:none; border:1px solid var(--border-color); border-radius:8px;">
                         <div style="max-height:50vh; overflow:auto;">
                         <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                            <thead style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
+                            <thead id="locationsTableHead" style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
                                 <tr>
                                     <th style="padding:0.6rem; text-align:left; border-bottom:1px solid var(--border-color);">Endereço</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Depósito</th>
@@ -236,7 +833,7 @@ window.loadLocationsView = async function () {
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Produto V.</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Capacidade</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Status</th>
-                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color); width:120px;">Ações</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color); width:140px;">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="locationsTableBody"></tbody>
@@ -968,10 +1565,42 @@ function renderGridView(data) {
 
 function renderTableView(data) {
     const tbody = document.getElementById('locationsTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
+    const cfg = (typeof getEnderecamentoConfig === 'function') ? getEnderecamentoConfig() : {
+        lblRua: 'RUA', lblPredio: 'PRÉDIO', lblApto: 'APTO', camposCustomizados: []
+    };
+
+    const thead = document.getElementById('locationsTableHead');
+    const customVisible = (cfg.camposCustomizados || []).filter(c => c.exibirTabela !== false);
+    if (thead) {
+        let customThs = customVisible.map(c => `<th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">${c.nome}</th>`).join('');
+        thead.innerHTML = `
+            <tr>
+                <th style="padding:0.6rem; text-align:left; border-bottom:1px solid var(--border-color);">Endereço</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Depósito</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Área</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">${cfg.lblRua || 'Rua'}</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">${cfg.lblPredio || 'Prédio'}</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Nível</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">${cfg.lblApto || 'Apto'}</th>
+                ${customThs}
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Tipo</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Equipamento</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Operação</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Produto V.</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Capacidade</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Status</th>
+                <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color); width:140px;">Ações</th>
+            </tr>
+        `;
+    }
+
+    const totalCols = 14 + customVisible.length;
+
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum endere&ccedil;o encontrado.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum endereço encontrado.</td></tr>`;
         return;
     }
 
@@ -985,6 +1614,11 @@ function renderTableView(data) {
         const colors = { 'LIVRE': '#10b981', 'OCUPADO': '#ef4444', 'BLOQUEADO': '#f59e0b' };
         const color = colors[loc.status] || '#94a3b8';
 
+        let customTds = customVisible.map(c => {
+            const val = (loc[c.chave] !== undefined && loc[c.chave] !== null && loc[c.chave] !== '') ? loc[c.chave] : '-';
+            return `<td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${val}</td>`;
+        }).join('');
+
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
@@ -995,7 +1629,8 @@ function renderTableView(data) {
             <td style="padding:0.5rem;text-align:center;">${loc.predio}</td>
             <td style="padding:0.5rem;text-align:center;">${loc.nivel}</td>
             <td style="padding:0.5rem;text-align:center;">${loc.posicao || loc.apto}</td>
-            <td style="padding:0.5rem;text-align:center;"><span style="background:var(--bg-lighter);padding:2px 6px;border-radius:4px;font-size:0.7rem;">${loc.tipo || 'Padr&atilde;o'}</span></td>
+            ${customTds}
+            <td style="padding:0.5rem;text-align:center;"><span style="background:var(--bg-lighter);padding:2px 6px;border-radius:4px;font-size:0.7rem;">${loc.tipo || 'Padrão'}</span></td>
             <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.equipamento || '-'}</td>
             <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.operacao || '-'}</td>
             <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.produto_vinculado || '-'}</td>
@@ -1004,6 +1639,9 @@ function renderTableView(data) {
                 <span style="background:${color}22;color:${color};padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600;">${loc.status}</span>
             </td>
             <td style="padding:0.5rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;">
+                <button onclick="window.openEditarEnderecoModal && window.openEditarEnderecoModal('${loc.id}')" style="background:none;border:none;cursor:pointer;color:var(--primary-color,#3b82f6);" title="Editar Endereço e Campos">
+                    <span class="material-icons-round" style="font-size:1.1rem;">edit</span>
+                </button>
                 <button onclick="window.WmsEtiquetas && WmsEtiquetas.imprimirEtiquetaHtml({ endereco: '${loc.id}', tipo: '${loc.tipo || 'PICKING'}' })" style="background:none;border:none;cursor:pointer;color:var(--primary-color,#3b82f6);" title="Imprimir Etiqueta Térmica / ZPL">
                     <span class="material-icons-round" style="font-size:1.1rem;">qr_code_2</span>
                 </button>
@@ -1026,12 +1664,12 @@ function renderTableView(data) {
                 <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page===0?'disabled':'' }
                     onclick="locationsState.tablePage=${page-1};renderTableView(locationsState._filteredCache)">&laquo; Anterior</button>
                 <span style="font-size:.82rem;color:var(--text-secondary);">
-                    P&aacute;g <strong>${page+1}</strong> de ${totalPages} &bull; ${data.length.toLocaleString('pt-BR')} endere&ccedil;os
+                    Pág <strong>${page+1}</strong> de ${totalPages} &bull; ${data.length.toLocaleString('pt-BR')} endereços
                 </span>
                 <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page>=totalPages-1?'disabled':'' }
-                    onclick="locationsState.tablePage=${page+1};renderTableView(locationsState._filteredCache)">Pr&oacute;xima &raquo;</button>`;
+                    onclick="locationsState.tablePage=${page+1};renderTableView(locationsState._filteredCache)">Próxima &raquo;</button>`;
         } else {
-            paginationEl.innerHTML = `<span style="font-size:.82rem;color:var(--text-secondary);">${data.length.toLocaleString('pt-BR')} endere&ccedil;os</span>`;
+            paginationEl.innerHTML = `<span style="font-size:.82rem;color:var(--text-secondary);">${data.length.toLocaleString('pt-BR')} endereços</span>`;
         }
     }
 }
@@ -1042,7 +1680,7 @@ window.showLocationActions = function (id) {
     if (!loc) return;
 
     const action = prompt(
-        `Endereço: ${loc.id}\nStatus: ${loc.status}\n\nDigite a ação:\n1 - Bloquear/Desbloquear\n2 - Imprimir Etiqueta Térmica/ZPL\n3 - Excluir\n4 - Cancelar`
+        `Endereço: ${loc.id}\nStatus: ${loc.status}\n\nDigite a ação:\n1 - Bloquear/Desbloquear\n2 - Imprimir Etiqueta Térmica/ZPL\n3 - Editar Endereço e Campos\n4 - Excluir\n5 - Cancelar`
     );
 
     if (action === '1') toggleBlock(id);
@@ -1052,7 +1690,11 @@ window.showLocationActions = function (id) {
         } else {
             alert('Módulo de etiquetas indisponível.');
         }
-    } else if (action === '3') deleteLocation(id);
+    } else if (action === '3') {
+        if (window.openEditarEnderecoModal) {
+            window.openEditarEnderecoModal(id);
+        }
+    } else if (action === '4') deleteLocation(id);
 }
 
 window.toggleBlock = function (id) {

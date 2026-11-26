@@ -149,6 +149,81 @@ window.printSelectedLabels = function (type) {
     const checked = [...document.querySelectorAll('.lbl-check:checked')].map(c => c.value);
     if (checked.length === 0) return alert('Selecione pelo menos um endereço.');
 
+    if (type === 'endereco' && window.WmsEtiquetas && window.WmsEtiquetas._extrairDadosEndereco) {
+        const stockData = window.StockManager ? window.StockManager.getData() : { addresses: [] };
+        const addrsMap = {};
+        (stockData.addresses || []).forEach(a => addrsMap[a.id || a.address] = a);
+
+        const win = window.open('', '_blank');
+        const cardsHtml = checked.map(addr => {
+            const raw = addrsMap[addr] || { id: addr, endereco: addr };
+            const d = WmsEtiquetas._extrairDadosEndereco(raw);
+            const extrasHtml = (d.camposEtiqueta && d.camposEtiqueta.length > 0)
+                ? `<div style="width:100%;font-size:7.5pt;color:#333;margin-top:2px;display:flex;gap:6px;justify-content:center;border-top:1px dashed #ccc;padding-top:2px;">
+                    ${d.camposEtiqueta.map(c => `<span><strong>${c.label}:</strong> ${c.valor}</span>`).join(' • ')}
+                   </div>`
+                : '';
+
+            return `
+                <div class="label" style="
+                    width: 105mm; height: 38mm; border: 1.5px solid #000; border-radius: 8px; padding: 3mm 4mm;
+                    box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;
+                    page-break-inside: avoid; background: #fff; font-family: 'Inter', Arial, sans-serif; margin: 4mm;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <!-- RUA -->
+                        <div style="flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <span style="font-size: 11pt; font-weight: 700; color: #111; letter-spacing: 0.5px; text-transform: uppercase;">${d.lblRua}</span>
+                            <span style="font-size: 38pt; font-weight: 900; line-height: 1.05; color: #000; margin-top: 2px;">${d.rua}</span>
+                        </div>
+                        <!-- PRÉDIO -->
+                        <div style="flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <span style="font-size: 11pt; font-weight: 700; color: #111; letter-spacing: 0.5px; text-transform: uppercase;">${d.lblPredio}</span>
+                            <span style="font-size: 38pt; font-weight: 900; line-height: 1.05; color: #000; margin-top: 2px;">${d.predio}</span>
+                        </div>
+                        <!-- APTO (Invertido) -->
+                        <div style="background: #000; color: #fff; border-radius: 4px; padding: 2mm 3.5mm; min-width: 27mm; display: flex; flex-direction: column; justify-content: space-between; align-items: center; box-sizing: border-box; height: 29mm;">
+                            <div style="width: 100%; text-align: right; font-size: 9pt; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; line-height: 1;">${d.lblApto}</div>
+                            <div style="font-size: 35pt; font-weight: 900; line-height: 1; color: #fff; text-align: center; width: 100%; margin-top: auto; margin-bottom: auto;">${d.apto}</div>
+                        </div>
+                        <!-- QR Code + ID -->
+                        <div style="margin-left: 3mm; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 24mm;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(d.qrData)}" style="width: 21mm; height: 21mm; display: block;" alt="QR" />
+                            <span style="font-family: 'Courier New', monospace; font-size: 10pt; font-weight: 700; color: #222; margin-top: 1.5mm; letter-spacing: 0.5px;">${d.idNum}</span>
+                        </div>
+                    </div>
+                    ${extrasHtml}
+                </div>
+            `;
+        }).join('');
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Imprimir Etiquetas de Endereçamento</title>
+                <style>
+                    @page { size: auto; margin: 5mm; }
+                    body { font-family: sans-serif; margin: 0; padding: 10px; background: #f8fafc; }
+                    .label-sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 6mm; }
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="label-sheet">${cardsHtml}</div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => window.print(), 400);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        win.document.close();
+        return;
+    }
+
     const win = window.open('', '_blank');
     win.document.write(`
         <html>
