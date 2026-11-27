@@ -1,3 +1,20 @@
+### Versão 3.5.9 (Build 232) - 27/11/2026
+- **Aba e Fluxo Especializado de Importação John Deere**: Criado canal dedicado para importação de orçamentos e carrinhos de compras do portal John Deere, adaptado ao layout não padronizado em cartões verticais.
+- **Botão e Modal Dedicado John Deere**:
+  - Novo botão John Deere destacado em verde/amarelo na barra de importação (`.import-bar`) e na barra superior da Central de Cotação.
+  - Modal com abas para upload de fotos/prints/arquivos e aba para colar texto copiado diretamente do portal John Deere.
+- **Parser Inteligente de Blocos Verticais John Deere (`parseJohnDeere`)**:
+  - Reconhece a estrutura onde cada item possui o nome da peça acima, o `Número de peça: [CÓDIGO]` logo abaixo e a quantidade à direita.
+  - Detecta e processa o aviso `ⓘ Esta peça é um substituto para [CÓDIGO_ANTERIOR]`.
+  - Agrupa os dados dispersos em uma linha unificada de 5 colunas padronizadas (`Item | Código | Descrição | Quantidade | Substituto / Obs`), integrando perfeitamente com o Mapeador de Colunas.
+- **Modo John Deere no Demarcador Visual de Imagens**:
+  - Botão de alternância rápida na barra de ferramentas do demarcador (`[Modo John Deere]`).
+  - Calibração de corte vertical otimizada (Peça 78% / Quantidade 22%).
+  - Algoritmo de OCR que correlaciona blocos de texto da coluna esquerda com a quantidade demarcada na coluna direita pela altura vertical.
+- **Integração Cruzada com o Catálogo ERP**:
+  - Reconhecimento automático da marca `JOHN DEERE`.
+  - Códigos substitutos são extraídos para `alternativas`, permitindo que o sistema consulte o ERP tanto pelo código novo quanto pelo código substituído.
+
 ### Versão 3.5.8 (Build 231) - 27/11/2026
 - **Correção Definitiva da Importação de Excel e CSV**: Solucionada a falha que impedia o carregamento de arquivos `.xlsx`, `.xls`, `.csv` e `.txt` na Central de Cotação.
 - **Parser Nativo e Resiliente de CSV / TXT**:

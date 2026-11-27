@@ -600,7 +600,7 @@ const DemandaImport = (() => {
         // Tenta extrair: CÓDIGO(s1) DESCRIÇÃO(s*) QTDE(último token)
         const m = linha.match(/^(\S+)\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s*$/);
         if (!m) return null;
-        const ref  = m[1].toUpperCase().trim();
+        const ref = m[1].toUpperCase().trim();
         const desc = m[2].trim();
         const qtde = parseFloat(m[3].replace(',', '.')) || 1;
         return { refOriginal: ref, descOriginal: desc || ref, qtdeSolicitada: qtde, obs: '', incerteza: !ref };
@@ -613,8 +613,8 @@ const DemandaImport = (() => {
         while (i < util.length) {
             const l = util[i];
             if (_isPartCode(l) && !_isOnlyNumber(l)) {
-                const ref  = l.toUpperCase().trim();
-                const desc = (i + 1 < util.length && !_isPartCode(util[i+1]) && !_isOnlyNumber(util[i+1])) ? util[i+1].trim() : ref;
+                const ref = l.toUpperCase().trim();
+                const desc = (i + 1 < util.length && !_isPartCode(util[i + 1]) && !_isOnlyNumber(util[i + 1])) ? util[i + 1].trim() : ref;
                 const hasDesc = (desc !== ref);
                 let qtde = 1;
                 let skipCount = hasDesc ? 2 : 1;
@@ -678,7 +678,7 @@ const DemandaImport = (() => {
         if (!linha || _isNoiseLine(linha)) return null;
 
         let qtde = 1;
-        let ref  = '';
+        let ref = '';
         let desc = linha;
 
         // ── 0. Linha que já é um código de peça direto ──
@@ -686,11 +686,11 @@ const DemandaImport = (() => {
         if (_isPartCode(linha)) {
             const code = linha.toUpperCase().trim();
             return {
-                refOriginal:    code,
-                descOriginal:   code,
+                refOriginal: code,
+                descOriginal: code,
                 qtdeSolicitada: 1,
-                obs:            '',
-                incerteza:      false,
+                obs: '',
+                incerteza: false,
             };
         }
 
@@ -710,14 +710,14 @@ const DemandaImport = (() => {
                 }
             }
 
-            ref  = resto.toUpperCase().trim();
+            ref = resto.toUpperCase().trim();
             desc = `${tipo} ${resto}`;
             return {
-                refOriginal:    ref,
-                descOriginal:   desc,
+                refOriginal: ref,
+                descOriginal: desc,
                 qtdeSolicitada: qtde,
-                obs:            '',
-                incerteza:      false,
+                obs: '',
+                incerteza: false,
             };
         }
 
@@ -727,7 +727,7 @@ const DemandaImport = (() => {
         if (slashIdx > 0 && !/^\d{3,}[-/]\d+$/.test(linha)) {
             const candidateRef = linha.slice(slashIdx + 1).trim();
             if (candidateRef.length >= 3 && /^[A-Z0-9][A-Z0-9\-]{2,}$/i.test(candidateRef)) {
-                ref  = candidateRef.toUpperCase();
+                ref = candidateRef.toUpperCase();
                 desc = linha.slice(0, slashIdx).trim();
                 // remove sufixo de marca tipo ";JOHN DEERE" do final da descricao
                 desc = desc.replace(/[;,]\s*john\s*deere\s*$/i, '').trim();
@@ -784,7 +784,7 @@ const DemandaImport = (() => {
             for (const pat of refPatterns) {
                 const m = desc.match(pat);
                 if (m) {
-                    ref  = m[1].toUpperCase().trim();
+                    ref = m[1].toUpperCase().trim();
                     desc = desc.replace(m[0], '').trim().replace(/^[,\s\-]+/, '').replace(/[,\s\-]+$/, '');
                     break;
                 }
@@ -814,11 +814,11 @@ const DemandaImport = (() => {
         if (ref && !desc) desc = ref;
 
         return {
-            refOriginal:    ref,
-            descOriginal:   desc || linha,
+            refOriginal: ref,
+            descOriginal: desc || linha,
             qtdeSolicitada: qtde,
-            obs:            '',
-            incerteza:      !ref,
+            obs: '',
+            incerteza: !ref,
         };
     }
 
@@ -876,7 +876,7 @@ const DemandaImport = (() => {
                         readerIso.onerror = () => resolve(texto);
                         readerIso.readAsText(file, 'windows-1252');
                         return;
-                    } catch (_) {}
+                    } catch (_) { }
                 }
                 resolve(texto);
             };
@@ -977,11 +977,11 @@ const DemandaImport = (() => {
             if (typeof XLSX === 'undefined') {
                 throw new Error('SheetJS (XLSX) não está carregado. Adicione a biblioteca.');
             }
-            const buffer  = await file.arrayBuffer();
-            const wb      = XLSX.read(buffer, { type: 'array' });
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array' });
             const sheetNm = wb.SheetNames[0];
-            const sheet   = wb.Sheets[sheetNm];
-            rows          = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+            const sheet = wb.Sheets[sheetNm];
+            rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
         }
 
         if (rows.length < 2) throw new Error('Arquivo vazio ou com menos de 2 linhas.');
@@ -1016,12 +1016,12 @@ const DemandaImport = (() => {
         const map = { ref: -1, desc: -1, qtde: -1, preco: -1, marca: -1, obs: -1 };
 
         const patterns = {
-            ref:   /^(ref|c[oó]d|part\s*n|p\/n|pn$|n[úu]mero\s*(da\s*)?pe[çc]a)|refer[eê]ncia|c[oó]digo/i,
-            desc:  /desc|produto|^pe[çc]as?$|denomina|material|^itens?$/i,
-            qtde:  /^(qtde?|qtd|quant|qty|qt\.?$)/i,
+            ref: /^(ref|c[oó]d|part\s*n|p\/n|pn$|n[úu]mero\s*(da\s*)?pe[çc]a)|refer[eê]ncia|c[oó]digo/i,
+            desc: /desc|produto|^pe[çc]as?$|denomina|material|^itens?$/i,
+            qtde: /^(qtde?|qtd|quant|qty|qt\.?$)/i,
             preco: /pre[çc]o|valor\s*unit|vl\.?\s*unit|unit[áa]rio/i,
             marca: /marca|fabric|brand/i,
-            obs:   /^obs|observ|coment/i,
+            obs: /^obs|observ|coment/i,
         };
 
         header.forEach((col, idx) => {
@@ -1106,10 +1106,10 @@ const DemandaImport = (() => {
         const raw = (col) => col >= 0 ? row[col] : '';
         const get = (col) => String(raw(col) == null ? '' : raw(col)).trim();
 
-        let ref   = get(colMap.ref);
-        let desc  = get(colMap.desc);
+        let ref = get(colMap.ref);
+        let desc = get(colMap.desc);
         const marca = get(colMap.marca);
-        let obs   = get(colMap.obs);
+        let obs = get(colMap.obs);
 
         const qRaw = raw(colMap.qtde);
         const qtde = (typeof qRaw === 'number' ? qRaw : parseFloat(String(qRaw || '').replace(',', '.'))) || 1;
@@ -1131,13 +1131,13 @@ const DemandaImport = (() => {
         if (!ref && /^(sub-?)?total\b/i.test(desc)) return null; // linha de total
 
         const item = {
-            refOriginal:    ref,
-            descOriginal:   desc || ref,
+            refOriginal: ref,
+            descOriginal: desc || ref,
             qtdeSolicitada: qtde,
             marca,
             obs,
-            incerteza:      !ref,
-            _rowNum:        rowNum,
+            incerteza: !ref,
+            _rowNum: rowNum,
         };
         if (preco > 0) item.precoConcorrente = preco;
         return item;
@@ -1243,14 +1243,14 @@ const DemandaImport = (() => {
         }
 
         const buffer = await file.arrayBuffer();
-        const wb     = XLSX.read(buffer, { type: 'array' });
+        const wb = XLSX.read(buffer, { type: 'array' });
         if (!wb.SheetNames || !wb.SheetNames.length) {
             throw new Error('A planilha selecionada não contém abas.');
         }
         const sheetNm = wb.SheetNames[0];
-        const sheet   = wb.Sheets[sheetNm];
+        const sheet = wb.Sheets[sheetNm];
         // raw: false preserva a formatação visual (ex: zeros à esquerda em códigos, valores numéricos limpos)
-        const rows    = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
         const gradeExcel = rows
             .map(r => (Array.isArray(r) ? r : []).map(c => (c == null ? '' : String(c).trim())))
             .filter(r => r.some(c => c !== ''));
@@ -1289,10 +1289,153 @@ const DemandaImport = (() => {
         return linhas.map(l => [l.trim()]);
     }
 
+    // ── Parser Especializado John Deere (Carrinho de Compras / Orçamento) ──
+    /**
+     * Processa orçamentos e listas do portal John Deere onde cada produto é um bloco vertical:
+     * - Linha 1: Nome da peça (Descrição)
+     * - Linha 2: "Número de peça: XXXXX" + Quantidade (ao lado ou na linha)
+     * - Linha 3 (opcional): "Esta peça é um substituto para YYYYY"
+     * - Quantidade: indicada na coluna da direita ou linha dedicada
+     *
+     * @param {string} texto - Texto extraído via OCR, PDF ou colado pelo operador
+     * @returns {{ itens: Array, grade: Array, colunas: object }}
+     */
+    function parseJohnDeere(texto) {
+        if (!texto || !String(texto).trim()) {
+            return { itens: [], grade: [['Item', 'Código', 'Descrição', 'Quantidade', 'Substituto / Obs']], colunas: { item: 0, ref: 1, desc: 2, qtde: 3, obs: 4 } };
+        }
+
+        const linhas = String(texto).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+        // Remove ruídos de cabeçalho geral do portal se houver
+        const linhasUteis = linhas.filter(l => {
+            const low = l.toLowerCase();
+            if (/^carrinho\s+de\s+compras/i.test(low)) return false;
+            if (/^pe[çc]a\s+quantidade/i.test(low)) return false;
+            if (/^john\s+deere$/i.test(low)) return false;
+            if (/^(itens?\s+no\s+carrinho|resumo\s+do\s+pedido|subtotal|total\b)/i.test(low)) return false;
+            return true;
+        });
+
+        const itens = [];
+        let bloco = null;
+
+        function finalizarBloco() {
+            if (!bloco) return;
+            if (bloco.ref || bloco.desc) {
+                const ref = (bloco.ref || '').toUpperCase().trim();
+                const desc = (bloco.desc || bloco.ref || '').trim();
+                const qtde = bloco.qtde > 0 ? bloco.qtde : 1;
+                const obsPartes = [];
+                if (bloco.substituto) {
+                    obsPartes.push('Substituto para ' + bloco.substituto.toUpperCase().trim());
+                }
+                if (bloco.obs && !obsPartes.includes(bloco.obs)) {
+                    obsPartes.push(bloco.obs.trim());
+                }
+
+                itens.push({
+                    refOriginal: ref,
+                    descOriginal: desc,
+                    qtdeSolicitada: qtde,
+                    marca: 'JOHN DEERE',
+                    obs: obsPartes.join(' | '),
+                    alternativas: bloco.substituto ? [bloco.substituto.toUpperCase().trim()] : [],
+                    precoConcorrente: bloco.preco || 0,
+                    incerteza: !ref,
+                    _origemJD: true,
+                    _rowNum: itens.length + 1
+                });
+            }
+            bloco = null;
+        }
+
+        for (let i = 0; i < linhasUteis.length; i++) {
+            let l = linhasUteis[i];
+            // Remove ícones comuns tipo ⓘ, ℹ, *, •
+            l = l.replace(/^[ⓘℹ*•\s\-_]+/, '').trim();
+
+            // 1. Detecta linha de "Número de peça: XXXX" ou "Part number: XXXX" ou "Part# XXXX"
+            const mRef = l.match(/(?:n[úu]mero\s*(?:da|de)?\s*pe[çc]a|part\s*n(?:umber|o|#)?|c[oó]d(?:igo)?(?:\s*pe[çc]a)?)\s*[:=\-]?\s*([A-Za-z0-9.\-\/]+)(.*)/i);
+            if (mRef) {
+                const refEncontrada = mRef[1].trim();
+                const resto = (mRef[2] || '').trim();
+
+                if (!bloco) {
+                    bloco = { desc: '', ref: refEncontrada, qtde: 1, obs: '', substituto: null, preco: 0 };
+                } else {
+                    bloco.ref = refEncontrada;
+                }
+
+                // Verifica se na mesma linha há número isolado para quantidade
+                if (resto) {
+                    const mQ = resto.match(/\b(\d{1,4})\b/);
+                    if (mQ) bloco.qtde = parseInt(mQ[1], 10);
+                }
+                continue;
+            }
+
+            // 2. Detecta linha de substituição: "Esta peça é um substituto para XXXXX"
+            const mSubst = l.match(/(?:esta\s*pe[çc]a\s*[eé]\s*um\s*substituto\s*para|substituto\s*para|substitui\s*(?:a\s*pe[çc]a)?)\s*[:=\-]?\s*([A-Za-z0-9.\-\/]+)/i);
+            if (mSubst) {
+                const subst = mSubst[1].trim();
+                if (!bloco) {
+                    bloco = { desc: '', ref: '', qtde: 1, obs: '', substituto: subst, preco: 0 };
+                } else {
+                    bloco.substituto = subst;
+                }
+                continue;
+            }
+
+            // 3. Linha numérica isolada de quantidade (ex: "1", "2", "10 UN")
+            const mQtdeSozinha = l.match(/^(\d{1,4})(?:\s*(?:un|und|pc|p[çc]a|itens?))?$/i);
+            if (mQtdeSozinha && bloco) {
+                bloco.qtde = parseInt(mQtdeSozinha[1], 10);
+                continue;
+            }
+
+            // 4. Se já temos ref no bloco atual e encontramos novo texto: novo produto começando!
+            if (bloco && bloco.ref) {
+                finalizarBloco();
+                bloco = { desc: l, ref: '', qtde: 1, obs: '', substituto: null, preco: 0 };
+                continue;
+            }
+
+            // 5. Linha antes de encontrar a ref -> Nome / Descrição da peça
+            if (!bloco) {
+                bloco = { desc: l, ref: '', qtde: 1, obs: '', substituto: null, preco: 0 };
+            } else {
+                bloco.desc = (bloco.desc ? bloco.desc + ' ' : '') + l;
+            }
+        }
+        finalizarBloco();
+
+        // Constrói a grade tabular com 5 colunas padronizadas
+        const grade = [
+            ['Item', 'Código', 'Descrição', 'Quantidade', 'Substituto / Obs']
+        ];
+        itens.forEach((it, idx) => {
+            grade.push([
+                String(idx + 1),
+                it.refOriginal,
+                it.descOriginal,
+                String(it.qtdeSolicitada || 1),
+                it.obs || ''
+            ]);
+        });
+
+        return {
+            itens: itens,
+            grade: grade,
+            colunas: { item: 0, ref: 1, desc: 2, qtde: 3, obs: 4, marca: -1, preco: -1 }
+        };
+    }
+
     return {
         parseText,
         parseExcel,
         parseFile,
+        parseJohnDeere,
         normalizeRef,
         refsMatch,
         validateItens,
@@ -1303,10 +1446,10 @@ const DemandaImport = (() => {
         garantirSheetJS,
         _util: {
             splitCodigoDescricao: _splitCodigoDescricao,
-            parseMoedaBR:         _parseMoedaBR,
-            detectColumns:        _detectColumns,
+            parseMoedaBR: _parseMoedaBR,
+            detectColumns: _detectColumns,
             completarColunasPorConteudo: _completarColunasPorConteudo,
-            isPartCode:           _isPartCode,
+            isPartCode: _isPartCode,
         },
     };
 

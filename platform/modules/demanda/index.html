@@ -236,6 +236,10 @@
             <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('excel')">
               <span class="material-icons-round">table_view</span> Excel/CSV
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('johndeere')"
+              style="border-color:rgba(34,197,94,.5);color:#86efac;background:rgba(34,197,94,.08)" title="Importar carrinho/orçamento John Deere">
+              <span class="material-icons-round" style="color:#22c55e">agriculture</span> John Deere
+            </button>
             <button class="btn btn-primary btn-sm" id="btnSalvarDemanda" onclick="DemandaApp.salvarDemanda()">
               <span class="material-icons-round">save</span> Salvar
             </button>
@@ -298,6 +302,11 @@
               <button class="btn-import" onclick="DemandaApp.openImportModal('foto')" title="Em breve">
                 <span class="material-icons-round">photo_camera</span>
                 Foto / Print
+              </button>
+              <button class="btn-import" onclick="DemandaApp.openImportModal('johndeere')"
+                style="border-color:rgba(34,197,94,.4);color:#86efac;background:rgba(34,197,94,.08)" title="Importar carrinho/orçamento John Deere">
+                <span class="material-icons-round" style="color:#22c55e">agriculture</span>
+                John Deere
               </button>
             </div>
 
@@ -7267,6 +7276,87 @@
     </div>
   </div>
 
+  <!-- Modal: Importar John Deere (Foto / Print / PDF / Texto) -->
+  <div class="modal-overlay" id="modalJohnDeere">
+    <div class="modal-card modal-lg" style="border:1px solid rgba(34,197,94,.35)">
+      <div class="modal-header" style="background:linear-gradient(90deg, rgba(34,197,94,.12), rgba(234,179,8,.08))">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span class="material-icons-round" style="color:#22c55e;font-size:1.6rem">agriculture</span>
+          <div>
+            <h3 style="margin:0;display:flex;align-items:center;gap:.5rem">
+              Importar Carrinho / Cotação John Deere
+              <span style="font-size:.7rem;padding:2px 7px;border-radius:999px;background:#22c55e;color:#052e16;font-weight:700">JOHN DEERE</span>
+            </h3>
+            <p style="margin:2px 0 0;font-size:.76rem;color:var(--text-secondary)">
+              Suporta prints do carrinho JD com substituições e texto copiado do portal
+            </p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="DemandaApp.closeModal('modalJohnDeere')">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <!-- Abas do Modal JD -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg-dark);padding:0 1.25rem">
+        <button id="tabBtnJDUpload" class="btn" onclick="DemandaApp._setModoJDTab('upload')"
+          style="border-radius:0;border:none;border-bottom:2px solid #22c55e;color:#22c55e;font-weight:700;padding:.75rem 1rem;background:transparent;display:flex;align-items:center;gap:6px">
+          <span class="material-icons-round" style="font-size:1.1rem">add_photo_alternate</span> Foto / Print / Arquivo
+        </button>
+        <button id="tabBtnJDTexto" class="btn" onclick="DemandaApp._setModoJDTab('texto')"
+          style="border-radius:0;border:none;border-bottom:2px solid transparent;color:var(--text-secondary);font-weight:600;padding:.75rem 1rem;background:transparent;display:flex;align-items:center;gap:6px">
+          <span class="material-icons-round" style="font-size:1.1rem">content_paste</span> Colar Texto do Portal
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding:1.25rem">
+        <!-- Aba 1: Upload de Foto/Print JD -->
+        <div id="jdTabUpload">
+          <div id="jdUploadArea" style="
+              border:2px dashed rgba(34,197,94,.4);border-radius:12px;padding:2.2rem 1.5rem;text-align:center;
+              cursor:pointer;transition:border-color .2s;background:rgba(34,197,94,.03);
+          " onclick="var fi=document.getElementById('jdFileInput');if(fi)fi.value='';fi.click()"
+            ondragover="event.preventDefault();this.style.borderColor='#22c55e'"
+            ondragleave="this.style.borderColor='rgba(34,197,94,.4)'" ondrop="DemandaApp.onJohnDeereDrop(event)">
+            <span class="material-icons-round" style="font-size:3rem;color:#22c55e">photo_camera</span>
+            <p style="color:var(--text-primary);font-size:.95rem;font-weight:600;margin-top:.6rem">
+              Clique para selecionar ou arraste o print do Carrinho John Deere
+            </p>
+            <p style="color:var(--text-secondary);font-size:.8rem;margin:0.25rem 0 0;">
+              Suporta <strong>Imagens (.png, .jpg, .webp)</strong>, <strong>PDF (.pdf)</strong> ou <strong>Excel/CSV (.xlsx, .csv)</strong>
+            </p>
+            <div style="margin-top:.85rem;display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .75rem;border-radius:6px;background:rgba(34,197,94,.1);color:#86efac;font-size:.75rem">
+              <span class="material-icons-round" style="font-size:1rem">auto_awesome</span>
+              Abre com o <strong>Modo John Deere</strong> calibrado (Peça 78% / Quantidade 22% + Substitutos)
+            </div>
+            <input type="file" id="jdFileInput" accept="image/*,.pdf,.xlsx,.xls,.csv,.txt" style="display:none"
+              onchange="DemandaApp.onJohnDeereFileSelected(this.files[0])">
+          </div>
+        </div>
+
+        <!-- Aba 2: Colar Texto Copiado do Portal JD -->
+        <div id="jdTabTexto" style="display:none">
+          <p style="font-size:.82rem;color:var(--text-secondary);margin:0 0 .5rem">
+            Selecione e copie o texto diretamente da tela do carrinho ou orçamento John Deere e cole abaixo:
+          </p>
+          <textarea id="jdTextarea" rows="10"
+            placeholder="Exemplo:&#10;Filtro de Ar Fresco da Cabine&#10;Número de peça: TA32591          1&#10;ⓘ Esta peça é um substituto para RE284091&#10;&#10;Filtro&#10;Número de peça: L214634          1"
+            style="width:100%;box-sizing:border-box;background:var(--bg-dark);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:.85rem;font-family:monospace;font-size:.85rem;resize:vertical"></textarea>
+          <div style="margin-top:.5rem;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:.76rem;color:var(--text-secondary)">Reconhece automaticamente blocos com nome, código, substituto e quantidade.</span>
+            <button class="btn btn-primary" onclick="DemandaApp.processarTextoJohnDeere()" style="background:#22c55e;color:#052e16;border:none;font-weight:700">
+              <span class="material-icons-round" style="font-size:1.1rem">play_arrow</span> Processar Texto JD
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background:var(--bg-dark)">
+        <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalJohnDeere')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Conferência de Importação -->
   <div class="modal-overlay" id="modalConferencia">
     <div class="modal-card modal-xl">
@@ -7778,10 +7868,10 @@
   <!-- Módulo de Demanda -->
   <script src="js/demanda-states.js?v=3.21.49"></script>
   <script src="js/demanda-db.js?v=3.5.0"></script>
-  <script src="js/demanda-import.js?v=3.5.8"></script>
-  <script src="js/demanda-imagem-demarcador.js?v=3.5.8"></script>
-  <script src="js/demanda-textocolunas.js?v=3.5.8"></script>
-  <script src="js/demanda-mapeador.js?v=3.5.8"></script>
+  <script src="js/demanda-import.js?v=3.5.9"></script>
+  <script src="js/demanda-imagem-demarcador.js?v=3.5.9"></script>
+  <script src="js/demanda-textocolunas.js?v=3.5.9"></script>
+  <script src="js/demanda-mapeador.js?v=3.5.9"></script>
   <script src="js/demanda-search.js?v=3.5.0"></script>
   <script src="js/demanda-lookup.js?v=3.21.66"></script>
   <script src="js/demanda-pdf.js?v=3.21.118"></script>
@@ -7791,7 +7881,7 @@
   <script src="js/demanda-analytics.js?v=3.5.0"></script>
   <script src="js/demanda-comercial.js?v=3.5.0"></script>
   <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-  <script src="js/demanda-app.js?v=3.5.8"></script>
+  <script src="js/demanda-app.js?v=3.5.9"></script>
 
   <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -7937,310 +8027,4 @@
   </div>
 
 
-  <!-- ═══════════════════════════════════════════════════════════
-         MODAL: Importar Catálogo de Peças (OEM / Fabricantes)
-         ═══════════════════════════════════════════════════════════ -->
-  <div id="modalImportarCatalogo"
-    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
-    <div
-      style="background:var(--surface);border:1px solid var(--border-color);border-radius:14px;padding:1.75rem;width:min(720px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)">
-      <div
-        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid var(--border-color);padding-bottom:.85rem">
-        <div style="display:flex;align-items:center;gap:.6rem">
-          <span class="material-icons-round" style="color:var(--accent-primary);font-size:1.5rem">upload_file</span>
-          <div>
-            <h3 style="margin:0;font-size:1.1rem;color:var(--text-primary)">Importar Catálogo de Peças Externas</h3>
-            <p style="margin:0;font-size:.78rem;color:var(--text-secondary)">Alimente catálogos de peças originais (OEM)
-              ou fabricantes de autopeças</p>
-          </div>
-        </div>
-        <button onclick="DemandaApp.fecharModalImportarCatalogo()"
-          style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;padding:.25rem">✕</button>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-        <div>
-          <label
-            style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Marca
-            / Montadora / Fabricante *</label>
-          <input id="catImpMarca" type="text" placeholder="Ex: JOHN DEERE, SKF, TATU, SPICER, VALTRA..."
-            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
-        </div>
-        <div>
-          <label
-            style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Tipo
-            de Origem *</label>
-          <select id="catImpTipoOrigem"
-            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
-            <option value="OEM">Peça Original (Montadora OEM)</option>
-            <option value="FABRICANTE">Fabricante (Autopeça / Componente / Aftermarket)</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-        <div>
-          <label
-            style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Sistema
-            Padrão</label>
-          <select id="catImpSistema"
-            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
-            <option value="DISCO_MANCAL">Mancais, Discos, Rolamentos & Cubos</option>
-            <option value="TRANSMISSAO">Transmissão, Diferencial & Eixos</option>
-            <option value="PLANTIO">Linha de Plantio & Dosadores</option>
-            <option value="CORTE">Corte, Rotor & Molinete</option>
-            <option value="PULVERIZACAO">Pulverização & Bomba</option>
-            <option value="HIDRAULICO">Hidráulico & Cilindros</option>
-            <option value="MOTOR">Motor, Filtros & Correias</option>
-          </select>
-        </div>
-        <div>
-          <label
-            style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Identificação
-            do Catálogo (Opcional)</label>
-          <input id="catImpNomeArquivo" type="text" placeholder="Ex: Catálogo Geral 2026, Tabela Rolamentos v1..."
-            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
-        </div>
-      </div>
-
-      <div style="margin-bottom:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
-          <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase">Cole os
-            Dados do Catálogo (Tabela ou Texto)</label>
-          <span style="font-size:.72rem;color:var(--text-muted)">Formato: Código [TAB ou ;] Descrição [TAB ou ;]
-            Aplicação [TAB ou ;] Ref. Similar</span>
-        </div>
-        <textarea id="catImpTexto" rows="7" placeholder="Exemplo colado do Excel:
-AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
-0501046922	MANCAL A ÓLEO GRADE ARADORA	Grade Marchesan GAPCR	5201010045; PC-42100
-6205-2RS	ROLAMENTO RÍGIDO ESFERAS 25x52x15	Eixo do Molinete / Linha de Plantio	JD9205; 80242200"
-          style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem;color:var(--text-primary);font-size:.82rem;font-family:monospace;resize:vertical"></textarea>
-      </div>
-
-      <div
-        style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;border-top:1px solid var(--border-color);padding-top:1rem">
-        <span id="catImpStatus" style="font-size:.8rem;color:var(--text-secondary)">Pronto para importar</span>
-        <div style="display:flex;gap:.5rem">
-          <button class="btn btn-secondary btn-sm" onclick="DemandaApp.fecharModalImportarCatalogo()">Cancelar</button>
-          <button class="btn btn-primary btn-sm" onclick="DemandaApp.processarImportacaoCatalogo()">
-            <span class="material-icons-round" style="font-size:.9rem">save</span> Gravar no Catálogo
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-         MODAL DE DRILL-DOWN AUDITÁVEL (SEÇÕES 89, 90)
-         ═══════════════════════════════════════════════════════════ -->
-  <div class="modal-backdrop" id="dmd-modal"
-    style="display: none; background: rgba(4, 7, 16, 0.92); backdrop-filter: blur(10px); z-index: 1070;">
-    <div class="modal-box" id="dmd-modal-box"
-      style="max-width: 960px; width: 95%; background: #0c1322; border: 1px solid #1e3a8a; border-radius: 14px; box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 35px rgba(37, 99, 235, 0.25); overflow: hidden; display: flex; flex-direction: column;">
-      <div class="modal-header" id="dmd-modal-header"
-        style="background: #0d172b; border-bottom: 1px solid #1e2c4f; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div
-            style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #38bdf8; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-            <span>📊 AUDITORIA DE DEMANDA</span>
-            <span
-              style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 8px; border-radius: 9999px; font-size: 10px; border: 1px solid rgba(56, 189, 248, 0.3);">MEMÓRIA
-              DE CÁLCULO (90 DIAS)</span>
-          </div>
-          <h3 id="dmd-modal-title"
-            style="font-size: 16px; font-weight: 800; color: #fff; margin: 4px 0 0; letter-spacing: 0.3px;">[SKU]
-            PRODUTO</h3>
-        </div>
-        <button onclick="closeDmdModal()"
-          style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1; transition: color 0.2s;"
-          onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
-      </div>
-      <div class="modal-body" id="dmd-modal-body"
-        style="padding: 20px 24px; background: #0c1322; max-height: calc(85vh - 120px); overflow-y: auto;">
-        <!-- Injetado dinamicamente via openDmdDetailModal -->
-      </div>
-      <div class="modal-footer" id="dmd-modal-footer"
-        style="background: #0d172b; border-top: 1px solid #1e2c4f; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: #64748b; font-size: 12px; font-weight: 500;">Fórmula Oficial: DMD = (Vendas Líquidas 90d ÷
-          90) × Fator Sazonal</span>
-        <button class="btn"
-          style="background-color: #2563eb; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 22px; border: none; font-size: 13px; cursor: pointer; transition: background 0.2s;"
-          onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'"
-          onclick="closeDmdModal()">← Voltar à Ficha do Produto</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="drilldown-modal" style="display: none; z-index: 1050;">
-    <div class="modal-box" id="drilldown-modal-box"
-      style="width: 98vw; max-width: 1820px; height: 95vh; max-height: 95vh; display: flex; flex-direction: column; background: #0b1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9); overflow: hidden; transition: all 0.2s ease;">
-      <div class="modal-header"
-        style="background: #0b1322; border-bottom: 1px solid #1e293b; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
-        <div>
-          <h3 id="modal-drilldown-title"
-            style="font-size: 18px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.3px;">Auditoria
-            Analítica</h3>
-          <p id="modal-drilldown-sub" style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Detalhamento de SKUs e
-            Reconciliação Contábil</p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <button class="btn btn-sm btn-outline" id="btn-toggle-drilldown-fs" onclick="toggleDrilldownFullscreen()"
-            title="Alternar Tela Cheia" style="font-size: 12px; padding: 5px 12px; border-radius: 6px;">⛶ Tela
-            Cheia</button>
-          <button class="modal-close" onclick="closeDrilldownModal()"
-            style="color: #94a3b8; font-size: 24px; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 0 4px;">&times;</button>
-        </div>
-      </div>
-
-      <div class="modal-body"
-        style="padding: 16px 24px; background: #0b1322; display: flex; flex-direction: column; flex: 1; overflow: hidden;">
-        <!-- BARRA DE CONTROLE & FILTROS AMPLIADA -->
-        <div
-          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; background: #111c30; padding: 10px 16px; border-radius: 8px; border: 1px solid #1e2e4a;">
-          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1;">
-            <!-- Pesquisa Livre -->
-            <input type="text" id="drilldown-search-input" class="filter-input"
-              placeholder="🔍 Pesquisar por ID, Descrição, Cód..." style="width: 280px;"
-              oninput="applyDrilldownMultiFilter()">
-
-            <!-- Filtro por Marca (Obrigatório) -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Marca:</span>
-              <select id="drilldown-filter-marca" class="filter-select"
-                style="min-width: 200px; padding: 6px 12px; font-size: 12px;" onchange="applyDrilldownMultiFilter()">
-                <option value="">Todas as Marcas</option>
-              </select>
-            </div>
-
-            <!-- Filtro por Curva -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Curva:</span>
-              <select id="drilldown-filter-curva" class="filter-select"
-                style="width: 120px; padding: 6px 10px; font-size: 12px;" onchange="applyDrilldownMultiFilter()">
-                <option value="">Todas</option>
-                <option value="A">Curva A</option>
-                <option value="B">Curva B</option>
-                <option value="C">Curva C</option>
-                <option value="X">Curva X</option>
-              </select>
-            </div>
-
-            <!-- Botão Limpar -->
-            <button class="btn btn-sm btn-outline" onclick="resetDrilldownFilters()"
-              title="Limpar filtros desta análise" style="padding: 5px 12px; font-size: 12px;">Limpar</button>
-          </div>
-
-          <!-- Ações da Direita: Contador, Excel, Imprimir -->
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <div id="drilldown-counter" style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-right: 4px;">0
-              registros</div>
-            <button class="btn btn-sm"
-              style="background-color: #10b981; color: #fff; font-weight: 700; border-radius: 6px; padding: 6px 14px; border: none; display: flex; align-items: center; gap: 6px; cursor: pointer;"
-              onclick="exportDrilldownToCSV()" title="Exportar dados filtrados para Excel / CSV">
-              <span>📊</span> Exportar Excel
-            </button>
-            <button class="btn btn-sm btn-outline"
-              style="font-weight: 700; border-radius: 6px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; cursor: pointer;"
-              onclick="printDrilldown()" title="Imprimir ou Salvar em PDF">
-              <span>🖨️</span> Imprimir
-            </button>
-          </div>
-        </div>
-
-        <!-- TABELA EM ESPAÇO AMPLIADO COM REF. FÁBRICA NA 2ª COLUNA E VALOR EXCEDENTE DESTACADO -->
-        <div class="table-container"
-          style="flex: 1; max-height: calc(95vh - 215px); overflow-y: auto; overflow-x: auto;"
-          id="drilldown-table-container">
-          <table class="data-table sortable-table" id="table-drilldown" style="width: 100%;">
-            <thead>
-              <tr>
-                <th style="width: 70px;">ID</th>
-                <th style="min-width: 120px;">Ref. Fábrica</th>
-                <th style="min-width: 250px;">Descrição do Produto</th>
-                <th style="min-width: 120px;">Marca</th>
-                <th style="min-width: 140px;">Equipamento</th>
-                <th style="text-align: center; width: 75px;">Curva</th>
-                <th class="text-right" style="width: 90px;">Est. Disp.</th>
-                <th class="text-right" style="width: 90px;">Dias Est.</th>
-                <th class="text-right" style="width: 125px; color: #fbbf24;">Valor Excedente</th>
-                <th class="text-right" style="width: 95px;">Compra Sug.</th>
-                <th class="text-right" style="width: 115px;">Investimento</th>
-                <th class="text-center" style="width: 100px;">Prioridade</th>
-                <th class="text-center" style="width: 100px;">Start</th>
-                <th class="text-center" style="width: 80px;">Detalhe</th>
-              </tr>
-            </thead>
-            <tbody id="drilldown-tbody">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="modal-footer"
-        style="background: #0b1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
-        <div id="drilldown-footer-reconciliation" style="font-size: 13px; font-weight: 700; color: #fff;"></div>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn btn-primary" id="btn-drilldown-inv-filter" onclick="applyDrilldownAsInventoryFilter()"
-            style="display: none;">Ver no Inventário</button>
-          <button class="btn btn-outline" onclick="closeDrilldownModal()">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-         MODAL: DETALHE COMPLETO DO SKU (SEÇÃO 93)
-         ═══════════════════════════════════════════════════════════ -->
-  <div class="modal-backdrop" id="sku-modal" style="display: none; z-index: 1060;">
-    <div class="modal-box" id="sku-modal-box"
-      style="max-width: 920px; background: #0c1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); overflow: hidden;">
-      <div class="modal-header" id="sku-modal-header"
-        style="background: #0c1322; border-bottom: 1px solid #1e293b; padding: 18px 24px 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
-        <h3 id="sku-modal-title"
-          style="font-size: 16px; font-weight: 800; color: #fff; margin: 0; text-transform: uppercase; letter-spacing: 0.3px;">
-          [SKU] PRODUTO</h3>
-        <button class="modal-close" onclick="closeSkuModal()"
-          style="color: #94a3b8; font-size: 24px; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 0 4px;">&times;</button>
-      </div>
-      <div class="modal-body" id="sku-modal-body"
-        style="padding: 20px 24px; background: #0c1322; max-height: calc(88vh - 120px); overflow-y: auto;">
-        <!-- Rendered via JS -->
-      </div>
-      <div class="modal-footer" id="sku-modal-footer"
-        style="background: #0c1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
-        <span id="sku-modal-footer-text" style="color: #64748b; font-size: 12px; font-weight: 500;">Dados Genuínos
-          CENTRAL PEÇAS &amp; MAXDATA</span>
-        <button id="sku-modal-btn-close" class="btn"
-          style="background-color: #0ea5e9; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 26px; border: none; font-size: 13px; cursor: pointer;"
-          onclick="closeSkuModal()">Fechar</button>
-      </div>
-    </div>
-
-    <!-- Garantia absoluta de renderização do Shell e Views (prevenção definitiva de tela preta) -->
-    <script>
-      (function () {
-        function garantirVisibilidade() {
-          var sh = document.getElementById("appShell");
-          if (sh && (sh.style.display === "none" || getComputedStyle(sh).display === "none")) {
-            sh.style.display = "flex";
-          }
-          var activeView = document.querySelector("[id^='view-'][style*='display: block'], [id^='view-']:not([style*='display: none'])");
-          if (!activeView && window.DemandaApp && typeof DemandaApp.switchView === "function") {
-            try { DemandaApp.switchView("captura"); } catch (_) { }
-          }
-        }
-        if (document.readyState === "complete" || document.readyState === "interactive") {
-          setTimeout(garantirVisibilidade, 300);
-        } else {
-          window.addEventListener("DOMContentLoaded", function () { setTimeout(garantirVisibilidade, 300); });
-          window.addEventListener("load", function () { setTimeout(garantirVisibilidade, 100); });
-        }
-        // Timeout de segurança após 1.5s
-        setTimeout(garantirVisibilidade, 1500);
-      })();
-    </script>
-</body>
-
-</html>
+... [truncated for diff preview]

@@ -856,6 +856,11 @@ const DemandaApp = (function () {
             _abrirImportPDF();
         } else if (type === "foto") {
             _abrirImportFoto();
+        } else if (type === "johndeere") {
+            var taJD = document.getElementById("jdTextarea"); if (taJD) taJD.value = "";
+            var fiJD = document.getElementById("jdFileInput"); if (fiJD) fiJD.value = "";
+            _setModoJDTab("upload");
+            _openModal("modalJohnDeere");
         }
     }
 
@@ -1459,6 +1464,170 @@ const DemandaApp = (function () {
         _toast("Texto carregado! Revise e clique em Processar.", "info");
     }
 
+    // ════════════════════════════════════════════════════════
+    // IMPORT JOHN DEERE (Carrinho de compras, Prints, PDF, Texto)
+    // ════════════════════════════════════════════════════════
+    function _setModoJDTab(tab) {
+        var tabUp = document.getElementById("tabBtnJDUpload");
+        var tabTx = document.getElementById("tabBtnJDTexto");
+        var painelUp = document.getElementById("jdTabUpload");
+        var painelTx = document.getElementById("jdTabTexto");
+        if (tab === "texto") {
+            if (tabUp) { tabUp.style.borderBottom = "2px solid transparent"; tabUp.style.color = "var(--text-secondary)"; tabUp.style.fontWeight = "600"; }
+            if (tabTx) { tabTx.style.borderBottom = "2px solid #22c55e"; tabTx.style.color = "#22c55e"; tabTx.style.fontWeight = "700"; }
+            if (painelUp) painelUp.style.display = "none";
+            if (painelTx) painelTx.style.display = "block";
+            var ta = document.getElementById("jdTextarea"); if (ta) ta.focus();
+        } else {
+            if (tabUp) { tabUp.style.borderBottom = "2px solid #22c55e"; tabUp.style.color = "#22c55e"; tabUp.style.fontWeight = "700"; }
+            if (tabTx) { tabTx.style.borderBottom = "2px solid transparent"; tabTx.style.color = "var(--text-secondary)"; tabTx.style.fontWeight = "600"; }
+            if (painelUp) painelUp.style.display = "block";
+            if (painelTx) painelTx.style.display = "none";
+        }
+    }
+
+    function onJohnDeereDrop(ev) {
+        ev.preventDefault();
+        var dt = ev.dataTransfer;
+        if (dt && dt.files && dt.files.length) {
+            onJohnDeereFileSelected(dt.files[0]);
+        }
+    }
+
+    function onJohnDeereFileSelected(file) {
+        if (!file) return;
+        closeModal("modalJohnDeere");
+        _setUltimoArquivo({ file: file, nome: file.name || "Carrinho John Deere", fonte: "johndeere" });
+
+        var nomeLow = (file.name || "").toLowerCase();
+        var ehImagem = (file.type && file.type.startsWith("image/")) || /\.(png|jpe?g|webp|bmp|gif)$/i.test(nomeLow);
+        var ehPdf = file.type === "application/pdf" || nomeLow.endsWith(".pdf");
+
+        // 1. Imagem: abre direto no Demarcador com Modo JD e calibração 78% / 22%
+        if (ehImagem && window.DemandaImagemDemarcador) {
+            DemandaImagemDemarcador.abrir({
+                file: file,
+                nome: file.name || "Print Carrinho John Deere",
+                modoJD: true,
+                cortesPct: [0.78],
+                toast: _toast,
+                onVoltar: function () { openImportModal("johndeere"); },
+                onConfirm: function (grade, estadoDemarcador) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        fonte: "johndeere",
+                        nome: file.name || "Carrinho John Deere",
+                        file: file,
+                        dataUrl: estadoDemarcador ? estadoDemarcador.dataUrl : '',
+                        estadoDemarcador: estadoDemarcador,
+                        toast: _toast,
+                        onVoltar: function () {
+                            DemandaImagemDemarcador.abrir({
+                                file: file,
+                                dataUrl: estadoDemarcador ? estadoDemarcador.dataUrl : '',
+                                cortesPct: estadoDemarcador ? estadoDemarcador.cortesPct : [0.78],
+                                modoJD: true,
+                                yTopPct: estadoDemarcador ? estadoDemarcador.yTopPct : null,
+                                yBottomPct: estadoDemarcador ? estadoDemarcador.yBottomPct : null,
+                                nome: file.name || "Print Carrinho John Deere",
+                                toast: _toast,
+                                onConfirm: function (novaGrade, novoEstado) {
+                                    DemandaMapeador.abrir({
+                                        rows: novaGrade,
+                                        fonte: "johndeere",
+                                        nome: file.name || "Carrinho John Deere",
+                                        file: file,
+                                        dataUrl: novoEstado ? novoEstado.dataUrl : '',
+                                        estadoDemarcador: novoEstado,
+                                        toast: _toast,
+                                        onConfirm: function (its) { _showConferencia(DemandaImport.validateItens(its)); }
+                                    });
+                                }
+                            });
+                        },
+                        onConfirm: function (itens) {
+                            _showConferencia(DemandaImport.validateItens(itens));
+                        }
+                    });
+                }
+            });
+            return;
+        }
+
+        // 2. PDF: abre leitor PDF
+        if (ehPdf) {
+            _abrirImportPDF(file);
+            return;
+        }
+
+        // 3. Arquivo de texto (.txt, .csv) ou outro: tenta ler texto e chamar parseJohnDeere
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var txt = (e.target.result || "").trim();
+            if (txt && window.DemandaImport && typeof DemandaImport.parseJohnDeere === "function") {
+                var grade = DemandaImport.parseJohnDeere(txt);
+                if (grade && grade.length > 1) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        rawText: txt,
+                        fonte: "johndeere",
+                        nome: file.name || "Carrinho John Deere",
+                        file: file,
+                        toast: _toast,
+                        onVoltar: function () { openImportModal("johndeere"); },
+                        onConfirm: function (itens) {
+                            _showConferencia(DemandaImport.validateItens(itens));
+                        }
+                    });
+                    return;
+                }
+            }
+            // Fallback para Excel/CSV padrão
+            onExcelFileSelected(file);
+        };
+        reader.readAsText(file);
+    }
+
+    function processarTextoJohnDeere() {
+        var ta = document.getElementById("jdTextarea");
+        if (!ta || !ta.value.trim()) {
+            _toast("Cole o texto copiado do portal John Deere antes de processar.", "warning");
+            return;
+        }
+        var texto = ta.value.trim();
+        closeModal("modalJohnDeere");
+
+        if (window.DemandaImport && typeof DemandaImport.parseJohnDeere === "function") {
+            var grade = DemandaImport.parseJohnDeere(texto);
+            if (grade && grade.length > 1) {
+                _setUltimoArquivo({ nome: "Texto Carrinho John Deere", fonte: "johndeere", rows: grade, rawText: texto });
+                DemandaMapeador.abrir({
+                    rows: grade,
+                    rawText: texto,
+                    fonte: "johndeere",
+                    nome: "Carrinho John Deere",
+                    toast: _toast,
+                    onVoltar: function () {
+                        openImportModal("johndeere");
+                        _setModoJDTab("texto");
+                        var ta2 = document.getElementById("jdTextarea");
+                        if (ta2) ta2.value = texto;
+                    },
+                    onConfirm: function (itens) {
+                        _showConferencia(DemandaImport.validateItens(itens));
+                    }
+                });
+                _toast((grade.length - 1) + " item(ns) identificados do John Deere! Revise as colunas.", "success");
+                return;
+            }
+        }
+
+        // Fallback: se não estruturou em grade JD, envia para o assistente de texto padrão
+        var taTexto = document.getElementById("textareaImport");
+        if (taTexto) taTexto.value = texto;
+        openImportModal("texto");
+        _toast("Não foi possível identificar o formato John Deere. Abrindo em Colar Texto padrão.", "info");
+    }
 
     function closeModal(id) {
         var el = document.getElementById(id);
@@ -8909,6 +9078,11 @@ const DemandaApp = (function () {
         _abrirImportFoto: _abrirImportFoto,
         _fecharImportFoto: _fecharImportFoto,
         _processarFotoTranscricao: _processarFotoTranscricao,
+        // Import John Deere
+        _setModoJDTab: _setModoJDTab,
+        onJohnDeereDrop: onJohnDeereDrop,
+        onJohnDeereFileSelected: onJohnDeereFileSelected,
+        processarTextoJohnDeere: processarTextoJohnDeere,
         onExcelDrop: onExcelDrop,
         onExcelFileSelected: onExcelFileSelected,
         confirmExcelImport: confirmExcelImport,

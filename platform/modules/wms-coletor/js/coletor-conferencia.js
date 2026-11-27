@@ -9,34 +9,34 @@
 
 // ─── ESTADO GLOBAL DA SESSÃO ─────────────────────────────────────────────────
 window._confSessao = {
-    nfId:   null,
+    nfId: null,
     inicio: null,
-    ativo:  false,
+    ativo: false,
 };
 window._recAtivo = null; // receipt em memória (evita reads durante bipagem)
-let _saveTimer   = null; // debounce para salvar leituras no Firestore
+let _saveTimer = null; // debounce para salvar leituras no Firestore
 
 function _salvarLeiturasDebounced() {
     clearTimeout(_saveTimer);
     _saveTimer = setTimeout(async () => {
         if (window._recAtivo) {
-            await WmsStore.salvarLeituras(window._recAtivo.id, window._recAtivo._leituras || {}).catch(() => {});
+            await WmsStore.salvarLeituras(window._recAtivo.id, window._recAtivo._leituras || {}).catch(() => { });
         }
     }, 3000);
 }
 
 // ─── TELA INICIAL — LISTA DE NFs AGUARDANDO CONFERÊNCIA ──────────────────────
-window.initConferenciaItensScreen = async function(container) {
+window.initConferenciaItensScreen = async function (container) {
     window._confSessao.ativo = false;
-    window._confSessao.nfId  = null;
-    window._recAtivo         = null;
+    window._confSessao.nfId = null;
+    window._recAtivo = null;
 
     container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);">
         <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">sync</span>
         <span style="font-size:.82rem;">Carregando cargas...</span></div>`;
 
     const pending = await WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' }).catch(() => []);
-    pending.sort((a, b) => new Date(a.dataCheckin||0) - new Date(b.dataCheckin||0)); // FIFO
+    pending.sort((a, b) => new Date(a.dataCheckin || 0) - new Date(b.dataCheckin || 0)); // FIFO
 
     container.innerHTML = `
         <!-- Instrução de bipagem -->
@@ -62,13 +62,13 @@ window.initConferenciaItensScreen = async function(container) {
 
         <!-- Lista de NFs -->
         ${pending.length > 0 ? pending.map(r => {
-            const totalItens  = (r.itens || []).length;
-            const itensBipados = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) > 0).length;
-            const pct = totalItens > 0 ? Math.round((itensBipados / totalItens) * 100) : 0;
-            const temDiv = r.condicaoCarga && r.condicaoCarga !== 'OK';
-            const dtCheckin = r.dataCheckin ? new Date(r.dataCheckin).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+        const totalItens = (r.itens || []).length;
+        const itensBipados = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) > 0).length;
+        const pct = totalItens > 0 ? Math.round((itensBipados / totalItens) * 100) : 0;
+        const temDiv = r.condicaoCarga && r.condicaoCarga !== 'OK';
+        const dtCheckin = r.dataCheckin ? new Date(r.dataCheckin).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 
-            return `
+        return `
             <div class="m-card" style="padding:.85rem;cursor:pointer;margin-bottom:.6rem;" onclick="iniciarConferirItens('${r.id}')">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem;">
                     <div>
@@ -93,7 +93,7 @@ window.initConferenciaItensScreen = async function(container) {
                 <div style="font-size:.68rem;color:var(--text-secondary);margin-top:.2rem;">${itensBipados}/${totalItens} SKUs iniciados · ${pct}%</div>
                 ` : ''}
             </div>`;
-        }).join('') : `
+    }).join('') : `
             <div style="text-align:center;padding:3rem 1rem;color:var(--text-secondary);">
                 <span class="material-icons-round" style="font-size:3.5rem;opacity:.25;">inventory_2</span>
                 <p style="margin-top:.75rem;font-size:.85rem;">Nenhuma carga aguardando conferência.</p>
@@ -104,7 +104,7 @@ window.initConferenciaItensScreen = async function(container) {
 };
 
 // ─── SCAN na tela inicial ──────────────────────────────────────────────────────
-window.handleScanConferenciaItens = async function(code) {
+window.handleScanConferenciaItens = async function (code) {
     if (window._confSessao.ativo) { _registrarBipagem(code); return; }
 
     const clean = code.replace(/\D/g, '');
@@ -112,20 +112,20 @@ window.handleScanConferenciaItens = async function(code) {
         const lista = await WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' });
         const target = lista.find(r =>
             (clean.length === 44 && (r.chaveNfe || '').replace(/\D/g, '') === clean) ||
-            (clean.length < 44  && String(r.nfNumero) === clean)
+            (clean.length < 44 && String(r.nfNumero) === clean)
         );
         if (target) iniciarConferirItens(target.id);
         else { Feedback.beep('error'); showToast('NF não encontrada na fila de conferência.', 'danger'); }
-    } catch(e) { showToast('Erro: ' + e.message, 'danger'); }
+    } catch (e) { showToast('Erro: ' + e.message, 'danger'); }
 };
 
 // ─── INICIAR CONFERÊNCIA DE UMA NF ───────────────────────────────────────────
-window.iniciarConferirItens = async function(id) {
+window.iniciarConferirItens = async function (id) {
     const r = await WmsStore.buscarRecebimento(id).catch(() => null);
     if (!r) { showToast('Recebimento não encontrado.', 'danger'); return; }
     if (!r._leituras) r._leituras = {};
 
-    window._recAtivo   = r;
+    window._recAtivo = r;
     window._confSessao = { nfId: id, inicio: new Date().toISOString(), ativo: true };
     _renderTelaConferencia(r);
 };
@@ -133,10 +133,10 @@ window.iniciarConferirItens = async function(id) {
 // ─── RENDERIZA TELA DE CONFERÊNCIA ───────────────────────────────────────────
 function _renderTelaConferencia(r) {
     const container = document.getElementById('screen-recebimento');
-    const cfg       = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
-    const isCega    = cfg.geral?.contagemCega !== false; // default: cega ativa
+    const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const isCega = cfg.geral?.contagemCega !== false; // default: cega ativa
 
-    const totalItens     = (r.itens || []).length;
+    const totalItens = (r.itens || []).length;
     const itensConferidos = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) >= it.quantidade).length;
     const pct = totalItens > 0 ? Math.round((itensConferidos / totalItens) * 100) : 0;
     const temDiv = r.condicaoCarga && r.condicaoCarga !== 'OK';
@@ -207,37 +207,37 @@ function _renderItensHtml(r, isCega) {
     }
 
     return r.itens.map(it => {
-        const lido     = r._leituras?.[it.sku] || 0;
+        const lido = r._leituras?.[it.sku] || 0;
         const esperado = Number(it.quantidade);
-        const diff     = lido - esperado;
-        const ok       = lido >= esperado && esperado > 0;
-        const excesso  = lido > esperado;
-        const zerado   = lido === 0;
+        const diff = lido - esperado;
+        const ok = lido >= esperado && esperado > 0;
+        const excesso = lido > esperado;
+        const zerado = lido === 0;
 
         let borderColor = 'rgba(255,255,255,.08)';
-        let bg          = 'rgba(255,255,255,.02)';
-        let icone       = 'radio_button_unchecked';
-        let iconeColor  = 'rgba(255,255,255,.2)';
+        let bg = 'rgba(255,255,255,.02)';
+        let icone = 'radio_button_unchecked';
+        let iconeColor = 'rgba(255,255,255,.2)';
         let statusLabel = '';
 
-        if (excesso)      { borderColor='rgba(245,158,11,.4)';  bg='rgba(245,158,11,.05)';  icone='warning';      iconeColor='#f59e0b'; statusLabel='EXCESSO'; }
-        else if (ok)      { borderColor='rgba(16,185,129,.4)';  bg='rgba(16,185,129,.05)';  icone='check_circle'; iconeColor='#10b981'; statusLabel='OK'; }
-        else if (!zerado) { borderColor='rgba(14,165,233,.35)'; bg='rgba(14,165,233,.04)';  icone='pending';      iconeColor='#0ea5e9'; statusLabel='PARCIAL'; }
+        if (excesso) { borderColor = 'rgba(245,158,11,.4)'; bg = 'rgba(245,158,11,.05)'; icone = 'warning'; iconeColor = '#f59e0b'; statusLabel = 'EXCESSO'; }
+        else if (ok) { borderColor = 'rgba(16,185,129,.4)'; bg = 'rgba(16,185,129,.05)'; icone = 'check_circle'; iconeColor = '#10b981'; statusLabel = 'OK'; }
+        else if (!zerado) { borderColor = 'rgba(14,165,233,.35)'; bg = 'rgba(14,165,233,.04)'; icone = 'pending'; iconeColor = '#0ea5e9'; statusLabel = 'PARCIAL'; }
 
-        const skuId = it.sku.replace(/[^a-z0-9]/gi,'_');
+        const skuId = it.sku.replace(/[^a-z0-9]/gi, '_');
 
         // Bloco de quantidade — cega: só mostra lido; aberta: mostra esp vs lido
         const qtyBlock = isCega
             ? `<div style="text-align:center;min-width:2.8rem;">
-                   <div style="font-size:1.6rem;font-weight:900;color:${zerado?'rgba(255,255,255,.15)':iconeColor};line-height:1;">${lido}</div>
+                   <div style="font-size:1.6rem;font-weight:900;color:${zerado ? 'rgba(255,255,255,.15)' : iconeColor};line-height:1;">${lido}</div>
                    <div style="font-size:.58rem;color:var(--text-secondary);">LIDO</div>
                </div>`
             : `<div style="text-align:center;min-width:4rem;">
                    <div style="font-size:.58rem;color:var(--text-secondary);">ESP / LID</div>
-                   <div style="font-size:1.3rem;font-weight:900;color:${zerado?'rgba(255,255,255,.15)':iconeColor};line-height:1.1;">
+                   <div style="font-size:1.3rem;font-weight:900;color:${zerado ? 'rgba(255,255,255,.15)' : iconeColor};line-height:1.1;">
                        ${esperado}<span style="font-size:.7rem;opacity:.6;">/</span>${lido}
                    </div>
-                   ${diff !== 0 ? `<div style="font-size:.6rem;color:${diff>0?'#f59e0b':'#ef4444'};font-weight:700;">${diff>0?'+':''}${diff}</div>` : ''}
+                   ${diff !== 0 ? `<div style="font-size:.6rem;color:${diff > 0 ? '#f59e0b' : '#ef4444'};font-weight:700;">${diff > 0 ? '+' : ''}${diff}</div>` : ''}
                </div>`;
 
         return `
@@ -279,7 +279,7 @@ function _renderItensHtml(r, isCega) {
 
 // ─── REGISTRAR BIPAGEM (SCANNER) ─────────────────────────────────────────────
 // ─── TOGGLE MODO CEGO / GUIADO ────────────────────────────────────────────────
-window.alternarModoCego = function() {
+window.alternarModoCego = function () {
     const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     if (!cfg.geral) cfg.geral = {};
     cfg.geral.contagemCega = (cfg.geral.contagemCega === false);
@@ -303,9 +303,9 @@ function _registrarBipagem(code) {
 
     // Resolve o item por barcode, SKU, GTIN ou código interno do ERP
     const item = (r.itens || []).find(it =>
-        it.sku          === cln ||
+        it.sku === cln ||
         it.codigoBarras === cln ||
-        it.codigoInterno=== cln ||
+        it.codigoInterno === cln ||
         (gs1Parsed && (it.sku === gs1Parsed.gtin || it.codigoBarras === gs1Parsed.gtin))
     );
 
@@ -327,9 +327,9 @@ function _registrarBipagem(code) {
     }
 
     r._leituras[item.sku] = (r._leituras[item.sku] || 0) + 1;
-    const lido     = r._leituras[item.sku];
+    const lido = r._leituras[item.sku];
     const esperado = Number(item.quantidade);
-    const status   = lido > esperado ? 'excesso' : lido === esperado ? 'ok' : 'parcial';
+    const status = lido > esperado ? 'excesso' : lido === esperado ? 'ok' : 'parcial';
 
     if (window.Feedback) {
         if (status === 'excesso') {
@@ -342,7 +342,7 @@ function _registrarBipagem(code) {
     }
 
     // Atualiza campo manual se visível
-    const skuId = item.sku.replace(/[^a-z0-9]/gi,'_');
+    const skuId = item.sku.replace(/[^a-z0-9]/gi, '_');
     const inp = document.getElementById('manual-' + skuId);
     if (inp) inp.value = lido;
 
@@ -352,7 +352,7 @@ function _registrarBipagem(code) {
 
     setTimeout(() => {
         const card = document.getElementById('item-card-' + skuId);
-        if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         const scanInput = document.getElementById('scannerInput');
         if (scanInput) scanInput.focus();
     }, 120);
@@ -395,18 +395,18 @@ function _atualizarUltimoLido(item, lido, status, esperado) {
             window.WmsErpCatalog.findByCode(lido).then(p => {
                 const el = document.getElementById('conf-notfound-erp');
                 if (el && p) el.textContent = `No ERP: ${p.sku} — ${p.descricao} (não pertence a esta NF)`;
-            }).catch(() => {});
+            }).catch(() => { });
         }
         return;
     }
 
-    const colors = { ok:'#10b981', excesso:'#f59e0b', parcial:'#0ea5e9' };
-    const icons  = { ok:'check_circle', excesso:'warning', parcial:'pending' };
-    const msgs   = { ok:'✅ Completo!', excesso:`⚠️ Excesso! (esp: ${esperado})`, parcial:`${lido}/${esperado}` };
+    const colors = { ok: '#10b981', excesso: '#f59e0b', parcial: '#0ea5e9' };
+    const icons = { ok: 'check_circle', excesso: 'warning', parcial: 'pending' };
+    const msgs = { ok: '✅ Completo!', excesso: `⚠️ Excesso! (esp: ${esperado})`, parcial: `${lido}/${esperado}` };
     const c = colors[status]; const ico = icons[status];
 
-    panel.style.background   = `rgba(${status==='ok'?'16,185,129':status==='excesso'?'245,158,11':'14,165,233'},.08)`;
-    panel.style.borderColor  = `rgba(${status==='ok'?'16,185,129':status==='excesso'?'245,158,11':'14,165,233'},.4)`;
+    panel.style.background = `rgba(${status === 'ok' ? '16,185,129' : status === 'excesso' ? '245,158,11' : '14,165,233'},.08)`;
+    panel.style.borderColor = `rgba(${status === 'ok' ? '16,185,129' : status === 'excesso' ? '245,158,11' : '14,165,233'},.4)`;
     panel.innerHTML = `
         <span class="material-icons-round" style="font-size:2.2rem;color:${c};flex-shrink:0;">${ico}</span>
         <div style="flex:1;min-width:0;">
@@ -420,7 +420,7 @@ function _atualizarUltimoLido(item, lido, status, esperado) {
 }
 
 // ─── REGISTRAR QTD MANUAL ─────────────────────────────────────────────────────
-window.registrarManualConf = function(sku, valor) {
+window.registrarManualConf = function (sku, valor) {
     const qty = parseInt(valor);
     if (isNaN(qty) || qty < 0) return;
     const r = window._recAtivo;
@@ -433,17 +433,17 @@ window.registrarManualConf = function(sku, valor) {
 
 // ─── ATUALIZA UI SEM RE-RENDERIZAR TUDO ──────────────────────────────────────
 function _atualizarUiConferencia(r) {
-    const cfg    = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const isCega = cfg.geral?.contagemCega !== false;
 
     // Atualiza barra de progresso
-    const totalItens      = (r.itens || []).length;
+    const totalItens = (r.itens || []).length;
     const itensConferidos = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) >= it.quantidade).length;
     const pct = totalItens > 0 ? Math.round((itensConferidos / totalItens) * 100) : 0;
 
-    const bar   = document.getElementById('conf-progress-bar');
+    const bar = document.getElementById('conf-progress-bar');
     const label = document.getElementById('conf-pct-label');
-    if (bar)   bar.style.width = pct + '%';
+    if (bar) bar.style.width = pct + '%';
     if (label) label.textContent = `${itensConferidos}/${totalItens} SKUs · ${pct}%`;
 
     // Re-renderiza lista de itens
@@ -452,24 +452,24 @@ function _atualizarUiConferencia(r) {
 }
 
 // ─── VOLTAR PARA LISTA ────────────────────────────────────────────────────────
-window.fecharConferenciaItens = function() {
+window.fecharConferenciaItens = function () {
     window._confSessao = { nfId: null, inicio: null, ativo: false };
     initConferenciaItensScreen(document.getElementById('screen-recebimento'));
 };
 
 // ─── FINALIZAR CONFERÊNCIA ────────────────────────────────────────────────────
-window.finalizarConferencia = async function() {
+window.finalizarConferencia = async function () {
     const r = window._recAtivo;
     if (!r) return;
 
-    const itensPayload  = [];
-    let hasDivergencia  = false;
+    const itensPayload = [];
+    let hasDivergencia = false;
     let itensSemBipagem = 0;
 
     (r.itens || []).forEach(it => {
-        const lido     = r._leituras?.[it.sku] || 0;
+        const lido = r._leituras?.[it.sku] || 0;
         const esperado = Number(it.quantidade);
-        const div      = lido - esperado;
+        const div = lido - esperado;
         if (div !== 0) hasDivergencia = true;
         if (lido === 0) itensSemBipagem++;
         itensPayload.push({ sku: it.sku, descricao: it.descricao, lido, esperado, divergencia: div });
@@ -489,18 +489,18 @@ window.finalizarConferencia = async function() {
     try {
         clearTimeout(_saveTimer);
         const sessao = window.ParreiraAuth?.getSessao?.() || {};
-        const fim    = new Date().toISOString();
+        const fim = new Date().toISOString();
 
         const maxdataPayload = {
-            recebimentoId:   r.id,
-            nfNumero:        r.nfNumero,
-            chaveNfe:        r.chaveNfe || '',
-            fornecedor:      r.fornecedor,
-            pedidoCompra:    r.pedidoCompra || '',
-            operador:        sessao.nome || sessao.login || 'Operador',
-            inicio:          window._confSessao.inicio, fim,
+            recebimentoId: r.id,
+            nfNumero: r.nfNumero,
+            chaveNfe: r.chaveNfe || '',
+            fornecedor: r.fornecedor,
+            pedidoCompra: r.pedidoCompra || '',
+            operador: sessao.nome || sessao.login || 'Operador',
+            inicio: window._confSessao.inicio, fim,
             hasDivergencia,
-            itens:           itensPayload,
+            itens: itensPayload,
             _maxdataEntryId: r._maxdataEntryId || ''
         };
 
@@ -509,31 +509,31 @@ window.finalizarConferencia = async function() {
 
         // 3. Finaliza no Firestore
         await WmsStore.finalizarConferencia(r.id, {
-            status:          hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO',
+            status: hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO',
             itensConferidos: itensPayload,
-            operador:        sessao.nome || sessao.login || 'Operador',
-            inicio:          window._confSessao.inicio, fim
+            operador: sessao.nome || sessao.login || 'Operador',
+            inicio: window._confSessao.inicio, fim
         });
 
         // 4. Cria registro de divergência para controle no WMS PC
         if (hasDivergencia) {
             const itensDivergentes = itensPayload.filter(it => it.divergencia !== 0);
             await WmsStore.criarDivergencia({
-                id:             `DIV-${r.id}`,
-                recebimentoId:  r.id,
-                nfNumero:       r.nfNumero,
-                chaveNfe:       r.chaveNfe || '',
-                fornecedor:     r.fornecedor,
+                id: `DIV-${r.id}`,
+                recebimentoId: r.id,
+                nfNumero: r.nfNumero,
+                chaveNfe: r.chaveNfe || '',
+                fornecedor: r.fornecedor,
                 cnpjFornecedor: r.cnpjFornecedor || '',
-                pedidoCompra:   r.pedidoCompra || '',
-                doca:           r.doca || '',
+                pedidoCompra: r.pedidoCompra || '',
+                doca: r.doca || '',
                 dataConferencia: fim,
                 operadorConferencia: sessao.nome || sessao.login || 'Operador',
                 itensDivergentes,
-                totalItens:     itensPayload.length,
+                totalItens: itensPayload.length,
                 totalDivergentes: itensDivergentes.length,
-                status:         'ABERTA',   // ABERTA → EM_ANALISE → NOTIFICADO → RESOLVIDO / BAIXADO
-                tratativas:     [],
+                status: 'ABERTA',   // ABERTA → EM_ANALISE → NOTIFICADO → RESOLVIDO / BAIXADO
+                tratativas: [],
                 protocoloMaxdata: ''        // preenchido após integração real
             }).catch(e => console.warn('[Divergência] Falha ao criar registro:', e.message));
         }
@@ -541,7 +541,7 @@ window.finalizarConferencia = async function() {
         // 5. Gera putaway
         await _gerarPutaway(r);
 
-        window._recAtivo   = null;
+        window._recAtivo = null;
         window._confSessao = { nfId: null, inicio: null, ativo: false };
         Feedback.beep('success'); Feedback.flash('success');
         showToast(hasDivergencia
@@ -551,7 +551,7 @@ window.finalizarConferencia = async function() {
         if (window.updateHomeStats) updateHomeStats();
         setTimeout(() => navigateTo('home'), 1500);
 
-    } catch(e) {
+    } catch (e) {
         showToast('Erro ao finalizar: ' + e.message, 'danger');
         if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">done_all</span> Finalizar Conferência'; }
     }
@@ -562,9 +562,9 @@ window.finalizarConferencia = async function() {
 async function _gerarPutaway(r) {
     const cfgRaw = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const cfgPut = cfgRaw.putaway || { modo: 'PICKING_DIRETO', tipoEnderec: 'FLUTUANTE' };
-    const setores = cfgPut.setores || { A:'PICK-A', B:'PICK-B', C:'PULMAO', D:'FUNDO' };
-    const efCfg  = cfgRaw.enderecoFixo || {};
-    const suf    = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const setores = cfgPut.setores || { A: 'PICK-A', B: 'PICK-B', C: 'PULMAO', D: 'FUNDO' };
+    const efCfg = cfgRaw.enderecoFixo || {};
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
 
     // Sugestão de endereço real pela curva ABC (lê wms_mock_data em cache)
     function _sugerirEndRealPut(curvaABC, tipo) {
@@ -575,18 +575,18 @@ async function _gerarPutaway(r) {
             const pt = cands.filter(e => e.tipo === tipo);
             if (pt.length > 0) cands = pt;
         }
-        const score = e => (parseInt(e.rua)||0)*10000+(parseInt(e.predio)||0)*1000+(parseInt(e.nivel)||0)*10+(parseInt(e.posicao||'0')||0);
-        cands.sort((a,b) => score(a)-score(b));
+        const score = e => (parseInt(e.rua) || 0) * 10000 + (parseInt(e.predio) || 0) * 1000 + (parseInt(e.nivel) || 0) * 10 + (parseInt(e.posicao || '0') || 0);
+        cands.sort((a, b) => score(a) - score(b));
         const total = cands.length;
         let slice;
-        if      (curvaABC==='A') slice = cands.slice(0, Math.ceil(total*0.15));
-        else if (curvaABC==='B') slice = cands.slice(Math.ceil(total*0.05), Math.ceil(total*0.35));
-        else if (curvaABC==='D') { cands.reverse(); slice = cands; }
-        else                      slice = cands.slice(Math.floor(total*0.35), Math.floor(total*0.70));
-        return (slice.length>0?slice:cands)[0]?.id || null;
+        if (curvaABC === 'A') slice = cands.slice(0, Math.ceil(total * 0.15));
+        else if (curvaABC === 'B') slice = cands.slice(Math.ceil(total * 0.05), Math.ceil(total * 0.35));
+        else if (curvaABC === 'D') { cands.reverse(); slice = cands; }
+        else slice = cands.slice(Math.floor(total * 0.35), Math.floor(total * 0.70));
+        return (slice.length > 0 ? slice : cands)[0]?.id || null;
     }
 
-    const prioMap = { A:'ALTA', B:'ALTA', C:'NORMAL', D:'BAIXA' };
+    const prioMap = { A: 'ALTA', B: 'ALTA', C: 'NORMAL', D: 'BAIXA' };
 
     const tasks = [];
     for (let i = 0; i < (r.itens || []).length; i++) {
@@ -596,7 +596,7 @@ async function _gerarPutaway(r) {
 
         // Busca curva ABCD do SKU (Firestore → fallback D)
         let curva = 'D';
-        try { curva = await WmsStore.buscarCurvaSku(item.sku); } catch(_) {}
+        try { curva = await WmsStore.buscarCurvaSku(item.sku); } catch (_) { }
 
         // Endereço sugerido: real por curva ou fixo
         let enderecoSugerido;
@@ -607,25 +607,25 @@ async function _gerarPutaway(r) {
         }
 
         tasks.push({
-            id:               `PUT-${Date.now()}-${i}`,
-            nf:               r.nfNumero,
-            sku:              item.sku,
-            desc:             item.descricao,
-            qtd:              lido,        // ✔ campo padrão (desktop usa qtd)
-            qty:              lido,        // compat. c/ versões antigas
-            lote:             item.lote || item.numLote || '',
-            prioridade:       prioMap[curva] || 'NORMAL',
+            id: `PUT-${Date.now()}-${i}`,
+            nf: r.nfNumero,
+            sku: item.sku,
+            desc: item.descricao,
+            qtd: lido,        // ✔ campo padrão (desktop usa qtd)
+            qty: lido,        // compat. c/ versões antigas
+            lote: item.lote || item.numLote || '',
+            prioridade: prioMap[curva] || 'NORMAL',
             curva,
             enderecoSugerido,
-            modo:             cfgPut.modo || 'PICKING_DIRETO',
-            tipoEnderec:      cfgPut.tipoEnderec || 'FLUTUANTE',
-            status:           'PENDENTE',
-            tipoDestino:      null,
-            enderecoEfetivo:  null,
-            operador:         null,
-            iniciadoEm:       null,
-            concluidoEm:      null,
-            created:          new Date().toISOString()
+            modo: cfgPut.modo || 'PICKING_DIRETO',
+            tipoEnderec: cfgPut.tipoEnderec || 'FLUTUANTE',
+            status: 'PENDENTE',
+            tipoDestino: null,
+            enderecoEfetivo: null,
+            operador: null,
+            iniciadoEm: null,
+            concluidoEm: null,
+            created: new Date().toISOString()
         });
     }
     if (tasks.length > 0) await WmsStore.criarPutaway(tasks);

@@ -75,7 +75,7 @@ const DemandaMapeador = (() => {
         ['ref', /^(ref|c[oó]d|part\s*n|p\/n|pn$)|refer[eê]ncia|c[oó]digo|n[úu]mero\s*(da\s*)?pe[çc]a/i],
         ['desc', /desc|produto|^pe[çc]as?$|denomina|material|^itens?\s*desc/i],
         ['marca', /marca|fabric|brand/i],
-        ['obs', /^obs|observ|coment/i],
+        ['obs', /^obs|observ|coment|substitu/i],
         ['item', /^(item|it|seq|n[º°o]\.?|#)$/i],
     ];
 
@@ -284,15 +284,30 @@ const DemandaMapeador = (() => {
             if (!(unit > 0) && total > 0 && qtde > 0) unit = Math.round((total / qtde) * 100) / 100;
 
             const obsPartes = [];
-            if (_str(v.obs)) obsPartes.push(_str(v.obs));
+            if (_str(v.obs)) {
+                obsPartes.push(_str(v.obs));
+                // Extrai referência substituta de texto John Deere (ex: "substituto para RE284091")
+                const mSub = _str(v.obs).match(/substitu(?:to|i)\s+(?:para\s+)?([A-Z0-9_\-\.\/]+)/i);
+                if (mSub && mSub[1]) {
+                    const refSub = mSub[1].replace(/[^A-Z0-9_\-\.\/]/gi, '').toUpperCase().trim();
+                    if (refSub && !alternativas.includes(refSub)) {
+                        alternativas.push(refSub);
+                    }
+                }
+            }
             if (_str(v.codInterno)) obsPartes.push('Cód. interno: ' + _str(v.codInterno));
             if (alternativas.length) obsPartes.push('Ref. alternativas: ' + alternativas.join(', '));
+
+            let marcaFinal = _str(v.marca);
+            if (!marcaFinal && ((_st && _st.fonte === 'johndeere') || /john\s*deere/i.test(_str(v.obs)))) {
+                marcaFinal = 'JOHN DEERE';
+            }
 
             const item = {
                 refOriginal: ref,
                 descOriginal: desc || ref,
                 qtdeSolicitada: Math.round(qtde * 1000) / 1000,
-                marca: _str(v.marca),
+                marca: marcaFinal,
                 obs: obsPartes.join(' | '),
                 incerteza: !ref,
                 _rowNum: r - (cfg.inicio || 0) + 1,
@@ -301,6 +316,7 @@ const DemandaMapeador = (() => {
                 _qtdeInvalida: qtdeInvalida,
                 _semQtdeNaOrigem: semQtdeNaOrigem,
             };
+            if (alternativas.length) item.alternativas = alternativas;
             if (unit > 0) item.precoConcorrente = unit;
             itens.push(item);
         }

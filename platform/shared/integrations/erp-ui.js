@@ -145,7 +145,7 @@ const ErpUI = {
         const providers = typeof ErpRegistry !== 'undefined'
             ? ErpRegistry.getProviders().map(p =>
                 `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
-              ).join('')
+            ).join('')
             : '<option value="acontec">Acontec</option>';
 
         container.innerHTML = `
@@ -405,7 +405,7 @@ const ErpUI = {
             const urlVal = config.apiUrl || config.baseUrl || '';
             if ($('erpApiUrl') && urlVal) $('erpApiUrl').value = urlVal;
 
-            if ($('erpEmpId')    && config.empId)    $('erpEmpId').value    = config.empId;
+            if ($('erpEmpId') && config.empId) $('erpEmpId').value = config.empId;
             if ($('erpTerminal') && config.terminal) $('erpTerminal').value = config.terminal;
             if ($('erpAutoSync') && config.autoSync) $('erpAutoSync').checked = config.autoSync;
             if ($('erpSyncInterval') && config.syncInterval) $('erpSyncInterval').value = config.syncInterval;
@@ -439,9 +439,9 @@ const ErpUI = {
 
         try {
             if (!this._tenantId) this._tenantId = this._resolveTenant();
-            const provider  = ($('erpProvider')?.value || '').toLowerCase();
-            let urlVal      = $('erpApiUrl')?.value?.trim() || '';
-            const terminal  = $('erpTerminal')?.value?.trim() || '';
+            const provider = ($('erpProvider')?.value || '').toLowerCase();
+            let urlVal = $('erpApiUrl')?.value?.trim() || '';
+            const terminal = $('erpTerminal')?.value?.trim() || '';
 
             // Auto-correção de erro comum de digitação (.con.br -> .com.br)
             if (urlVal.includes('.con.br')) {
@@ -468,13 +468,13 @@ const ErpUI = {
 
             const config = {
                 provider,
-                apiUrl:       urlVal,       // compatibilidade com adapters antigos
-                baseUrl:      urlVal,       // compatibilidade com MaxDataAdapter
-                empId:        parseInt($('erpEmpId')?.value || '1'),
+                apiUrl: urlVal,       // compatibilidade com adapters antigos
+                baseUrl: urlVal,       // compatibilidade com MaxDataAdapter
+                empId: parseInt($('erpEmpId')?.value || '1'),
                 terminal,
-                apiToken:     $('erpApiToken')?.value?.trim() || '', // tratado no Registry
-                enabled:      true,
-                autoSync:     $('erpAutoSync')?.checked || false,
+                apiToken: $('erpApiToken')?.value?.trim() || '', // tratado no Registry
+                enabled: true,
+                autoSync: $('erpAutoSync')?.checked || false,
                 syncInterval: parseInt($('erpSyncInterval')?.value || '30')
             };
 
@@ -548,13 +548,13 @@ const ErpUI = {
 
     async _runSync(type) {
         const buttons = {
-            clients:  document.getElementById('btnSyncErpClients'),
-            nfs:      document.getElementById('btnSyncErpNFs'),
+            clients: document.getElementById('btnSyncErpClients'),
+            nfs: document.getElementById('btnSyncErpNFs'),
             products: document.getElementById('btnSyncErpProducts'),
-            orders:   document.getElementById('btnSyncErpOrders')
+            orders: document.getElementById('btnSyncErpOrders')
         };
-        const labels  = { clients: 'Clientes', nfs: 'NFs para Cotação', products: 'Produtos', orders: 'Pedidos' };
-        const icons   = { clients: '👥', nfs: '📊', products: '📦', orders: '🧧' };
+        const labels = { clients: 'Clientes', nfs: 'NFs para Cotação', products: 'Produtos', orders: 'Pedidos' };
+        const icons = { clients: '👥', nfs: '📊', products: '📦', orders: '🧧' };
         const btn = buttons[type];
 
         if (btn) { btn.disabled = true; btn.textContent = `⏳ Sincronizando ${labels[type]}...`; }
@@ -576,7 +576,7 @@ const ErpUI = {
                     this._addLog('info', `👥 ${r.total} cliente(s) do ERP no Cadastro de Clientes do WMS (${r.novos} novos${r.manuais ? `, ${r.manuais} manuais mantidos` : ''}).`);
                 }
             }
-            if (type === 'nfs')      result = await erp.syncNFs({ status: 'pendente' });
+            if (type === 'nfs') result = await erp.syncNFs({ status: 'pendente' });
             if (type === 'products') {
                 result = wmsCatalogo
                     ? await window.WmsErpCatalog.syncProducts({
@@ -589,7 +589,7 @@ const ErpUI = {
                     })
                     : await erp.syncProducts();
             }
-            if (type === 'orders')   result = await erp.syncOrders();
+            if (type === 'orders') result = await erp.syncOrders();
 
             const summary = result
                 ? `${result.added || 0} novos, ${result.updated || 0} atualizados, ${result.errors || 0} erros`
@@ -649,8 +649,8 @@ const ErpUI = {
         const badge = document.getElementById('erp-status-badge');
         if (badge) {
             badge.style.background = '#d1fae5';
-            badge.style.color      = '#065f46';
-            badge.textContent      = '✅ Conectado';
+            badge.style.color = '#065f46';
+            badge.textContent = '✅ Conectado';
         }
         // Atualiza status do token (para Maxdata: auth automática ativa)
         const tokenStatus = document.getElementById('erp-token-status');

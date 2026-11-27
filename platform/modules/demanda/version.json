@@ -1,9 +1,9 @@
 {
-  "version": "3.5.8",
-  "build": "20261127-v3.5.8",
+  "version": "3.5.9",
+  "build": "20261127-v3.5.9",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-27",
-  "change": "v3.5.8: Correção definitiva da importação de arquivos Excel (.xlsx, .xls) e CSV (.csv, .txt) — Parser nativo e resiliente para arquivos CSV/TXT com detecção automática de delimitadores brasileiros (ponto e vírgula, vírgula, tabulação, pipe) e suporte a acentuação UTF-8/Windows-1252 sem dependência externa, carregamento dinâmico sob demanda do SheetJS com fallback para CDNs alternativas, reset automático do seletor de arquivos ao abrir e selecionar permitindo reimportar o mesmo arquivo, e feedback visual com tratamento robusto de erros.",
-  "releaseDate": "2026-11-27T08:25:00-03:00"
+  "change": "v3.5.9: Aba e fluxo especializado de importação de produtos e orçamentos John Deere (carrinho de compras e catálogo). Suporta prints/fotos com layout em cartões verticais (nome da peça acima, número de peça e quantidade abaixo, e menção opcional de substituto), agrupamento inteligente em 5 colunas padronizadas, OCR com coluna da direita (78%/22%) refinada e extração de códigos substitutos para referências alternativas de busca no ERP.",
+  "releaseDate": "2026-11-27T17:30:00-03:00"
 }

@@ -1,7 +1,7 @@
 window.getTenantSuffix = function () {
     try {
         const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
-        const tid  = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
+        const tid = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
         if (tid) return '_' + tid.replace('_hml', '');
         return '_centralpecas';
     } catch (e) { return '_centralpecas'; }
@@ -12,7 +12,7 @@ window.getWmsConfig = function () {
         const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
         const raw = (suf && localStorage.getItem('wms_config' + suf)) || localStorage.getItem('wms_config');
         return raw ? JSON.parse(raw) : {};
-    } catch(e) {
+    } catch (e) {
         return {};
     }
 };
@@ -23,7 +23,7 @@ window.saveWmsConfig = function (cfg) {
         const val = JSON.stringify(cfg || {});
         if (suf) localStorage.setItem('wms_config' + suf, val);
         localStorage.setItem('wms_config', val);
-    } catch(e) {
+    } catch (e) {
         console.warn('[WMS Coletor] saveWmsConfig erro:', e);
     }
 };
@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('[COLETOR] Firebase Auth wait failed:', e.message);
     }
 
-    const sessao   = ParreiraAuth.getSessao();
-    const nome     = sessao.nome || sessao.login || 'OP';
+    const sessao = ParreiraAuth.getSessao();
+    const nome = sessao.nome || sessao.login || 'OP';
     const initials = nome.substring(0, 2).toUpperCase();
 
     const badge = document.getElementById('userBadge');
@@ -71,10 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Mantém compatibilidade com código legado que lê logged_user
     localStorage.setItem('logged_user', JSON.stringify({
-        name:     sessao.nome,
-        login:    sessao.login,
-        role:     sessao.role,
-        pin:      sessao.pin || '',
+        name: sessao.nome,
+        login: sessao.login,
+        role: sessao.role,
+        pin: sessao.pin || '',
         tenantId: sessao.tenantId
     }));
 
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('wms_integration_config' + _ts, JSON.stringify(intConfig));
             console.log('📦 [COLETOR] Configuração ERP inicializada com sucesso:', intConfig.connectorId);
         }
-    } catch(e) {
+    } catch (e) {
         console.warn('⚠️ [COLETOR] Falha ao sincronizar config ERP:', e.message);
     }
 
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('wms_integration_config' + _ts, JSON.stringify(intConfig));
             console.log('📦 [COLETOR] Configuração ERP inicializada com sucesso:', intConfig.connectorId);
         }
-    } catch(e) {
+    } catch (e) {
         console.warn('⚠️ [COLETOR] Falha ao sincronizar config ERP:', e.message);
     }
 
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const servVer = v.version || COLETOR_VERSION;
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${servVer} ⚙️`;
-                        const banner = document.getElementById('coletor-update-banner');
+            const banner = document.getElementById('coletor-update-banner');
             if (banner) {
                 // Banner só aparece se houver versão mais nova no servidor do que o código em execução
                 if (servVer && servVer !== COLETOR_VERSION) {
@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .catch(() => {
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION} ⚙️`;
-                        const banner = document.getElementById('coletor-update-banner');
+            const banner = document.getElementById('coletor-update-banner');
             if (banner) banner.style.display = 'none';
         });
 });
@@ -232,10 +232,10 @@ function navigateTo(screenId) {
         currentScreen = screenId;
 
         // Init custom screens
-        if (screenId === 'conferir'    && window.initConferirScreen)          window.initConferirScreen(target);
-        if (screenId === 'config'      && window.initConfigScreen)            window.initConfigScreen(target);
-        if (screenId === 'recebimento' && window.initConferenciaItensScreen)  window.initConferenciaItensScreen(target);
-        if (screenId === 'armazenar'   && window.initArmazenagemScreen)       window.initArmazenagemScreen(target);
+        if (screenId === 'conferir' && window.initConferirScreen) window.initConferirScreen(target);
+        if (screenId === 'config' && window.initConfigScreen) window.initConfigScreen(target);
+        if (screenId === 'recebimento' && window.initConferenciaItensScreen) window.initConferenciaItensScreen(target);
+        if (screenId === 'armazenar' && window.initArmazenagemScreen) window.initArmazenagemScreen(target);
         if (screenId === 'inventario') {
             if (window.ColetorInventario && window.ColetorInventario.render) {
                 window.ColetorInventario.render(target);
@@ -388,7 +388,7 @@ function updateHomeStats() {
                 el('badgeConferir').textContent = count;
                 el('badgeConferir').style.display = count > 0 ? 'inline-block' : 'none';
             }
-        }).catch(() => {});
+        }).catch(() => { });
 
         WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' }).then(confRecs => {
             const count = confRecs.length;
@@ -397,7 +397,7 @@ function updateHomeStats() {
                 el('badgeReceber').style.display = count > 0 ? 'flex' : 'none';
             }
             if (el('statPendentes')) el('statPendentes').textContent = count;
-        }).catch(() => {});
+        }).catch(() => { });
 
         if (window.WmsStore.listarPutaway) {
             WmsStore.listarPutaway({ status: 'PENDENTE' }).then(tasks => {
@@ -406,7 +406,7 @@ function updateHomeStats() {
                     el('badgeArmazenar').textContent = count;
                     el('badgeArmazenar').style.display = count > 0 ? 'inline-block' : 'none';
                 }
-            }).catch(() => {});
+            }).catch(() => { });
         }
     } else {
         const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
@@ -497,7 +497,7 @@ window.Feedback = {
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + 0.35);
             }
-        } catch (_) {}
+        } catch (_) { }
     },
 
     vibrateSuccess: function () {
@@ -660,7 +660,7 @@ window.WmsBarcodeParser = {
     });
 
     // Suporte universal a Colar (Paste) em celulares Android e Desktop
-    window.addEventListener('paste', function(e) {
+    window.addEventListener('paste', function (e) {
         const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
         if (!pasted) return;
         const match44 = pasted.match(/\d{44}/);
@@ -722,17 +722,17 @@ window.WmsBarcodeParser = {
 // LEITOR DE CÂMERA ROBUSTO (MOBILE / WEBCAM)
 // ===================================
 window._cameraScannerInstance = null;
-window._cameraTargetInputId   = null;
-window._cameraDevicesList     = [];
-window._cameraCurrentIndex    = 0;
+window._cameraTargetInputId = null;
+window._cameraDevicesList = [];
+window._cameraCurrentIndex = 0;
 
-window.startCameraScanner = function(targetInputId = null) {
+window.startCameraScanner = function (targetInputId = null) {
     window._cameraTargetInputId = targetInputId;
 
     // Remove qualquer modal pré-existente para não acumular nem travar
     let existingModal = document.getElementById('cameraScannerModal');
     if (existingModal) {
-        try { existingModal.remove(); } catch(_) {}
+        try { existingModal.remove(); } catch (_) { }
     }
 
     let modal = document.getElementById('cameraScannerModal');
@@ -799,7 +799,7 @@ function _updateCameraStatus(text) {
 
 function _initCameraInstance() {
     if (window._cameraScannerInstance) {
-        try { window._cameraScannerInstance.stop().catch(() => {}); } catch(_) {}
+        try { window._cameraScannerInstance.stop().catch(() => { }); } catch (_) { }
     }
 
     // Ativa BarcodeDetector acelerado por hardware no Android (Chrome 84+)
@@ -814,7 +814,7 @@ function _initCameraInstance() {
     // Configuração com caixa retangular panorâmica ideal para Código 128 longo (44 dígitos da DANFE) e QR Code
     const config = {
         fps: 22,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
+        qrbox: function (viewfinderWidth, viewfinderHeight) {
             const w = Math.floor(Math.min(viewfinderWidth * 0.96, 400));
             const h = Math.floor(Math.min(viewfinderHeight * 0.58, 200));
             return { width: Math.max(w, 240), height: Math.max(h, 110) };
@@ -834,24 +834,24 @@ function _initCameraInstance() {
         hdConstraints,
         config,
         (decodedText) => { onCameraCodeDetected(decodedText); },
-        () => {}
+        () => { }
     ).catch(() => {
         // Fallback para câmera environment padrão sem restrição de resolução (aparelhos básicos)
         return html5QrCode.start(
             { facingMode: "environment" },
             config,
             (decodedText) => { onCameraCodeDetected(decodedText); },
-            () => {}
+            () => { }
         );
     }).then(() => {
         _onCameraStartedSuccess();
         Html5Qrcode.getCameras().then(devs => {
             if (devs && devs.length) window._cameraDevicesList = devs;
-        }).catch(() => {});
+        }).catch(() => { });
     }).catch(err => {
         console.warn('[Camera] Falha facingMode environment:', err);
         const errName = err?.name || '';
-        const errMsg  = err?.message || String(err);
+        const errMsg = err?.message || String(err);
 
         // Se falhou mas não foi bloqueio de permissão, tenta câmera frontal/user
         if (errName !== 'NotAllowedError' && errName !== 'PermissionDeniedError') {
@@ -860,7 +860,7 @@ function _initCameraInstance() {
                 { facingMode: "user" },
                 config,
                 (decodedText) => { onCameraCodeDetected(decodedText); },
-                () => {}
+                () => { }
             ).then(() => {
                 _onCameraStartedSuccess();
             }).catch(e2 => {
@@ -890,7 +890,7 @@ function _exibirErroPermissao(err) {
     t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f87171;border:1px solid #ef4444;padding:.75rem 1.2rem;border-radius:12px;font-size:.85rem;z-index:999999;max-width:90vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5);line-height:1.4;';
     t.textContent = msg;
     document.body.appendChild(t);
-    setTimeout(() => { try { t.remove(); } catch(_) {} }, 7000);
+    setTimeout(() => { try { t.remove(); } catch (_) { } }, 7000);
 }
 
 function _onCameraStartedSuccess() {
@@ -905,12 +905,12 @@ function _onCameraStartedSuccess() {
             videoElem.style.height = '100%';
             videoElem.style.objectFit = 'cover';
             videoElem.style.display = 'block';
-            videoElem.play().catch(() => {});
+            videoElem.play().catch(() => { });
         }
     }, 150);
 }
 
-window.cycleCameraDevice = function() {
+window.cycleCameraDevice = function () {
     if (!window._cameraDevicesList || window._cameraDevicesList.length <= 1) {
         alert('Este dispositivo possui apenas 1 câmera disponível.');
         return;
@@ -921,7 +921,7 @@ window.cycleCameraDevice = function() {
 
     const config = {
         fps: 20,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
+        qrbox: function (viewfinderWidth, viewfinderHeight) {
             const w = Math.floor(Math.min(viewfinderWidth * 0.94, 380));
             const h = Math.floor(Math.min(viewfinderHeight * 0.48, 180));
             return { width: Math.max(w, 200), height: Math.max(h, 80) };
@@ -938,14 +938,14 @@ window.cycleCameraDevice = function() {
     }
 };
 
-window.promptManualChaveInput = function() {
+window.promptManualChaveInput = function () {
     const raw = prompt('Digite ou cole os 44 dígitos da Chave da NF-e ou o número da NF:');
     if (raw && raw.trim()) {
         onCameraCodeDetected(raw.trim());
     }
 };
 
-window.stopCameraScanner = function() {
+window.stopCameraScanner = function () {
     if (window._cameraInitTimeout) clearTimeout(window._cameraInitTimeout);
 
     // 1. Fecha o modal IMEDIATAMENTE (sincrono) -- independente do estado do scanner
@@ -953,7 +953,7 @@ window.stopCameraScanner = function() {
     if (modal) {
         modal.classList.add('hidden');
         modal.style.cssText += ';display:none!important;pointer-events:none!important;';
-        try { modal.remove(); } catch(_) {}
+        try { modal.remove(); } catch (_) { }
     }
 
     // 2. Para o scanner em background (assincrono -- nao bloqueia o fechamento)
@@ -963,16 +963,16 @@ window.stopCameraScanner = function() {
         setTimeout(() => {
             try {
                 if (inst.isScanning) {
-                    inst.stop().catch(() => {}).finally(() => { try { inst.clear(); } catch(_) {} });
+                    inst.stop().catch(() => { }).finally(() => { try { inst.clear(); } catch (_) { } });
                 } else {
-                    try { inst.clear(); } catch(_) {}
+                    try { inst.clear(); } catch (_) { }
                 }
-            } catch(_) {}
+            } catch (_) { }
         }, 0);
     }
 };
 
-window.onCameraCodeDetected = function(rawCode) {
+window.onCameraCodeDetected = function (rawCode) {
     if (window.Feedback) {
         window.Feedback.beep('success');
         window.Feedback.flash('success');
@@ -1024,7 +1024,7 @@ window.onCameraCodeDetected = function(rawCode) {
     }
 };
 
-window.toggleCameraTorch = function() {
+window.toggleCameraTorch = function () {
     if (!window._cameraScannerInstance) return;
     try {
         const track = window._cameraScannerInstance.getRunningTrack();
@@ -1034,14 +1034,14 @@ window.toggleCameraTorch = function() {
         } else {
             alert('Lanterna não disponível nesta lente. Tente trocar de lente.');
         }
-    } catch(e) { console.warn('Torch error:', e); }
+    } catch (e) { console.warn('Torch error:', e); }
 };
 
 // force deploy
 
 
 // Alias para garantir que bipagem de câmera ou scanner funcione na conferência
-window.handleScanRecebimento = function(code) {
+window.handleScanRecebimento = function (code) {
     const raw = (code || '').trim();
     const match44 = raw.match(/\d{44}/);
     if (match44 && !window._confSessao?.ativo && window.handleScanConferir) {
@@ -1054,7 +1054,7 @@ window.handleScanRecebimento = function(code) {
 };
 
 
-window.initInventarioScreen = function(target) {
+window.initInventarioScreen = function (target) {
     const el = target || document.getElementById('screen-inventario');
     if (window.ColetorInventario && window.ColetorInventario.render) {
         window.ColetorInventario.render(el);

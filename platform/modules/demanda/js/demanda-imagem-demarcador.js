@@ -61,6 +61,10 @@ const DemandaImagemDemarcador = (() => {
                         <button class="did-btn did-btn-sec did-btn-sm" id="didBtnAutoCols" title="Posiciona automaticamente divisões sugeridas">
                             <span class="material-icons-round">auto_awesome</span> Sugerir 5 Colunas
                         </button>
+                        <button class="did-btn did-btn-sec did-btn-sm" id="didBtnModoJD" title="Ativar modo especializado para orçamentos e carrinhos John Deere (Nome + Código + Substituto + Quantidade)" style="border-color:#16a34a;color:#4ade80">
+                            <span class="material-icons-round" style="color:#facc15;font-size:1.05rem">agriculture</span>
+                            <span id="didBtnModoJDLbl">Modo John Deere</span>
+                        </button>
                         <button class="did-btn did-btn-sec did-btn-sm" id="didBtnLimpar" title="Remove todos os cortes verticais">
                             <span class="material-icons-round">clear_all</span> Limpar Cortes
                         </button>
@@ -230,10 +234,13 @@ const DemandaImagemDemarcador = (() => {
             inclinacao: Number(opts.inclinacao) || 0.0,
             contraste: Number(opts.contraste) || 100,
             pb: Boolean(opts.pb),
+            modoJD: Boolean(opts.modoJD),
             mostrarGradeGuia: false,
             yTopPct: opts.yTopPct != null ? opts.yTopPct : 0.18,      // 18% do topo corta cabeçalho comum
             yBottomPct: opts.yBottomPct != null ? opts.yBottomPct : 0.88, // 88% corta rodapé
-            cortesPct: opts.cortesPct && opts.cortesPct.length ? opts.cortesPct.slice() : [0.15, 0.45, 0.62, 0.76, 0.88], // 5 cortes = 6 colunas típicas
+            cortesPct: opts.cortesPct && opts.cortesPct.length
+                ? opts.cortesPct.slice()
+                : (opts.modoJD ? [0.78] : [0.15, 0.45, 0.62, 0.76, 0.88]), // Modo JD: 1 corte (Peça vs Qtde); Padrão: 5 cortes
             onConfirm: onConfirm,
             onVoltar: opts.onVoltar || null,
             toast: toast
@@ -367,6 +374,7 @@ const DemandaImagemDemarcador = (() => {
 
     function _atualizarControlesAjuste() {
         if (!_st) return;
+        _atualizarVisualModoJD();
         const incValEl = $('didInclinacaoVal');
         if (incValEl) incValEl.textContent = (_st.inclinacao > 0 ? '+' : '') + _st.inclinacao.toFixed(1) + '°';
         const sliderInc = $('didSliderInclinacao');
@@ -389,6 +397,24 @@ const DemandaImagemDemarcador = (() => {
         if (btnGrid) {
             btnGrid.style.color = _st.mostrarGradeGuia ? '#38bdf8' : '';
             btnGrid.style.background = _st.mostrarGradeGuia ? 'rgba(56,189,248,0.18)' : '';
+        }
+    }
+
+    function _atualizarVisualModoJD() {
+        const btn = $('didBtnModoJD');
+        if (!btn || !_st) return;
+        if (_st.modoJD) {
+            btn.style.background = '#15803d';
+            btn.style.borderColor = '#22c55e';
+            btn.style.color = '#fff';
+            const lbl = $('didBtnModoJDLbl');
+            if (lbl) lbl.textContent = 'Modo John Deere (Ativo)';
+        } else {
+            btn.style.background = '';
+            btn.style.borderColor = '#16a34a';
+            btn.style.color = '#4ade80';
+            const lbl = $('didBtnModoJDLbl');
+            if (lbl) lbl.textContent = 'Modo John Deere';
         }
     }
 
@@ -610,6 +636,22 @@ const DemandaImagemDemarcador = (() => {
             _st.cortesPct = [0.15, 0.45, 0.62, 0.76, 0.88];
             _renderizar();
             _toast('5 colunas sugeridas aplicadas na foto. Ajuste os marcadores conforme necessário.', 'info');
+        };
+
+        // Modo John Deere (Carrinho / Orçamento Portal John Deere)
+        $('didBtnModoJD').onclick = () => {
+            if (!_st) return;
+            _st.modoJD = !_st.modoJD;
+            _atualizarVisualModoJD();
+            if (_st.modoJD) {
+                _st.cortesPct = [0.78]; // Divisão entre Peça (esquerda) e Quantidade (direita)
+                _renderizar();
+                _toast('Modo John Deere ativado: agrupa Nome da Peça, Código, Substituto e Quantidade em linhas completas.', 'info');
+            } else {
+                _st.cortesPct = [0.15, 0.45, 0.62, 0.76, 0.88];
+                _renderizar();
+                _toast('Modo John Deere desativado. Modo tabular convencional restaurado.', 'info');
+            }
         };
 
         // Limpar Cortes
@@ -938,14 +980,26 @@ const DemandaImagemDemarcador = (() => {
 
             let grade = [];
 
-            // Método Primário: Extração por Overlay de Palavras com Bounding Boxes
-            if (overlay && overlay.Lines && overlay.Lines.length > 0) {
+            // Detecta automaticamente se o documento é John Deere (Carrinho / Orçamento)
+            const ehJohnDeere = _st.modoJD ||
+                /carrinho\s+de\s+compras/i.test(text) ||
+                /n[úu]mero\s*(?:da|de)?\s*pe[çc]a/i.test(text) ||
+                /substituto\s*para/i.test(text) ||
+                /john\s*deere/i.test(text);
+
+            if (ehJohnDeere) {
+                _st.modoJD = true;
+                _atualizarVisualModoJD();
+                grade = _montarGradeJohnDeere(overlay, text, cv.width, cv.height);
+            } else if (overlay && overlay.Lines && overlay.Lines.length > 0) {
                 grade = _montarGradePorOverlay(overlay, _st.cortesPct, cv.width, cv.height);
             }
 
             // Fallback: se overlay não veio ou veio vazio, utiliza linhas de texto
             if (!grade || grade.length === 0) {
-                grade = _montarGradePorTexto(text, _st.cortesPct.length + 1);
+                grade = ehJohnDeere
+                    ? (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseJohnDeere === 'function' ? DemandaImport.parseJohnDeere(text).grade : _montarGradePorTexto(text, 5))
+                    : _montarGradePorTexto(text, _st.cortesPct.length + 1);
             }
 
             loading.style.display = 'none';
@@ -967,6 +1021,8 @@ const DemandaImagemDemarcador = (() => {
                 inclinacao: _st.inclinacao,
                 contraste: _st.contraste,
                 pb: _st.pb,
+                modoJD: _st.modoJD,
+                fonte: _st.modoJD ? 'johndeere' : 'foto',
                 yTopPct: _st.yTopPct,
                 yBottomPct: _st.yBottomPct,
                 cortesPct: _st.cortesPct.slice()
@@ -1172,6 +1228,49 @@ const DemandaImagemDemarcador = (() => {
             grade = grade.map(row => colunasComDados.map(c => row[c]));
         }
 
+        return grade;
+    }
+
+    // ── Extração Especializada John Deere (Blocos: Nome, Código, Substituto, Qtde) ──
+    function _montarGradeJohnDeere(overlay, text, imgW, imgH) {
+        let resultadoJD = null;
+        if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseJohnDeere === 'function') {
+            resultadoJD = DemandaImport.parseJohnDeere(text);
+        }
+
+        let grade = (resultadoJD && resultadoJD.grade && resultadoJD.grade.length > 1)
+            ? resultadoJD.grade
+            : null;
+
+        // Se overlay de palavras com coordenadas estiver disponível, refina as quantidades usando a coluna da direita
+        if (grade && overlay && overlay.Lines) {
+            const palavrasQtde = [];
+            const splitX = ((_st && _st.cortesPct && _st.cortesPct[0]) || 0.75) * imgW;
+            (overlay.Lines || []).forEach(line => {
+                (line.Words || []).forEach(w => {
+                    const txt = String(w.WordText || '').trim();
+                    const cx = (Number(w.Left) || 0) + (Number(w.Width) || 0) / 2;
+                    const cy = (Number(w.Top) || 0) + (Number(w.Height) || 0) / 2;
+                    if (cx >= splitX && /^\d{1,4}$/.test(txt)) {
+                        palavrasQtde.push({ text: txt, cy: cy, cx: cx });
+                    }
+                });
+            });
+
+            if (palavrasQtde.length > 0) {
+                palavrasQtde.sort((a, b) => a.cy - b.cy);
+                // Vincula quantidades aos produtos por ordem vertical
+                for (let r = 1; r < grade.length; r++) {
+                    if (palavrasQtde[r - 1]) {
+                        grade[r][3] = palavrasQtde[r - 1].text;
+                    }
+                }
+            }
+        }
+
+        if (!grade || grade.length <= 1) {
+            grade = _montarGradePorTexto(text, 5);
+        }
         return grade;
     }
 
