@@ -165,7 +165,7 @@ window.StockManager = {
 
         // Sincroniza baixa atômica no Firestore
         if (window.WmsStore && window.WmsStore.efetivarBaixaEstoque) {
-            window.WmsStore.efetivarBaixaEstoque(sku, qty, docRef).catch(() => {});
+            window.WmsStore.efetivarBaixaEstoque(sku, qty, docRef).catch(() => { });
         }
     },
 
@@ -224,7 +224,7 @@ function renderConsultaEstoque(container) {
                     Consulta de Estoque
                 </h3>
                 <div style="display:flex; align-items:center; gap:.75rem;">
-                    <button id="est-btn-carga-erp" class="btn btn-secondary" onclick="cargaInicialSaldoErp()" style="display:none; font-size:.8rem; padding:.35rem .8rem;"
+                    <button id="est-btn-carga-erp" class="btn btn-primary" onclick="cargaInicialSaldoErp()" style="display:none; font-size:.8rem; padding:.35rem .8rem;"
                         title="Cria o saldo SEM ENDEREÇO a partir do saldo do ERP, para distribuir pelos endereços">
                         <span class="material-icons-round" style="font-size:1rem;">move_to_inbox</span> Carga inicial do saldo ERP
                     </button>
@@ -263,6 +263,7 @@ function renderConsultaEstoque(container) {
                             <th>Lote</th>
                             <th>Validade</th>
                             <th>Status</th>
+                            <th style="width:90px; text-align:center;">Ação</th>
                         </tr>
                     </thead>
                     <tbody id="est-tbody"></tbody>
@@ -315,6 +316,7 @@ async function _enriquecerEstoqueComErp(stockEnderecado) {
         if (!n) return;
 
         const [saldos, semEnd] = await Promise.all([window.WmsErpCatalog.saldoMap(), window.WmsErpCatalog.listSemEndereco()]);
+        window._estoqueErpInfo = { comSaldo: [...saldos.values()].filter(s => s.saldoErp > 0).length };
         const linhasSem = semEnd.map(s => ({
             sku: s.sku, desc: s.descricao || 'Produto', endereco: window.WmsErpCatalog.SEM_ENDERECO,
             saldo: Number(s.qtd || 0), unidade: s.unidade || 'UN', status: 'A ENDEREÇAR', lote: '-', validade: ''
@@ -330,10 +332,10 @@ async function _enriquecerEstoqueComErp(stockEnderecado) {
         window._estoqueData = todas;
 
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('est-card-skus',  new Set(todas.map(p => p.sku)).size.toLocaleString('pt-BR'));
+        set('est-card-skus', new Set(todas.map(p => p.sku)).size.toLocaleString('pt-BR'));
         set('est-card-saldo', todas.reduce((s, p) => s + (Number(p.saldo) || 0), 0).toLocaleString('pt-BR'));
-        set('est-card-disp',  todas.filter(p => p.status === 'DISPONÍVEL').length.toLocaleString('pt-BR'));
-        set('est-card-aend',  linhasSem.length.toLocaleString('pt-BR'));
+        set('est-card-disp', todas.filter(p => p.status === 'DISPONÍVEL').length.toLocaleString('pt-BR'));
+        set('est-card-aend', linhasSem.length.toLocaleString('pt-BR'));
         set('est-count-label', `${todas.length.toLocaleString('pt-BR')} registros`);
         filterEstoque();
     } catch (e) {
@@ -378,9 +380,9 @@ window.filterEstoque = function () {
 
     const LIMITE = 300;   // milhares de linhas SEM ENDEREÇO travariam a tela
     const cores = {
-        'DISPONÍVEL':  ['#10b981', 'rgba(16,185,129,0.12)'],
+        'DISPONÍVEL': ['#10b981', 'rgba(16,185,129,0.12)'],
         'A ENDEREÇAR': ['#3b82f6', 'rgba(59,130,246,0.12)'],
-        'QUARENTENA':  ['#f59e0b', 'rgba(245,158,11,0.12)']
+        'QUARENTENA': ['#f59e0b', 'rgba(245,158,11,0.12)']
     };
     tbody.innerHTML = filtered.slice(0, LIMITE).map(p => {
         const [statusColor, statusBg] = cores[p.status] || ['#ef4444', 'rgba(239,68,68,0.12)'];
@@ -397,22 +399,45 @@ window.filterEstoque = function () {
                 <td style="font-size:0.8rem;">${p.validade || '-'}</td>
                 <td><span style="padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600;
                     background:${statusBg}; color:${statusColor};">${p.status}</span></td>
+                <td style="text-align:center;">
+                    <button class="btn btn-secondary" style="padding:.2rem .5rem; font-size:.72rem;"
+                        onclick="abrirTransferenciaDoEstoque('${String(p.sku).replace(/'/g, "\\'")}', '${String(p.endereco).replace(/'/g, "\\'")}', ${Number(p.saldo || 1)})"
+                        title="Endereçar / Transferir este item">
+                        <span class="material-icons-round" style="font-size:.9rem; vertical-align:middle;">swap_horiz</span>
+                    </button>
+                </td>
             </tr>`;
     }).join('');
 
     if (filtered.length > LIMITE) {
-        tbody.innerHTML += `<tr><td colspan="9" style="text-align:center; padding:1rem; color:var(--text-secondary); font-size:.8rem;">
+        tbody.innerHTML += `<tr><td colspan="10" style="text-align:center; padding:1rem; color:var(--text-secondary); font-size:.8rem;">
             Mostrando ${LIMITE} de ${filtered.length.toLocaleString('pt-BR')} registros — refine a busca por SKU ou descrição.</td></tr>`;
     }
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum produto encontrado.</td></tr>`;
+        const info = window._estoqueErpInfo;
+        const estoqueVazio = (window._estoqueData || []).length === 0;
+        tbody.innerHTML = (estoqueVazio && info && info.comSaldo > 0)
+            ? `<tr><td colspan="10" style="text-align:center; padding:2rem;">
+                   <div style="color:var(--text-secondary); margin-bottom:.85rem; font-size:.85rem;">
+                       O estoque endereçado do WMS está vazio. O ERP tem saldo em <strong style="color:var(--text-primary);">${info.comSaldo.toLocaleString('pt-BR')}</strong> produto(s).
+                   </div>
+                   <button class="btn btn-primary" onclick="cargaInicialSaldoErp()">
+                       <span class="material-icons-round" style="font-size:1rem;">move_to_inbox</span> Carga inicial do saldo ERP
+                   </button>
+                   <div style="color:var(--text-secondary); margin-top:.6rem; font-size:.75rem;">Os produtos entram como SEM ENDEREÇO; depois distribua pela Transferência de Endereço.</div>
+               </td></tr>`
+            : `<tr><td colspan="10" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum produto encontrado.</td></tr>`;
     }
+};
+
+window.abrirTransferenciaDoEstoque = function (sku, origem, qtd) {
+    window._trfPrefill = { sku: String(sku || ''), origem: String(origem || ''), qtd: Number(qtd || 1) };
+    if (typeof window.switchView === 'function') window.switchView('est-transferencia');
 };
 
 // --- CONSULTA POR ENDEREÇO ---
 function renderConsultaEndereco(container) {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
-    const addresses = mockData.addresses || [];
+    const addresses = window.StockManager ? window.StockManager.getData().addresses : [];
     const stock = getMockStock();
 
     // Get unique streets
@@ -556,7 +581,7 @@ window.renderKardexView = async function (container) {
         if (window.WmsStore && window.WmsStore.listarKardex) {
             logs = await window.WmsStore.listarKardex({ limite: 200 });
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback local
     if (!logs || logs.length === 0) {
@@ -669,7 +694,7 @@ window.renderReabastecimentoView = async function (container) {
         try {
             await window.WmsStore.verificarGatilhosReabastecimento();
             ordens = await window.WmsStore.listarOrdensReabastecimento();
-        } catch (_) {}
+        } catch (_) { }
     }
 
     container.innerHTML = `

@@ -316,14 +316,24 @@ window.finalizarInventario = function (invId) {
 // 2. TRANSFERÊNCIA DE ENDEREÇO
 // ========================
 function renderTransferencia(container) {
-    let transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
-    if (!transferencias) {
-        transferencias = [
-            { id: 'TRF-001', sku: 'SKU-0001', desc: 'Parafuso Phillips M6x30', qtd: 100, origem: '01-01-0101', destino: '01-02-0101', motivo: 'Reorganização', status: 'CONCLUÍDA', data: new Date(Date.now() - 86400000).toISOString() },
-            { id: 'TRF-002', sku: 'SKU-0008', desc: 'Lixa d\'água 220', qtd: 50, origem: '02-02-0101', destino: '02-03-0101', motivo: 'Otimização ABC', status: 'CONCLUÍDA', data: new Date(Date.now() - 86400000 * 2).toISOString() },
-        ];
-        localStorage.setItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(transferencias));
+    const trfKey = 'wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    let transferencias = JSON.parse(localStorage.getItem(trfKey) || '[]');
+    // Remove dados simulados antigos (TRF-001/002 de seed) caso ainda estejam no navegador
+    const cleaned = transferencias.filter(t => !(
+        (t.id === 'TRF-001' && t.sku === 'SKU-0001' && t.desc === 'Parafuso Phillips M6x30') ||
+        (t.id === 'TRF-002' && t.sku === 'SKU-0008' && t.desc === "Lixa d'água 220")
+    ));
+    if (cleaned.length !== transferencias.length) {
+        transferencias = cleaned;
+        localStorage.setItem(trfKey, JSON.stringify(transferencias));
     }
+
+    const prefill = window._trfPrefill || null;
+    window._trfPrefill = null;
+
+    const addrs = window.StockManager ? window.StockManager.getData().addresses : [];
+    const ocupados = addrs.filter(a => a.status === 'OCUPADO' && a.sku).slice(0, 200);
+    const destinos = addrs.filter(a => a.status !== 'BLOQUEADO' && !a.blocked).slice(0, 300);
 
     container.innerHTML = `
         <div class="card" style="margin-bottom:1.5rem;">
@@ -337,23 +347,29 @@ function renderTransferencia(container) {
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                     <div class="form-group">
                         <label class="form-label">SKU</label>
-                        <input id="trf-sku" class="form-input" placeholder="Código do produto">
+                        <input id="trf-sku" class="form-input" placeholder="Código do produto" value="${prefill ? prefill.sku : ''}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Quantidade</label>
-                        <input id="trf-qtd" type="number" class="form-input" min="1" value="1">
+                        <input id="trf-qtd" type="number" class="form-input" min="1" value="${prefill ? prefill.qtd : 1}">
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:1rem; align-items:end; margin-bottom:1rem;">
                     <div class="form-group">
                         <label class="form-label">Endereço Origem</label>
-                        <input id="trf-origem" class="form-input" placeholder="Ex: 01-01-0101 ou SEM ENDEREÇO" style="font-family:monospace;" list="trf-origem-opcoes">
-                        <datalist id="trf-origem-opcoes"><option value="SEM ENDEREÇO"></option></datalist>
+                        <input id="trf-origem" class="form-input" placeholder="Ex: 01-01-0101 ou SEM ENDEREÇO" style="font-family:monospace;" list="trf-origem-opcoes" value="${prefill ? prefill.origem : ''}">
+                        <datalist id="trf-origem-opcoes">
+                            <option value="SEM ENDEREÇO"></option>
+                            ${ocupados.map(a => `<option value="${a.id || a.address}">${a.sku} (${a.qty || 0})</option>`).join('')}
+                        </datalist>
                     </div>
                     <span class="material-icons-round" style="font-size:1.5rem; color:var(--primary-color); padding-bottom:0.6rem;">arrow_forward</span>
                     <div class="form-group">
                         <label class="form-label">Endereço Destino</label>
-                        <input id="trf-destino" class="form-input" placeholder="Ex: 02-01-0201" style="font-family:monospace;">
+                        <input id="trf-destino" class="form-input" placeholder="Ex: 02-01-0201" style="font-family:monospace;" list="trf-destino-opcoes">
+                        <datalist id="trf-destino-opcoes">
+                            ${destinos.map(a => `<option value="${a.id || a.address}">${a.status}${a.sku ? ' · ' + a.sku : ''}</option>`).join('')}
+                        </datalist>
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom:1rem;">
@@ -406,45 +422,99 @@ function renderTransferencia(container) {
     `;
 }
 
-window.salvarTransferencia = async function () {
-    let sku = document.getElementById('trf-sku').value || 'SKU-0000';
-    const qtd = parseInt(document.getElementById('trf-qtd').value) || 1;
-    let origem = document.getElementById('trf-origem').value || '00-00-0000';
-    const destino = document.getElementById('trf-destino').value || '00-00-0000';
-    const motivo = document.getElementById('trf-motivo').value;
-    let desc = `Produto ${sku}`;
+// Os endereços têm o Firestore (tenants/{t}/enderecos) como fonte oficial: o wms-core regrava o
+// wms_mock_data local a partir dele. Toda movimentação precisa ser persistida lá, senão some.
+function _trfAcharEndereco(addrs, id) {
+    const alvo = String(id || '').trim().toUpperCase();
+    return addrs.find(a => String(a.id || a.address || '').trim().toUpperCase() === alvo) || null;
+}
 
-    // Distribuição da carga inicial do ERP: origem SEM ENDEREÇO → endereço real (movimenta o estoque de verdade)
-    if (/^\s*SEM[\s\-_]*ENDERE[CÇ]O\s*$/i.test(origem)) {
-        sku = String(document.getElementById('trf-sku').value || '').trim();
-        const dest = String(document.getElementById('trf-destino').value || '').trim();
-        if (!sku || !dest || qtd <= 0) { alert('Informe SKU, quantidade e endereço de destino.'); return; }
-        if (!window.WmsErpCatalog || !window.StockManager) { alert('Catálogo do ERP indisponível.'); return; }
-
-        const end = window.StockManager.getData().addresses.find(a => (a.id || a.address) === dest);
-        if (!end) { alert(`O endereço de destino ${dest} não existe.`); return; }
-        if (end.status === 'BLOQUEADO' || end.blocked) { alert(`O endereço ${dest} está bloqueado.`); return; }
-        if (end.status === 'OCUPADO' && end.sku && String(end.sku) !== sku) { alert(`O endereço ${dest} já está ocupado pelo SKU ${end.sku}.`); return; }
-
-        const prod = await window.WmsErpCatalog.get(sku).catch(() => null);
-        desc = prod?.descricao || desc;
-        try {
-            await window.WmsErpCatalog.baixarSemEndereco(sku, qtd);
-        } catch (e) { alert(e.message); return; }
-        if (!window.StockManager.add(sku, qtd, dest, desc, prod?.unidade || 'UN', 'TRF-SEM-ENDERECO')) {
-            await window.WmsErpCatalog.devolverSemEndereco(sku, qtd, { descricao: desc, unidade: prod?.unidade || 'UN' }).catch(() => {});
-            alert(`Não foi possível gravar no endereço ${dest}. O saldo SEM ENDEREÇO foi devolvido.`);
-            return;
+function _trfPersistirEndereco(a) {
+    if (!a || !window.WmsStore || typeof window.WmsStore.atualizarEndereco !== 'function') return Promise.resolve();
+    const id = a.id || a.address;
+    const ocupado = a.status === 'OCUPADO' && a.sku && Number(a.qty) > 0;
+    const update = ocupado
+        ? {
+            status: 'OCUPADO', sku: a.sku, product: a.product || '', produto: a.product || '', descricao: a.product || '',
+            qty: Number(a.qty), quantidade: Number(a.qty), unit: a.unit || 'UN', lote: a.lote || ''
         }
-        origem = window.WmsErpCatalog.SEM_ENDERECO;
+        : { status: 'LIVRE', sku: null, product: null, produto: null, descricao: null, qty: 0, quantidade: 0, reserved: 0, lote: null };
+    return window.WmsStore.atualizarEndereco(id, update);
+}
+
+window.salvarTransferencia = async function () {
+    const sku = String(document.getElementById('trf-sku').value || '').trim();
+    const qtd = parseInt(document.getElementById('trf-qtd').value) || 0;
+    const origemIn = String(document.getElementById('trf-origem').value || '').trim();
+    const destinoIn = String(document.getElementById('trf-destino').value || '').trim();
+    const motivo = document.getElementById('trf-motivo').value;
+
+    if (!sku || qtd <= 0 || !origemIn || !destinoIn) { alert('Informe SKU, quantidade, endereço de origem e endereço de destino.'); return; }
+    if (!window.StockManager) { alert('Módulo de estoque indisponível.'); return; }
+
+    const semEndereco = /^\s*SEM[\s\-_]*ENDERE[CÇ]O\s*$/i.test(origemIn);
+    const data = window.StockManager.getData();
+    const dest = _trfAcharEndereco(data.addresses, destinoIn);
+
+    // Validações do destino (comuns aos dois fluxos)
+    if (!dest) { alert(`O endereço de destino ${destinoIn} não existe.`); return; }
+    if (dest.status === 'BLOQUEADO' || dest.blocked) { alert(`O endereço ${destinoIn} está bloqueado.`); return; }
+    if (dest.status === 'OCUPADO' && dest.sku && String(dest.sku) !== sku) { alert(`O endereço ${destinoIn} já está ocupado pelo SKU ${dest.sku}.`); return; }
+
+    const destinoId = dest.id || dest.address;
+    let origemLabel, desc, unidade, lote;
+
+    if (semEndereco) {
+        // Distribuição da carga inicial do ERP: SEM ENDEREÇO → endereço real
+        if (!window.WmsErpCatalog) { alert('Catálogo do ERP indisponível.'); return; }
+        const prod = await window.WmsErpCatalog.get(sku).catch(() => null);
+        desc = prod?.descricao || `Produto ${sku}`;
+        unidade = prod?.unidade || 'UN';
+        try { await window.WmsErpCatalog.baixarSemEndereco(sku, qtd); }
+        catch (e) { alert(e.message); return; }
+        origemLabel = window.WmsErpCatalog.SEM_ENDERECO;
+    } else {
+        // Endereço → endereço
+        const orig = _trfAcharEndereco(data.addresses, origemIn);
+        if (!orig) { alert(`O endereço de origem ${origemIn} não existe.`); return; }
+        if (orig === dest) { alert('Origem e destino são o mesmo endereço.'); return; }
+        if (orig.status !== 'OCUPADO' || String(orig.sku) !== sku) { alert(`O endereço ${origemIn} não contém o SKU ${sku}.`); return; }
+        const disponivel = Number(orig.qty || 0) - Number(orig.reserved || 0);
+        if (qtd > disponivel) { alert(`Saldo insuficiente em ${origemIn}: disponível ${disponivel}.`); return; }
+
+        desc = orig.product || `Produto ${sku}`;
+        unidade = orig.unit || 'UN';
+        lote = orig.lote;
+        orig.qty = Number(orig.qty) - qtd;
+        if (orig.qty <= 0) {
+            orig.status = 'LIVRE';
+            delete orig.sku; delete orig.product; delete orig.qty; delete orig.reserved; delete orig.lote;
+        }
+        origemLabel = orig.id || orig.address;
+        _trfPersistirEndereco(orig);
     }
 
+    // Grava no destino
+    if (dest.status === 'OCUPADO' && String(dest.sku) === sku) {
+        dest.qty = Number(dest.qty || 0) + qtd;
+    } else {
+        dest.status = 'OCUPADO';
+        dest.sku = sku;
+        dest.product = desc;
+        dest.qty = qtd;
+        dest.unit = unidade;
+        dest.lote = lote || dest.lote || '';
+    }
+    window.StockManager.saveData(data);
+    await _trfPersistirEndereco(dest);
+
     const transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const id = `TRF-${String(transferencias.length + 1).padStart(3, '0')}`;
     transferencias.push({
-        id: `TRF-${String(transferencias.length + 1).padStart(3, '0')}`,
-        sku, desc, qtd, origem, destino, motivo,
+        id, sku, desc, qtd, origem: origemLabel, destino: destinoId, motivo,
         status: 'CONCLUÍDA', data: new Date().toISOString()
     });
+    window.StockManager.logTransaction('TRANSFERENCIA', sku, qtd, id, `${origemLabel} → ${destinoId} (${motivo})`, destinoId);
 
     localStorage.setItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(transferencias));
     renderTransferencia(document.getElementById('view-dynamic'));

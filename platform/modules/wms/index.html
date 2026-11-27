@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitleTag">Bússola WMS | Gestão de Armazém</title>
     <base href="/platform/modules/wms/">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%20width%3D%2248%22%20height%3D%2248%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg_wms%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2248%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231e1b4b%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234338ca%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%3C/defs%3E%0A%20%20%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2211%22%20fill%3D%22url%28%23bg_wms%29%22/%3E%0A%20%20%3Cpolygon%20points%3D%2224%2C9%2038%2C17%2024%2C25%2010%2C17%22%20fill%3D%22%23818cf8%22/%3E%0A%20%20%3Cpolygon%20points%3D%2210%2C17%2024%2C25%2024%2C39%2010%2C31%22%20fill%3D%22%234f46e5%22/%3E%0A%20%20%3Cpolygon%20points%3D%2224%2C25%2038%2C17%2038%2C31%2024%2C39%22%20fill%3D%22%23c7d2fe%22/%3E%0A%20%20%3Cline%20x1%3D%2224%22%20y1%3D%229%22%20x2%3D%2224%22%20y2%3D%2225%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%221.5%22%20stroke-opacity%3D%220.6%22/%3E%0A%20%20%3Cline%20x1%3D%2210%22%20y1%3D%2217%22%20x2%3D%2238%22%20y2%3D%2217%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%221.5%22%20stroke-opacity%3D%220.4%22/%3E%0A%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%20width%3D%2248%22%20height%3D%2248%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg_wms%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2248%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231e1b4b%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234338ca%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%3C/defs%3E%0A%20%20%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2211%22%20fill%3D%22url%28%23bg_wms%29%22/%3E%0A%20%20%3Cpolygon%20points%3D%2224%2C9%2038%2C17%2024%2C25%2010%2C17%22%20fill%3D%22%23818cf8%22/%3E%0A%20%20%3Cpolygon%20points%3D%2210%2C17%2024%2C25%2024%2C39%2010%2C31%22%20fill%3D%22%234f46e5%22/%3E%0A%20%20%3Cpolygon%20points%3D%2224%2C25%2038%2C17%2038%2C31%2024%2C39%22%20fill%3D%22%23c7d2fe%22/%3E%0A%20%20%3Cline%20x1%3D%2224%22%20y1%3D%229%22%20x2%3D%2224%22%20y2%3D%2225%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%221.5%22%20stroke-opacity%3D%220.6%22/%3E%0A%20%20%3Cline%20x1%3D%2210%22%20y1%3D%2217%22%20x2%3D%2238%22%20y2%3D%2217%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%221.5%22%20stroke-opacity%3D%220.4%22/%3E%0A%3C/svg%3E">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -30,15 +31,15 @@
         <span>⚠️</span>
     </div>
     <script>
-    (function() {
-        var h = window.location.hostname;
-        if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' ||
-            (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
-            var b = document.getElementById('stagingBanner');
-            if (b) { b.style.display = 'flex'; document.body.style.paddingTop = '34px'; }
-            document.title = '[HOMOLOG] ' + document.title;
-        }
-    })();
+        (function () {
+            var h = window.location.hostname;
+            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' ||
+                (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
+                var b = document.getElementById('stagingBanner');
+                if (b) { b.style.display = 'flex'; document.body.style.paddingTop = '34px'; }
+                document.title = '[HOMOLOG] ' + document.title;
+            }
+        })();
     </script>
 
     <!-- LOGIN OVERLAY — mesmo padrão do módulo dispatch -->
@@ -62,36 +63,33 @@
 
             <!-- Campo empresa: oculto quando tenant vem da URL -->
             <div id="wmsLoginTenantGroup" style="display:none; margin-bottom:1rem;">
-                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">ID da Empresa</label>
-                <input type="text" id="wmsLoginTenantInput"
-                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">ID
+                    da Empresa</label>
+                <input type="text" id="wmsLoginTenantInput" style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
                         border:1px solid var(--border,#334155);border-radius:8px;
                         color:inherit;font-size:.9rem;box-sizing:border-box;text-transform:lowercase;"
                     placeholder="ex: parreiralog">
             </div>
 
             <div style="margin-bottom:1rem;">
-                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Usuário</label>
-                <input type="text" id="wmsLoginUser"
-                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                <label
+                    style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Usuário</label>
+                <input type="text" id="wmsLoginUser" style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
                         border:1px solid var(--border,#334155);border-radius:8px;
-                        color:inherit;font-size:.9rem;box-sizing:border-box;"
-                    placeholder="Seu usuário">
+                        color:inherit;font-size:.9rem;box-sizing:border-box;" placeholder="Seu usuário">
             </div>
             <div style="margin-bottom:.75rem;">
-                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Senha</label>
-                <input type="password" id="wmsLoginPass"
-                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                <label
+                    style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Senha</label>
+                <input type="password" id="wmsLoginPass" style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
                         border:1px solid var(--border,#334155);border-radius:8px;
-                        color:inherit;font-size:.9rem;box-sizing:border-box;"
-                    placeholder="Sua senha"
+                        color:inherit;font-size:.9rem;box-sizing:border-box;" placeholder="Sua senha"
                     onkeydown="if(event.key==='Enter') window.wmsDoLogin();">
             </div>
 
             <div id="wmsLoginErro" style="color:#ef4444;font-size:.82rem;min-height:1.1rem;margin-bottom:.5rem;"></div>
 
-            <button id="wmsLoginBtn" onclick="window.wmsDoLogin()"
-                style="width:100%;padding:.85rem;background:#10b981;border:none;color:white;
+            <button id="wmsLoginBtn" onclick="window.wmsDoLogin()" style="width:100%;padding:.85rem;background:#10b981;border:none;color:white;
                     border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;
                     display:flex;align-items:center;justify-content:center;gap:.5rem;">
                 <span class="material-icons-round" style="font-size:1.2rem;">login</span>
@@ -100,22 +98,22 @@
 
             <!-- Inline: lê tenant da URL sem piscar -->
             <script>
-            (function() {
-                var seg = window.location.pathname.split('/').filter(Boolean);
-                // /wms/parreira → seg[0]='wms', seg[1]='parreira'
-                var reserved = ['modules','platform','core','web','admin','tenants','wms'];
-                var tenant = (seg[0] === 'wms' && seg[1] && !reserved.includes(seg[1]))
-                             ? seg[1].trim().toLowerCase() : '';
-                var group    = document.getElementById('wmsLoginTenantGroup');
-                var input    = document.getElementById('wmsLoginTenantInput');
-                var subtitle = document.getElementById('wmsLoginSubtitle');
-                if (tenant) {
-                    if (input)    input.value = tenant;
-                    if (subtitle) subtitle.textContent = 'Acesse sua conta';
-                } else {
-                    if (group) group.style.display = 'block';
-                }
-            })();
+                (function () {
+                    var seg = window.location.pathname.split('/').filter(Boolean);
+                    // /wms/parreira → seg[0]='wms', seg[1]='parreira'
+                    var reserved = ['modules', 'platform', 'core', 'web', 'admin', 'tenants', 'wms'];
+                    var tenant = (seg[0] === 'wms' && seg[1] && !reserved.includes(seg[1]))
+                        ? seg[1].trim().toLowerCase() : '';
+                    var group = document.getElementById('wmsLoginTenantGroup');
+                    var input = document.getElementById('wmsLoginTenantInput');
+                    var subtitle = document.getElementById('wmsLoginSubtitle');
+                    if (tenant) {
+                        if (input) input.value = tenant;
+                        if (subtitle) subtitle.textContent = 'Acesse sua conta';
+                    } else {
+                        if (group) group.style.display = 'block';
+                    }
+                })();
             </script>
         </div>
     </div>
@@ -240,9 +238,8 @@
                         <a class="nav-sub-item" onclick="switchView('ent-conferencia')">Conferência</a>
                         <a class="nav-sub-item" onclick="switchView('ent-armazenagem')">Armazenagem (Putaway)</a>
                         <a class="nav-sub-item" onclick="switchView('ent-devolucao')">Devolução de Cliente</a>
-                        <a class="nav-sub-item" id="nav-divergencias"
-                           onclick="switchView('divergencias')"
-                           style="color:#ef4444;display:flex;align-items:center;gap:.4rem;">
+                        <a class="nav-sub-item" id="nav-divergencias" onclick="switchView('divergencias')"
+                            style="color:#ef4444;display:flex;align-items:center;gap:.4rem;">
                             <span class="material-icons-round" style="font-size:1rem;">report_problem</span>
                             Controle de Divergências
                             <span id="nav-div-badge" style="display:none;background:#ef4444;color:#fff;
@@ -296,10 +293,12 @@
                     <a class="nav-item" onclick="toggleSubmenu('sub-auditoria')">
                         <span class="material-icons-round">policy</span>
                         <span>Auditoria</span>
-                        <span class="material-icons-round" style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                        <span class="material-icons-round"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-auditoria" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">Invent&aacute;rio C&iacute;clico</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">Invent&aacute;rio
+                            C&iacute;clico</a>
                         <a class="nav-sub-item" onclick="switchView('aud-contagem')">Contagem Rotativa</a>
                         <a class="nav-sub-item" onclick="switchView('aud-divergencias')">Diverg&ecirc;ncias</a>
                         <a class="nav-sub-item" onclick="switchView('aud-rastreio')">Rastreabilidade (Kardex)</a>
@@ -312,15 +311,19 @@
                     <a class="nav-item" onclick="toggleSubmenu('sub-config')">
                         <span class="material-icons-round">settings</span>
                         <span>Configura&ccedil;&otilde;es</span>
-                        <span class="material-icons-round" style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                        <span class="material-icons-round"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-config" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('cfg-galpao')" style="color:var(--wms-primary);font-weight:600;display:flex;align-items:center;gap:.35rem;">
-                            <span class="material-icons-round" style="font-size:1rem;">warehouse</span> Layout do Galp&atilde;o
+                        <a class="nav-sub-item" onclick="switchView('cfg-galpao')"
+                            style="color:var(--wms-primary);font-weight:600;display:flex;align-items:center;gap:.35rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">warehouse</span> Layout do
+                            Galp&atilde;o
                         </a>
                         <a class="nav-sub-item" onclick="switchView('cfg-geral')">Gerais</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-armazenagem')">Regras de Armazenagem</a>
-                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de Separa&ccedil;&atilde;o</a>
+                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de
+                            Separa&ccedil;&atilde;o</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-etiqueta')">Layout de Etiqueta</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-integracao')">Integra&ccedil;&otilde;es</a>
                     </div>
@@ -335,7 +338,8 @@
                         <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
-                <a href="#" onclick="ParreiraAuth.logout();return false;" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
+                <a href="#" onclick="ParreiraAuth.logout();return false;"
+                    style="color:var(--accent-danger); text-decoration:none;" title="Sair">
                     <span class="material-icons-round">logout</span>
                 </a>
             </div>
@@ -346,9 +350,11 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="breadcrumb">
-                    <span class="text-secondary" id="breadParent">WMS</span> / <span class="current" id="pageTitle">Vis&atilde;o Geral</span>
+                    <span class="text-secondary" id="breadParent">WMS</span> / <span class="current"
+                        id="pageTitle">Vis&atilde;o Geral</span>
                 </div>
-                <div id="wms-sync-status" style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;margin-left:auto;padding:0 1rem;color:var(--text-secondary);">
+                <div id="wms-sync-status"
+                    style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;margin-left:auto;padding:0 1rem;color:var(--text-secondary);">
                     <span class="material-icons-round" style="font-size:.9rem;">cloud_queue</span>
                     <span>Cloud</span>
                 </div>
@@ -544,12 +550,12 @@
     <script src="js/wms-store.js?v=20260516w"></script>
     <script src="js/wms-sync.js?v=20260516r"></script>
     <script src="js/inbound.js?v=20260724a"></script>
-    <script src="js/estoque.js?v=3.21.132"></script>
+    <script src="js/estoque.js?v=3.21.133"></script>
     <script src="js/entrada.js?v=20260516r"></script>
     <script src="js/saida.js?v=20260516r"></script>
     <script src="js/picking.js?v=20260516r"></script>
     <script src="js/heatmap.js?v=20260516r"></script>
-    <script src="js/controle.js?v=3.21.132"></script>
+    <script src="js/controle.js?v=3.21.133"></script>
     <script src="js/relatorios.js?v=20260516r"></script>
     <script src="js/cadastros.js?v=3.21.132"></script>
     <script src="js/configuracoes.js?v=3.21.130"></script>
@@ -569,13 +575,13 @@
 
     <script>
         // wmsDoLogin — chamado pelo overlay de login embutido
-        window.wmsDoLogin = async function() {
-            var login  = (document.getElementById('wmsLoginUser')?.value  || '').trim();
-            var senha  =  document.getElementById('wmsLoginPass')?.value  || '';
-            var btn    =  document.getElementById('wmsLoginBtn');
-            var erro   =  document.getElementById('wmsLoginErro');
+        window.wmsDoLogin = async function () {
+            var login = (document.getElementById('wmsLoginUser')?.value || '').trim();
+            var senha = document.getElementById('wmsLoginPass')?.value || '';
+            var btn = document.getElementById('wmsLoginBtn');
+            var erro = document.getElementById('wmsLoginErro');
             if (erro) erro.textContent = '';
-            if (!login || !senha) { if(erro) erro.textContent='Preencha usuário e senha.'; return; }
+            if (!login || !senha) { if (erro) erro.textContent = 'Preencha usuário e senha.'; return; }
             if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
             try {
                 await ParreiraAuth.login(login, senha, 'wms');
@@ -584,9 +590,9 @@
                 var s = ParreiraAuth.getSessao();
                 var nEl = document.getElementById('userName');
                 var tEl = document.getElementById('userTenant');
-                var roleMap = {operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'};
+                var roleMap = { operator: 'Operador', supervisor: 'Supervisor', admin: 'Admin', master: 'Master' };
                 if (nEl) nEl.textContent = s.nome;
-                if (tEl) tEl.textContent = (s.tenantNome||'') + ' · ' + (roleMap[s.role]||s.role);
+                if (tEl) tEl.textContent = (s.tenantNome || '') + ' · ' + (roleMap[s.role] || s.role);
 
                 // v3.22.11 FIX: Re-inicializa WmsSync após login (DOMContentLoaded roda antes da sessão existir)
                 if (window.WmsSync) {
@@ -601,18 +607,18 @@
                                 } else if (count > 0) {
                                     if (syncBadge) syncBadge.innerHTML = `<span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span><span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
                                 }
-                            } catch(syncErr) { console.warn('[WMS] sync pós-login falhou:', syncErr.message); }
+                            } catch (syncErr) { console.warn('[WMS] sync pós-login falhou:', syncErr.message); }
                         }
                     }).catch(e => console.warn('[WmsSync] init pós-login:', e.message));
                 }
-            } catch(e) {
+            } catch (e) {
                 if (erro) erro.textContent = e.message || 'Usuário ou senha inválidos.';
                 if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1.2rem;">login</span> ACESSAR SISTEMA'; }
             }
         };
 
         // Session Guard
-        (function() {
+        (function () {
             var overlay = document.getElementById('wmsLoginOverlay');
             if (!window.ParreiraAuth || !ParreiraAuth.isLogado()) {
                 if (overlay) overlay.style.display = 'flex';
@@ -623,7 +629,7 @@
             const nEl = document.getElementById('userName');
             const tEl = document.getElementById('userTenant');
             if (nEl) nEl.textContent = s.nome;
-            if (tEl) tEl.textContent = (s.tenantNome||'') + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
+            if (tEl) tEl.textContent = (s.tenantNome || '') + ' · ' + ({ operator: 'Operador', supervisor: 'Supervisor', admin: 'Admin', master: 'Master' }[s.role] || s.role);
         })();
 
         // Load Version
