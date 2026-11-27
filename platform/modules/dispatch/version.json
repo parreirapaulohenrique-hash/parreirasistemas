@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.10",
-  "build": "20261030-v3.25.10",
-  "lastUpdate": "2026-10-30",
-  "releaseDate": "2026-10-30T12:55:00-03:00",
-  "change": "v3.25.10: FIX login e parse de scripts no ambiente de homologação (correção de duplicação de escopo e regex Unicode)."
+  "version": "3.25.11",
+  "build": "20261127-v3.25.11",
+  "lastUpdate": "2026-11-27",
+  "releaseDate": "2026-11-27T14:00:00-03:00",
+  "change": "v3.25.11: FIX Conferência de Fatura — commit atômico único (dispatches_db + invoice_history_db), try/finally + timeout (nunca mais trava em Processando...) e recuperador ampliado para resgatar NFs pagas órfãs sem fatura no histórico."
 }

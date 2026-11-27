@@ -7166,7 +7166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await window.processInvoicePayment(justification, supervisor.name || supervisor.login);
         };
 
-        // Process the payment (mark NFs as paid)
+        // Process the payment (mark NFs as paid) — v3.25.11: batch atômico (dispatches_db + invoice_history_db), try/finally e timeout
         window.processInvoicePayment = async (justification = '', authorizedBy = '') => {
             // v3.16.22: Proteção contra duplo clique — evita duplicação no histórico e log
             if (window._invoicePaymentInProgress) {
@@ -7175,240 +7175,250 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             window._invoicePaymentInProgress = true;
 
+            const _withTimeout = (promise, ms, label) => Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`Tempo esgotado (${Math.round(ms / 1000)}s) em: ${label}`)), ms))
+            ]);
+
             // Desabilita botões durante o processamento
             const _btnConfirm = document.getElementById('btnConfirmInvoice');
             const _btnForce   = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
             if (_btnConfirm) { _btnConfirm.disabled = true; _btnConfirm.innerHTML = '⏳ Processando...'; }
             if (_btnForce)   { _btnForce.disabled   = true; }
 
-            console.log('💳 [Invoice] Iniciando processamento de pagamento...');
-            console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
+            try {
+                console.log('💳 [Invoice] Iniciando processamento de pagamento...');
+                console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
-            const dispatches = [];
-            for (const id of window.invoiceSelectedNFs.keys()) {
-                let d = null;
-                if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
-                    try {
-                        const doc = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
-                            .collection('dispatches_db').doc(String(id)).get();
-                        if (doc.exists) {
-                            d = { id: doc.id, ...doc.data() };
+                const selectedIds = [...window.invoiceSelectedNFs.keys()];
+                if (selectedIds.length === 0) {
+                    showToast('⚠️ Nenhuma NF selecionada para conferência.', 'warning');
+                    return;
+                }
+
+                // Carrega NFs selecionadas em paralelo com timeout individual (10s) e fallback local/cache
+                const localSnapshot = Utils.getStorage('dispatches') || [];
+                const fullSnapshot  = window._dispatchesFullCache || Utils._fullDispatchesHistoryCache || [];
+                const loadedList = await Promise.all(selectedIds.map(async (id) => {
+                    let d = null;
+                    if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+                        try {
+                            const doc = await _withTimeout(
+                                window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                                    .collection('dispatches_db').doc(String(id)).get(),
+                                10000,
+                                `carregar NF ${id}`
+                            );
+                            if (doc.exists) {
+                                d = { id: doc.id, ...doc.data() };
+                            }
+                        } catch (e) {
+                            console.warn(`[Invoice] Fallback local para NF ID ${id} (${e.message})`);
                         }
-                    } catch (e) {
-                        console.error(`[Invoice] Falha ao carregar NF ID ${id} do Firestore:`, e);
                     }
+                    if (!d) d = localSnapshot.find(x => String(x.id) === String(id));
+                    if (!d) d = fullSnapshot.find(x => String(x.id) === String(id));
+                    if (!d) console.warn(`[Invoice] NF com ID ${id} selecionada mas não encontrada no banco ou cache local.`);
+                    return d ? { ...d } : null;
+                }));
+                const dispatches = loadedList.filter(Boolean);
+                console.log('💳 [Invoice] Total de despachos selecionados carregados:', dispatches.length);
+
+                if (dispatches.length === 0) {
+                    throw new Error('Não foi possível carregar os dados das NFs selecionadas. Recarregue a página e tente novamente.');
                 }
-                if (!d) {
-                    const localDispatches = Utils.getStorage('dispatches') || [];
-                    d = localDispatches.find(x => String(x.id) === String(id));
-                }
-                if (d) {
-                    dispatches.push(d);
-                } else {
-                    console.warn(`[Invoice] NF com ID ${id} selecionada mas não encontrada no banco ou cache local.`);
-                }
-            }
-            console.log('💳 [Invoice] Total de despachos selecionados carregados:', dispatches.length);
 
-            const invoiceRef = document.getElementById('invoiceRef').value.trim() || 'N/A';
-            const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
-            const carrier = window.invoiceCurrentCarrier;
-            const loggedUser = Utils.getStorage('logged_user');
-            const userName = loggedUser ? (loggedUser.name || loggedUser.login) : 'Sistema';
+                const invoiceRef = document.getElementById('invoiceRef').value.trim() || 'N/A';
+                const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+                const carrier = window.invoiceCurrentCarrier;
+                const loggedUser = Utils.getStorage('logged_user');
+                const userName = loggedUser ? (loggedUser.name || loggedUser.login) : 'Sistema';
 
-            // v3.14.56: helper para detectar se o pagamento é para transportadora de redespacho
-            const _carrierNorm2 = (s) => s ? s.toUpperCase().trim().replace(/\s+/g, '') : '';
-            const _carrierN2 = _carrierNorm2(carrier);
-            const _isRedespPayment = (d) => {
-                const mainN = _carrierNorm2(d.carrier);
-                const mainMatch = mainN === _carrierN2 || mainN.startsWith(_carrierN2) || _carrierN2.startsWith(mainN);
-                const newRedespN = _carrierNorm2(d.redespCarrier);
-                const newRedesp = d.redespCarrier && (newRedespN === _carrierN2 || newRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(newRedespN));
-                const legRedespN = _carrierNorm2(d.redespacho);
-                const legRedesp = !d.redespCarrier && d.redespacho && d.redespacho !== '-' && (legRedespN === _carrierN2 || legRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(legRedespN));
-                return (newRedesp || legRedesp) && !mainMatch;
-            };
+                // v3.14.56: helper para detectar se o pagamento é para transportadora de redespacho
+                const _carrierNorm2 = (s) => s ? s.toUpperCase().trim().replace(/\s+/g, '') : '';
+                const _carrierN2 = _carrierNorm2(carrier);
+                const _isRedespPayment = (d) => {
+                    const mainN = _carrierNorm2(d.carrier);
+                    const mainMatch = mainN === _carrierN2 || mainN.startsWith(_carrierN2) || _carrierN2.startsWith(mainN);
+                    const newRedespN = _carrierNorm2(d.redespCarrier);
+                    const newRedesp = d.redespCarrier && (newRedespN === _carrierN2 || newRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(newRedespN));
+                    const legRedespN = _carrierNorm2(d.redespacho);
+                    const legRedesp = !d.redespCarrier && d.redespacho && d.redespacho !== '-' && (legRedespN === _carrierN2 || legRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(legRedespN));
+                    return (newRedesp || legRedesp) && !mainMatch;
+                };
 
-            // Mark selected NFs as paid
-            let paidCount = 0;
-            let totalPaid = 0;
-            const paidNFs = [];
+                // Mark selected NFs as paid
+                let paidCount = 0;
+                let totalPaid = 0;
+                const paidNFs = [];
+                const nowIso = new Date().toISOString();
 
-            // Update para transportadora PRINCIPAL
-            const paidUpdate = {
-                status: 'Pago',
-                paidAt: new Date().toISOString(),
-                invoiceRef: invoiceRef,
-                paidBy: userName,
-                ...(justification ? { paymentNote: justification } : {}),
-                ...(authorizedBy ? { authorizedBy: authorizedBy } : {})
-            };
+                // Update para transportadora PRINCIPAL
+                const paidUpdate = {
+                    status: 'Pago',
+                    paidAt: nowIso,
+                    invoiceRef: invoiceRef,
+                    paidBy: userName,
+                    ...(justification ? { paymentNote: justification } : {}),
+                    ...(authorizedBy ? { authorizedBy: authorizedBy } : {})
+                };
 
-            // v3.14.56: Update SEPARADO para redespacho — não altera `status`
-            const redespUpdate = {
-                redespPago: true,
-                redespPaidAt: new Date().toISOString(),
-                redespInvoiceRef: invoiceRef,
-                redespPaidBy: userName,
-                ...(justification ? { redespPaymentNote: justification } : {}),
-                ...(authorizedBy ? { redespAuthorizedBy: authorizedBy } : {})
-            };
+                // v3.14.56: Update SEPARADO para redespacho — não altera `status`
+                const redespUpdate = {
+                    redespPago: true,
+                    redespPaidAt: nowIso,
+                    redespInvoiceRef: invoiceRef,
+                    redespPaidBy: userName,
+                    ...(justification ? { redespPaymentNote: justification } : {}),
+                    ...(authorizedBy ? { redespAuthorizedBy: authorizedBy } : {})
+                };
 
-            dispatches.forEach(d => {
-                const sId = String(d.id);
-                if (window.invoiceSelectedNFs.has(sId)) {
-                    const invoiceVal = window.invoiceSelectedNFs.get(sId) || 0;
-                    const isRedesp = _isRedespPayment(d);
-                    console.log(`💳 [Invoice] NF ${d.invoice} (ID: ${d.id}) - ${isRedesp ? '🔄 REDESPACHO' : '⭐ PRINCIPAL'} - valor: ${invoiceVal}`);
-                    Object.assign(d, isRedesp ? redespUpdate : paidUpdate);
+                dispatches.forEach(d => {
+                    const sId = String(d.id);
+                    if (window.invoiceSelectedNFs.has(sId)) {
+                        const invoiceVal = window.invoiceSelectedNFs.get(sId) || 0;
+                        const isRedesp = _isRedespPayment(d);
+                        console.log(`💳 [Invoice] NF ${d.invoice} (ID: ${d.id}) - ${isRedesp ? '🔄 REDESPACHO' : '⭐ PRINCIPAL'} - valor: ${invoiceVal}`);
+                        Object.assign(d, isRedesp ? redespUpdate : paidUpdate);
 
-                    // v3.19.5: Acerto VAN — grava valor real negociado e vanDiff no despacho
-                    if (!isRedesp && window.invoiceVanOriginalValues?.has(sId)) {
-                        const suggestedVal = window.invoiceVanOriginalValues.get(sId);
-                        const realVal = invoiceVal; // Map já contém valor real (atualizado pelo input)
-                        const vDiff = Math.round((suggestedVal - realVal) * 100) / 100;
-                        Object.assign(d, {
-                            originalTotal: suggestedVal,
-                            total: realVal,
-                            vanDiff: vDiff,
-                            vanAcertado: true,
-                            vanAcertadoAt: new Date().toISOString(),
-                            vanAcertadoPor: userName
+                        // v3.19.5: Acerto VAN — grava valor real negociado e vanDiff no despacho
+                        if (!isRedesp && window.invoiceVanOriginalValues?.has(sId)) {
+                            const suggestedVal = window.invoiceVanOriginalValues.get(sId);
+                            const realVal = invoiceVal;
+                            const vDiff = Math.round((suggestedVal - realVal) * 100) / 100;
+                            Object.assign(d, {
+                                originalTotal: suggestedVal,
+                                total: realVal,
+                                vanDiff: vDiff,
+                                vanAcertado: true,
+                                vanAcertadoAt: nowIso,
+                                vanAcertadoPor: userName
+                            });
+                            console.log(`💳 [VAN Acerto] NF ${d.invoice} — Sugerido: ${suggestedVal} | Real: ${realVal} | Diff: ${vDiff}`);
+                        }
+
+                        paidCount++;
+                        totalPaid += invoiceVal;
+                        paidNFs.push(d.invoice);
+                    }
+                });
+
+                console.log(`💳 [Invoice] NFs marcadas como pagas: ${paidCount}`);
+
+                // Prepara o registro do histórico ANTES do commit para gravar TUDO atomicamente no mesmo batch
+                const newHistoryEntry = {
+                    id: Date.now(),
+                    date: nowIso,
+                    carrier: carrier,
+                    invoiceRef: invoiceRef,
+                    invoiceValue: invoiceValue,
+                    calculatedValue: Math.round(totalPaid * 100) / 100,
+                    difference: Math.round((totalPaid - invoiceValue) * 100) / 100,
+                    nfCount: paidCount,
+                    nfList: paidNFs,
+                    confirmedBy: userName,
+                    authorizedBy: authorizedBy || null,
+                    justification: justification || null
+                };
+
+                // 1. Firestore — COMMIT ATÔMICO de dispatches_db + invoice_history_db juntos!
+                if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                    const tenantRef = window.db.collection('tenants').doc(Utils.Cloud.tenantId);
+                    const toCommit  = dispatches.filter(d => window.invoiceSelectedNFs.has(String(d.id)));
+                    const BATCH_LIMIT = 440;
+                    const totalChunks = Math.max(1, Math.ceil(toCommit.length / BATCH_LIMIT));
+
+                    for (let c = 0; c < totalChunks; c++) {
+                        const chunk = toCommit.slice(c * BATCH_LIMIT, (c + 1) * BATCH_LIMIT);
+                        const batch = window.db.batch();
+                        chunk.forEach(d => {
+                            const docRef = tenantRef.collection('dispatches_db').doc(String(d.id));
+                            batch.set(docRef, { ...d }, { merge: true });
                         });
-                        console.log(`💳 [VAN Acerto] NF ${d.invoice} — Sugerido: ${suggestedVal} | Real: ${realVal} | Diff: ${vDiff}`);
+                        if (c === totalChunks - 1) {
+                            const histRef = tenantRef.collection('invoice_history_db').doc(String(newHistoryEntry.id));
+                            batch.set(histRef, newHistoryEntry);
+                        }
+                        await _withTimeout(
+                            batch.commit(),
+                            20000,
+                            `gravar conferência no servidor (lote ${c + 1}/${totalChunks})`
+                        );
                     }
-
-                    paidCount++;
-                    totalPaid += invoiceVal;
-                    paidNFs.push(d.invoice);
+                    console.log(`💳 [Invoice] ${toCommit.length} NF(s) + histórico #${newHistoryEntry.id} persistidos atomicamente no Firestore!`);
                 }
-            });
 
-            console.log(`💳 [Invoice] NFs marcadas como pagas: ${paidCount}`);
-
-            // 1. localStorage (atualiza apenas os itens modificados)
-            console.log('💳 [Invoice] Salvando dispatches no localStorage...');
-            const localDispatches = Utils.getStorage('dispatches') || [];
-            dispatches.forEach(d => {
-                const idx = localDispatches.findIndex(x => String(x.id) === String(d.id));
-                if (idx !== -1) {
-                    localDispatches[idx] = d;
-                } else {
-                    localDispatches.push(d);
-                }
-            });
-            Utils.setStorage('dispatches', localDispatches);
-
-            // 2. Firestore — persiste status 'Pago' em cada dispatch individual
-            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
-                const batch = window.db.batch();
-                let batchCount = 0;
+                // 2. localStorage (atualiza apenas após commit bem-sucedido no servidor)
+                const localDispatches = Utils.getStorage('dispatches') || [];
                 dispatches.forEach(d => {
-                    const sId = String(d.id);
-                    if (window.invoiceSelectedNFs.has(sId)) {
-                        const docRef = window.db
-                            .collection('tenants').doc(Utils.Cloud.tenantId)
-                            .collection('dispatches_db').doc(String(d.id));
-                        // v3.14.56: usa { ...d } já mutado (redespUpdate ou paidUpdate aplicado acima)
-                        batch.set(docRef, { ...d }, { merge: true });
-                        batchCount++;
-                    }
+                    const idx = localDispatches.findIndex(x => String(x.id) === String(d.id));
+                    if (idx !== -1) localDispatches[idx] = d;
+                    else localDispatches.push(d);
                 });
-                if (batchCount > 0) {
-                    try {
-                        await batch.commit();
-                        console.log(`💳 [Invoice] ${batchCount} NFs persistidas como PAGAS no Firestore dispatches_db (set+merge)!`);
-                    } catch (e) {
-                        console.error('[Invoice] Falha ao persistir status Pago no Firestore:', e);
-                        showToast('⚠️ Aviso: falha ao salvar no servidor. Os dados podem não persistir após recarregar.', 'warning');
-                    }
+                Utils.setStorage('dispatches', localDispatches);
+
+                // 3. Caches em memória (usa objeto completo `d`, preservando redespUpdate vs paidUpdate)
+                [window._dispatchesFullCache, Utils._fullDispatchesHistoryCache].forEach(cacheArr => {
+                    if (!Array.isArray(cacheArr)) return;
+                    dispatches.forEach(d => {
+                        const sId = String(d.id);
+                        if (window.invoiceSelectedNFs.has(sId)) {
+                            const ci = cacheArr.findIndex(x => String(x.id) === sId);
+                            if (ci !== -1) Object.assign(cacheArr[ci], d);
+                            else cacheArr.push(d);
+                        }
+                    });
+                });
+
+                // 4. Salva histórico no localStorage
+                const invoiceHistory = Utils.getStorage('invoice_history') || [];
+                invoiceHistory.push(newHistoryEntry);
+                Utils.setStorage('invoice_history', invoiceHistory);
+
+                // Limpa os Maps após pagamento confirmado
+                window.invoiceSelectedNFs = new Map();
+                window.invoiceVanOriginalValues = new Map();
+
+                showToast(`✅ ${paidCount} NF(s) conferida(s) e fatura ${invoiceRef} registrada!`, 'success');
+
+                // ── AUDIT LOG (não bloqueia finalização) ──
+                if (Utils.writeLog) {
+                    Utils.writeLog(
+                        'INVOICE_PAYMENT', 'Conferência de Fatura',
+                        `${carrier} — ${paidNFs.join(', ')} — ${Utils.formatCurrency(totalPaid)} (Ref: ${invoiceRef})`,
+                        null,
+                        { carrier, paidNFs, totalPaid, invoiceRef, invoiceValue, authorizedBy: authorizedBy || null }
+                    );
+                }
+
+                // Clear form and refresh
+                window.clearInvoiceForm();
+                window.initInvoiceSection();
+
+                // Atualizar também a tabela de Montagem de Carga se estiver visível
+                if (window.renderAppHistory) {
+                    window.renderAppHistory();
+                }
+
+                console.log('💳 [Invoice] Processamento concluído!');
+            } catch (err) {
+                console.error('❌ [Invoice] Erro ao processar conferência de fatura:', err);
+                showToast(`❌ Não foi possível concluir a conferência: ${err.message}. Tente novamente.`, 'error', 8000);
+            } finally {
+                // SEMPRE libera a trava e restaura os botões — nunca mais trava em "Processando..."
+                window._invoicePaymentInProgress = false;
+                const _btnConfirmEnd = document.getElementById('btnConfirmInvoice');
+                const _btnForceEnd   = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
+                if (_btnConfirmEnd) {
+                    _btnConfirmEnd.disabled = false;
+                    _btnConfirmEnd.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem">check_circle</span> CONFIRMAR CONFERÊNCIA';
+                }
+                if (_btnForceEnd) {
+                    _btnForceEnd.disabled = false;
+                    _btnForceEnd.innerHTML = 'Confirmar';
                 }
             }
-
-            // 3. Cache em memória
-            if (window._dispatchesFullCache) {
-                dispatches.forEach(d => {
-                    const sId = String(d.id);
-                    if (window.invoiceSelectedNFs.has(sId)) {
-                        const ci = window._dispatchesFullCache.findIndex(x => String(x.id) === sId);
-                        if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], paidUpdate);
-                    }
-                });
-            }
-            // Limpa os Maps após pagamento
-            window.invoiceSelectedNFs = new Map();
-            window.invoiceVanOriginalValues = new Map(); // v3.19.5
-
-            console.log('💳 [Invoice] Dispatches salvos (localStorage + Firestore + cache)!');
-
-            // Save to invoice history
-            const invoiceHistory = Utils.getStorage('invoice_history') || [];
-            const newHistoryEntry = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                carrier: carrier,
-                invoiceRef: invoiceRef,
-                invoiceValue: invoiceValue,
-                calculatedValue: totalPaid,
-                difference: Math.round((totalPaid - invoiceValue) * 100) / 100,  // v3.17.8 FIX: arredonda para evitar 0.0000001 !== 0
-                nfCount: paidCount,
-                nfList: paidNFs,
-                confirmedBy: userName,
-                authorizedBy: authorizedBy || null,
-                justification: justification || null
-            };
-            invoiceHistory.push(newHistoryEntry);
-            Utils.setStorage('invoice_history', invoiceHistory);
-
-            // Persiste também no Firestore para sobreviver a reloads
-            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
-                try {
-                    await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
-                        .collection('invoice_history_db').doc(String(newHistoryEntry.id))
-                        .set(newHistoryEntry);
-                    console.log('💳 [Invoice] Histórico de faturas salvo no Firestore!');
-                } catch (e) {
-                    console.warn('[Invoice] Falha ao salvar histórico no Firestore:', e);
-                }
-            }
-            console.log('💳 [Invoice] Histórico de faturas salvo!');
-
-            showToast(`✅ ${paidCount} NFs marcadas como PAGAS!`, 'success');
-
-            // ── AUDIT LOG ──
-            if (Utils.writeLog) Utils.writeLog(
-                'INVOICE_PAYMENT', 'Conferência de Fatura',
-                `${carrier} — ${paidNFs.join(', ')} — ${Utils.formatCurrency(totalPaid)} (Ref: ${invoiceRef})`,
-                null,
-                { carrier, paidNFs, totalPaid, invoiceRef, invoiceValue, authorizedBy: authorizedBy || null }
-            );
-
-            // Libera flag e restaura botões
-            window._invoicePaymentInProgress = false;
-            const _btnConfirmEnd = document.getElementById('btnConfirmInvoice');
-            const _btnForceEnd   = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
-            if (_btnConfirmEnd) {
-                _btnConfirmEnd.disabled = false;
-                _btnConfirmEnd.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem">check_circle</span> CONFIRMAR CONFERÊNCIA';
-            }
-            if (_btnForceEnd) {
-                _btnForceEnd.disabled = false;
-                _btnForceEnd.innerHTML = 'Confirmar';
-            }
-
-            // Clear form and refresh
-            window.clearInvoiceForm();
-            window.initInvoiceSection();
-
-            // Atualizar também a tabela de Montagem de Carga se estiver visível
-            if (window.renderAppHistory) {
-                console.log('💳 [Invoice] Atualizando tabela de Montagem de Carga...');
-                window.renderAppHistory();
-            }
-
-            console.log('💳 [Invoice] Processamento concluído!');
         };
-
         // ==========================================
         // ANÁLISE DE FATURAS CONFERIDAS - v3.11.20
         // ==========================================
@@ -7502,84 +7512,142 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.filterInvoiceAnalysis();
         };
 
-        // v3.16.18: Recupera conferências perdidas a partir do Log de Auditoria
-        // Lê audit_log (INVOICE_PAYMENT), detecta entradas ausentes do invoice_history_db e as recria.
+        // v3.25.11: Recupera conferências perdidas a partir de DUAS fontes:
+        // (1) Log de Auditoria (audit_log) e (2) NFs já marcadas como Pagas em dispatches_db
+        // nos últimos 90 dias que ficaram órfãs sem registro correspondente em invoice_history_db.
         window.recoverInvoiceFromAuditLog = async () => {
             if (!window.db || !Utils.Cloud || !Utils.Cloud.hasTenant()) {
-                showToast('❌ Conexão com servidor não disponível.'); return;
+                showToast('❌ Conexão com servidor não disponível.', 'error'); return;
             }
-            showToast('🔍 Buscando conferências no Log de Auditoria...');
+            showToast('🔍 Buscando conferências perdidas no Auditoria e NFs pagas órfãs...');
 
             try {
-                // 1. Carrega audit_log do Firestore
-                const auditSnap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
-                    .collection('audit_log')
-                    .where('action', '==', 'INVOICE_PAYMENT')
-                    .get();
+                const tenantRef = window.db.collection('tenants').doc(Utils.Cloud.tenantId);
+                const normStr = (s) => String(s || '').toUpperCase().trim().replace(/\s+/g, '');
 
-                if (auditSnap.empty) { showToast('ℹ️ Nenhum registro de pagamento no Log de Auditoria.'); return; }
+                // 1. Carrega audit_log, invoice_history_db e NFs pagas em paralelo
+                const [auditSnap, histSnap, paidSnap, redespPaidSnap] = await Promise.all([
+                    tenantRef.collection('audit_log').where('action', '==', 'INVOICE_PAYMENT').get().catch(() => ({ empty: true, docs: [] })),
+                    tenantRef.collection('invoice_history_db').get(),
+                    tenantRef.collection('dispatches_db').where('status', '==', 'Pago').get().catch(() => ({ empty: true, docs: [] })),
+                    tenantRef.collection('dispatches_db').where('redespPago', '==', true).get().catch(() => ({ empty: true, docs: [] }))
+                ]);
 
-                // 2. Carrega invoice_history_db atual do Firestore
-                const histSnap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
-                    .collection('invoice_history_db').get();
                 const existingHistory = histSnap.docs.map(d => d.data());
 
-                // 3. Para cada entrada do audit_log, verifica se já existe no histórico
-                const missing = [];
-                auditSnap.docs.forEach(doc => {
+                const _existsIn = (list, carrier, ref) => {
+                    const cN = normStr(carrier);
+                    const rN = normStr(ref);
+                    return list.some(h => normStr(h.carrier) === cN && normStr(h.invoiceRef) === rN);
+                };
+
+                const toRecreate = [];
+
+                // 2. Fonte A — Log de Auditoria (INVOICE_PAYMENT)
+                (auditSnap.docs || []).forEach(doc => {
                     const entry = doc.data();
                     const after = entry.after || {};
-                    if (!after.carrier || !after.invoiceRef) return; // entrada incompleta
+                    if (!after.carrier || !after.invoiceRef) return;
+                    if (_existsIn(existingHistory, after.carrier, after.invoiceRef)) return;
+                    if (_existsIn(toRecreate, after.carrier, after.invoiceRef)) return;
 
-                    // Considera "existente" se há registro com mesmo carrier + invoiceRef
-                    const alreadyExists = existingHistory.some(h =>
-                        h.carrier === after.carrier &&
-                        String(h.invoiceRef) === String(after.invoiceRef)
-                    );
-                    if (!alreadyExists) {
-                        missing.push({ auditEntry: entry, after });
-                    }
-                });
-
-                if (missing.length === 0) {
-                    showToast('✅ Nenhuma conferência perdida encontrada. Análise está completa!');
-                    return;
-                }
-
-                // 4. Mostra resumo e pede confirmação
-                const summary = missing.map(m =>
-                    `${m.after.carrier} — Ref: ${m.after.invoiceRef} — ${Utils.formatCurrency(m.after.totalPaid || 0)} — ${new Date(m.auditEntry.timestamp).toLocaleDateString('pt-BR')} (por ${m.auditEntry.user})`
-                ).join('\n');
-
-                if (!confirm(`${missing.length} conferência(s) perdida(s) encontrada(s) no Log de Auditoria:\n\n${summary}\n\nRecriar na Análise de Faturas?`)) return;
-
-                // 5. Recria as entradas
-                const localHistory = Utils.getStorage('invoice_history') || [];
-                let recovered = 0;
-
-                for (const { auditEntry, after } of missing) {
-                    const newEntry = {
-                        id:              new Date(auditEntry.timestamp).getTime() || Date.now(),
-                        date:            auditEntry.timestamp,
+                    const calcVal = Math.round(Number(after.totalPaid || 0) * 100) / 100;
+                    const invVal  = Math.round(Number(after.invoiceValue || calcVal) * 100) / 100;
+                    toRecreate.push({
+                        id:              new Date(entry.timestamp).getTime() || Date.now() + toRecreate.length,
+                        date:            entry.timestamp || new Date().toISOString(),
                         carrier:         after.carrier,
-                        invoiceRef:      after.invoiceRef  || '',
-                        invoiceValue:    after.invoiceValue || 0,
-                        calculatedValue: after.totalPaid   || 0,
-                        difference:      (after.totalPaid || 0) - (after.invoiceValue || 0),
+                        invoiceRef:      String(after.invoiceRef).trim(),
+                        invoiceValue:    invVal,
+                        calculatedValue: calcVal,
+                        difference:      Math.round((calcVal - invVal) * 100) / 100,
                         nfCount:         (after.paidNFs || []).length,
                         nfList:          after.paidNFs || [],
-                        confirmedBy:     auditEntry.user   || 'Recuperado',
+                        confirmedBy:     entry.user || 'Recuperado',
                         authorizedBy:    after.authorizedBy || null,
                         justification:   null,
                         _recoveredFromAudit: true
-                    };
+                    });
+                });
 
-                    // Salva no Firestore
-                    await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
-                        .collection('invoice_history_db').doc(String(newEntry.id))
-                        .set(newEntry);
+                // 3. Fonte B — NFs pagas órfãs em dispatches_db (últimos 90 dias) sem fatura em invoice_history_db
+                const cutoffMs = Date.now() - 90 * 24 * 60 * 60 * 1000;
+                const orphanGroups = new Map();
 
-                    // Adiciona ao localStorage se não existir
+                const _addOrphan = (carrier, ref, paidAt, paidBy, authBy, note, nfNum, valor) => {
+                    if (!carrier || !ref || String(ref).trim() === 'N/A') return;
+                    const ts = paidAt ? new Date(paidAt).getTime() : 0;
+                    if (!ts || isNaN(ts) || ts < cutoffMs) return;
+                    if (_existsIn(existingHistory, carrier, ref)) return;
+                    if (_existsIn(toRecreate, carrier, ref)) return;
+
+                    const key = `${normStr(carrier)}||${normStr(ref)}`;
+                    if (!orphanGroups.has(key)) {
+                        orphanGroups.set(key, {
+                            id:              ts + orphanGroups.size,
+                            date:            paidAt,
+                            carrier:         carrier,
+                            invoiceRef:      String(ref).trim(),
+                            calculatedValue: 0,
+                            nfList:          [],
+                            confirmedBy:     paidBy || 'Recuperado',
+                            authorizedBy:    authBy || null,
+                            justification:   note || null,
+                            _recoveredFromDispatches: true
+                        });
+                    }
+                    const grp = orphanGroups.get(key);
+                    if (nfNum && !grp.nfList.includes(nfNum)) grp.nfList.push(nfNum);
+                    grp.calculatedValue = Math.round((grp.calculatedValue + (Number(valor) || 0)) * 100) / 100;
+                    if (ts > new Date(grp.date).getTime()) grp.date = paidAt;
+                };
+
+                (paidSnap.docs || []).forEach(doc => {
+                    const d = doc.data();
+                    if (!d || d.status !== 'Pago' || !d.invoiceRef) return;
+                    const redespVal = d.redespTotal || ((!d.redespTotal && d.redespCarrier && d.pedagio) ? Number(d.pedagio) : 0);
+                    const mainVal = (d.mainTotal != null && d.mainTotal !== d.total)
+                        ? Number(d.mainTotal)
+                        : Math.max(0, Number(d.total || 0) - Number(redespVal || 0));
+                    _addOrphan(d.carrier, d.invoiceRef, d.paidAt, d.paidBy, d.authorizedBy, d.paymentNote, d.invoice, mainVal);
+                });
+
+                (redespPaidSnap.docs || []).forEach(doc => {
+                    const d = doc.data();
+                    if (!d || !d.redespPago || !d.redespInvoiceRef) return;
+                    const rCarrier = d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : '');
+                    const rVal = Number(d.redespTotal || d.pedagio || 0);
+                    _addOrphan(rCarrier, d.redespInvoiceRef, d.redespPaidAt, d.redespPaidBy, d.redespAuthorizedBy, d.redespPaymentNote, d.invoice, rVal);
+                });
+
+                orphanGroups.forEach(grp => {
+                    grp.invoiceValue = grp.calculatedValue;
+                    grp.difference   = 0;
+                    grp.nfCount      = grp.nfList.length;
+                    toRecreate.push(grp);
+                });
+
+                if (toRecreate.length === 0) {
+                    showToast('✅ Nenhuma conferência perdida ou NF órfã encontrada. Análise está completa!', 'success');
+                    return;
+                }
+
+                // Ordena da mais recente para a mais antiga
+                toRecreate.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                // 4. Mostra resumo e pede confirmação
+                const summary = toRecreate.slice(0, 15).map(m =>
+                    `• ${m.carrier} — Fatura: ${m.invoiceRef} — NFs: ${(m.nfList || []).join(', ')} — ${Utils.formatCurrency(m.calculatedValue || 0)} (${new Date(m.date).toLocaleDateString('pt-BR')})`
+                ).join('\n') + (toRecreate.length > 15 ? `\n... e mais ${toRecreate.length - 15} fatura(s)` : '');
+
+                if (!confirm(`${toRecreate.length} conferência(s) perdida(s) encontrada(s):\n\n${summary}\n\nRecriar na Análise de Faturas?`)) return;
+
+                // 5. Recria as entradas no Firestore + localStorage
+                const localHistory = Utils.getStorage('invoice_history') || [];
+                let recovered = 0;
+
+                for (const newEntry of toRecreate) {
+                    await tenantRef.collection('invoice_history_db').doc(String(newEntry.id)).set(newEntry);
                     if (!localHistory.find(h => String(h.id) === String(newEntry.id))) {
                         localHistory.push(newEntry);
                     }
@@ -7594,10 +7662,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             } catch (e) {
                 console.error('[RecoverInvoice] Erro:', e);
-                showToast('❌ Erro ao recuperar: ' + e.message);
+                showToast('❌ Erro ao recuperar: ' + e.message, 'error');
             }
         };
-
         // Aplica filtros e renderiza todas as seções da aba de análise
         window.filterInvoiceAnalysis = () => {
             const history = Utils.getStorage('invoice_history') || [];
