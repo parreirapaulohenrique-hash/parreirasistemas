@@ -253,6 +253,7 @@
             { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://rds.skytins.com.br:8720/v2',           required: true  },
             { key: 'empId',     label: 'Empresa / Filial no MaxData (empId)',  type: 'number', placeholder: 'Ex: 1 (Matriz), 2 (Varejo), 4 (Porto), 5 (Redenção)', required: true  },
             { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: '364F64E6539974C1D75C8A46C14B2D3D',   required: true  },
+            { key: 'conferidorId', label: 'ID do conferente no MaxData (usuário gravado ao baixar a NF de entrada)', type: 'number', placeholder: 'Ex: 12 — opcional', required: false },
         ],
 
         // ── Token JWT: centralizado em window.WmsMaxdataAuth (cache + renovação + retry 401) ──
@@ -287,8 +288,25 @@
 
         async push(entity, payload, config) {
             try {
+                // NF de entrada conferida: único endpoint oficial é PUT /entry/{id}/markaschecked
+                if (entity === 'receipts') {
+                    const entryId = payload?._maxdataEntryId || payload?._maxdataId || payload?.entryId;
+                    if (!entryId) throw new Error('NF sem ID de entrada do MaxData — não é possível marcá-la como conferida.');
+                    const confId = Number(payload?.conferidorId || window.WmsMaxdataAuth.cfg().conferidorId || 0);
+                    const r = await window.WmsMaxdataAuth.fetch(
+                        window.WmsMaxdataAuth.buildUrl(`entry/${encodeURIComponent(entryId)}/markaschecked`), {
+                        method: 'PUT',
+                        body: JSON.stringify({ conferidorId: confId, pendente: false }),
+                        signal: AbortSignal.timeout(15000)
+                    });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(`HTTP ${r.status}${d.message ? ' — ' + d.message : ''}`);
+                    if (d.success === false) throw new Error(d.message || 'MaxData recusou a marcação da NF como conferida.');
+                    _addSyncLog(entity, 'wms→erp', 'ok', `Maxdata: entrada #${entryId} marcada como conferida`);
+                    return { status: 'ok', message: 'NF marcada como conferida no Maxdata.' };
+                }
+
                 const map = {
-                    'receipts':     { ep: 'entry/markaschecked', method: 'PUT'  },
                     'stock-levels': { ep: 'adjustmentstock',     method: 'POST' },
                 };
                 const target = map[entity];

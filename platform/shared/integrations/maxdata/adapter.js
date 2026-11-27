@@ -768,16 +768,17 @@ class MaxDataAdapter extends ErpAdapter {
      * Marca uma Nota Fiscal de Entrada como conferida no MaxData (WMS Inbound).
      * Endpoint: PUT /v2/entry/{id}/markaschecked
      */
-    async markEntryAsChecked(entryId) {
+    async markEntryAsChecked(entryId, conferidorId) {
         if (!entryId) throw new Error('ID da entrada obrigatório.');
-        const headers = await this._authHeaders();
         const url = this._buildUrl(`entry/${entryId}/markaschecked`);
         this._log('info', `Marcando NF de entrada #${entryId} como conferida no MaxData...`);
 
-        const resp = await this._fetchWithAuth(url, { method: 'PUT', headers });
-        if (!resp.ok) {
-            const errTxt = await resp.text().catch(() => resp.statusText);
-            throw new Error(`Falha ao marcar entrada como conferida (HTTP ${resp.status}): ${errTxt}`);
+        // Body oficial (API Doc): { conferidorId, pendente: false }
+        const confId = Number(conferidorId || this.config.conferidorId || 0);
+        const resp = await this._fetchWithAuth(url, { method: 'PUT', body: JSON.stringify({ conferidorId: confId, pendente: false }) });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.success === false) {
+            throw new Error(`Falha ao marcar entrada como conferida (HTTP ${resp.status}): ${data.message || resp.statusText}`);
         }
         this._log('success', `✅ Entrada #${entryId} marcada como conferida no MaxData.`);
         return { success: true, entryId };

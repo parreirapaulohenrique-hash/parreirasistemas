@@ -510,29 +510,10 @@
                 result = { status: 'warning', message: `ERP inacessível. Dados salvos localmente. (${err.message})` };
             }
         } else if (id === 'maxdata') {
-            try {
-                const token = await _maxdataGetToken();
-                const cfg2  = _maxdataCfg();
-                const base  = cfg2.baseUrl.replace(/\/$/, '');
-                const body = {
-                    entryId:        payload._maxdataEntryId || payload.entryId || payload._maxdataId || null,
-                    volumes:        payload.volumesFisicos || 0,
-                    placa:          payload.placa || '',
-                    motorista:      payload.motorista || '',
-                    operador:       payload.operador || '',
-                    dataCheckin:    payload.dataConferencia || new Date().toISOString()
-                };
-                const resp = await _maxdataFetch(_maxdataBuildUrl('entry/checkin'), {
-                    method: 'PUT',
-                    headers: _maxdataHdrs(token),
-                    body: JSON.stringify(body),
-                    signal: AbortSignal.timeout(15000)
-                });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                result = { status: 'ok', message: 'Check-in de volumes confirmado no Maxdata.' };
-            } catch (err) {
-                result = { status: 'warning', message: `Erro na integração Maxdata: ${err.message}. Check-in salvo localmente.` };
-            }
+            // Check-in de volumes (portaria/doca): a API MaxData não tem endpoint para isso
+            // (PUT /entry/checkin não existe). O registro fica no WMS; a NF é baixada no MaxData
+            // quando a conferência de itens é concluída (PUT /entry/{id}/markaschecked).
+            result = { status: 'ok', message: 'Check-in de volumes registrado no WMS. A NF será baixada no MaxData ao concluir a conferência de itens.' };
         } else {
             // Standalone (sem ERP)
             result = { status: 'ok', message: 'Recebimento de volumes registrado localmente (Standalone).' };
@@ -692,6 +673,25 @@
         return window.WmsMaxdataAuth.fetch(url, options);
     }
 
+    /**
+     * Baixa a conferência da NF de entrada no MaxData.
+     * Único endpoint oficial: PUT /v2/entry/{id}/markaschecked  body { conferidorId, pendente: false }.
+     * A API NÃO recebe itens nem divergências — esses ficam registrados no WMS.
+     */
+    async function _maxdataMarcarConferida(entryId, conferidorId) {
+        if (!entryId) throw new Error('NF sem ID de entrada do MaxData — não é possível marcá-la como conferida.');
+        const confId = Number(conferidorId || _maxdataCfg().conferidorId || 0);
+        const resp = await _maxdataFetch(_maxdataBuildUrl(`entry/${encodeURIComponent(entryId)}/markaschecked`), {
+            method: 'PUT',
+            body:   JSON.stringify({ conferidorId: confId, pendente: false }),
+            signal: AbortSignal.timeout(15000)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}${data.message ? ' — ' + data.message : ''}`);
+        if (data.success === false) throw new Error(data.message || 'MaxData recusou a marcação da NF como conferida.');
+        return data;
+    }
+
     function _maxdataHdrs(token) {
         return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     }
@@ -842,20 +842,24 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
     // ==========================================================================
     async function proc_confirmar_conferencia_itens(payload) {
         // @param {object} payload — { nfNumero, chaveNfe, operador, inicio, fim, itens: [{sku, divergenciaQty, lido, esperado}] }
-        const { connectorId } = window.WmsIntegration.getStatus();
+        // O Coletor não carrega wms-integration.js (window.WmsIntegration) — usa a config salva em localStorage.
+        const connectorId = window.WmsIntegration ? window.WmsIntegration.getStatus().connectorId : _getConnector().id;
 
         if (connectorId === 'maxdata') {
+            // Falha no ERP não bloqueia a finalização no WMS: a conferência é concluída localmente
+            // e a falha fica no log de sincronização (a NF continua pendente no MaxData).
             try {
                 const res = await proc_enviar_conferencia_maxdata(payload);
                 _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `Conferência de itens da NF ${payload.nfNumero} integrada com Maxdata.`);
                 return { status: 'ok', message: 'Conferência integrada com Maxdata.', protocolo: res.protocolo };
             } catch (err) {
                 _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', `Falha ao integrar conferência com Maxdata: ${err.message}`);
-                throw new Error(`Falha na integração com Maxdata: ${err.message}`);
+                console.warn('[WMS] Conferência concluída no WMS, mas não baixada no MaxData:', err.message);
+                return { status: 'warning', message: `Conferência salva no WMS, mas o MaxData não foi atualizado: ${err.message}` };
             }
         }
 
-        if (connectorId !== 'standalone') {
+        if (connectorId !== 'standalone' && window.WmsIntegration) {
             try {
                 const res = await window.WmsIntegration.push('receipts', payload);
                 if (res.status === 'error') throw new Error(res.message);
@@ -1013,7 +1017,9 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
     //   }
     // ==========================================================================
     async function proc_enviar_conferencia_maxdata(payload) {
-        const { id: connId, cfg } = _getConnector();
+        const { id: savedConnId, cfg } = _getConnector();
+        // Mesma resolução do proc_confirmar_conferencia_itens (WMS desktop usa WmsIntegration; Coletor usa localStorage)
+        const connId = window.WmsIntegration ? window.WmsIntegration.getStatus().connectorId : savedConnId;
 
         // ── REST API genérica (Maxdata ou outro ERP via REST) ─────────────────
         if (connId === 'rest-api' && cfg.baseUrl) {
@@ -1058,54 +1064,16 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
             }
         }
 
-        // ── Maxdata: PUT /entry/markaschecked (com itens conferidos e status CONCLUIDO) ─
+        // ── Maxdata: PUT /entry/{id}/markaschecked (único endpoint oficial de baixa da conferência) ─
         if (connId === 'maxdata') {
+            const entryId = payload._maxdataEntryId || payload._maxdataId || '';
             try {
-                const token = await _maxdataGetToken();
-                const cfg2  = _maxdataCfg();
-                const base  = cfg2.baseUrl.replace(/\/$/, '');
-                const body  = {
-                    entryId:        payload._maxdataEntryId || payload._maxdataId || null,
-                    nfNumero:       payload.nfNumero,
-                    chaveNfe:       payload.chaveNfe,
-                    operador:       payload.operador,
-                    status:         'CONCLUIDO',
-                    situacao:       'CONCLUIDO',
-                    concluido:      true,
-                    dataConferencia: payload.fim,
-                    comDivergencia:  payload.hasDivergencia,
-                    itens: (payload.itens || []).map(it => ({
-                        codigoInterno:       it.codigoInterno || it.sku,
-                        sku:                 it.sku,
-                        descricao:           it.descricao,
-                        quantidadeNF:        it.esperado,
-                        quantidadeConferida: it.lido,
-                        divergencia:         it.divergencia
-                    }))
-                };
-                const markUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('entry/markaschecked') : `${base}/entry/markaschecked`;
-                const resp = await _maxdataFetch(markUrl, {
-                    method: 'PUT', headers: _maxdataHdrs(token),
-                    body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
-                });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json().catch(() => ({}));
-
-                // Se houver ID da entrada, chama também update de status direto para garantir alteração de PENDENTE -> CONCLUIDO na Tela 102
-                const entryId = payload._maxdataEntryId || payload._maxdataId;
-                if (entryId) {
-                    await _maxdataFetch(_maxdataBuildUrl(`entry/${entryId}`), {
-                        method: 'PUT', headers: _maxdataHdrs(token),
-                        body: JSON.stringify({ status: 'CONCLUIDO', situacao: 'CONCLUIDO' }),
-                        signal: AbortSignal.timeout(8000)
-                    }).catch(() => null);
-                }
-
+                const data = await _maxdataMarcarConferida(entryId, payload.conferidorId);
                 _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'ok',
-                    `Maxdata: NF ${payload.nfNumero} conferida. Status alterado na Tela 102 de PENDENTE → CONCLUÍDO. Protocolo: ${data.protocolo || data.id || '—'}`);
-                return { ok: true, protocolo: data.protocolo || data.id || '' };
+                    `Maxdata: NF ${payload.nfNumero} (entrada #${entryId}) marcada como conferida${payload.hasDivergencia ? ' — divergências registradas apenas no WMS' : ''}.`);
+                return { ok: true, protocolo: data.id || entryId };
             } catch (e) {
-                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'error', e.message);
+                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'error', `NF ${payload.nfNumero}: ${e.message}`);
                 throw e;
             }
         }

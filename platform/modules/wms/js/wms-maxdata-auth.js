@@ -59,6 +59,8 @@ window.WmsMaxdataAuth = (function () {
             appName:        cc.appName        || APP.name,
             appKey:         cc.appKey         || APP.key,
             appDescription: cc.appDescription || APP.desc,
+            // ID do usuário MaxData gravado como conferente em PUT /entry/{id}/markaschecked
+            conferidorId:   Number(cc.conferidorId || 0),
             token:          cc._maxdataToken  || null
         };
     }

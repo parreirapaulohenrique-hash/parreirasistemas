@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 connectorConfig: {
                     baseUrl: ed.apiUrl || ed.baseUrl || 'http://rds.skytins.com.br:8720/v2',
                     empId: ed.empId || 1,
-                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
+                    conferidorId: ed.conferidorId || 0
                 },
                 updatedAt: ed.updatedAt || new Date().toISOString()
             };
@@ -107,7 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 connectorConfig: {
                     baseUrl: wd.baseUrl || 'http://rds.skytins.com.br:8720/v2',
                     empId: wd.empId || 1,
-                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
+                    conferidorId: wd.conferidorId || 0
                 },
                 updatedAt: wd.updatedAt || new Date().toISOString()
             };
@@ -148,7 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 connectorConfig: {
                     baseUrl: ed.apiUrl || ed.baseUrl || 'http://rds.skytins.com.br:8720/v2',
                     empId: ed.empId || 1,
-                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
+                    conferidorId: ed.conferidorId || 0
                 },
                 updatedAt: ed.updatedAt || new Date().toISOString()
             };
@@ -159,7 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 connectorConfig: {
                     baseUrl: wd.baseUrl || 'http://rds.skytins.com.br:8720/v2',
                     empId: wd.empId || 1,
-                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
+                    conferidorId: wd.conferidorId || 0
                 },
                 updatedAt: wd.updatedAt || new Date().toISOString()
             };
