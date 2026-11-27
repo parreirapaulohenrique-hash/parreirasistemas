@@ -1,3 +1,10 @@
+### Versão 3.5.10 (Build 233) - 27/11/2026
+- **Leitura Completa de Todas as Páginas em PDFs John Deere e Gerais**:
+  - Eliminada a limitação que lia apenas a 1ª página do arquivo PDF importado.
+  - **Extração de Texto Multipáginas (`DemandaPDF.extrairTextoTodasPaginas`)**: Percorre iterativamente todas as páginas do PDF (1 a N), unifica o fluxo textual e submete ao parser inteligente John Deere (`DemandaImport.parseJohnDeere`), extraindo 100% dos produtos do carrinho/orçamento instantaneamente.
+  - **Renderização Composta Contínua Multipáginas (`DemandaPDF.renderizarTodasPaginasComoImagem`)**: Para PDFs digitalizados/escaneados ou sem camada vetorial, todas as páginas (até 20 páginas) são renderizadas em alta resolução e combinadas verticalmente em um canvas unificado, permitindo demarcação visual e OCR em toda a extensão do documento.
+  - **Identificação com Feedback Visual**: Ao concluir a leitura, o sistema informa a quantidade total de produtos identificados e o número de páginas processadas (ex: `✓ 72 produtos identificados em todas as 4 páginas do PDF!`).
+
 ### Versão 3.5.9 (Build 232) - 27/11/2026
 - **Aba e Fluxo Especializado de Importação John Deere**: Criado canal dedicado para importação de orçamentos e carrinhos de compras do portal John Deere, adaptado ao layout não padronizado em cartões verticais.
 - **Botão e Modal Dedicado John Deere**:

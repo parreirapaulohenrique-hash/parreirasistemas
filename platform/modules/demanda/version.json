@@ -1,9 +1,9 @@
 {
-  "version": "3.5.9",
-  "build": "20261127-v3.5.9",
+  "version": "3.5.10",
+  "build": "20261127-v3.5.10",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-11-27",
-  "change": "v3.5.9: Aba e fluxo especializado de importação de produtos e orçamentos John Deere (carrinho de compras e catálogo). Suporta prints/fotos com layout em cartões verticais (nome da peça acima, número de peça e quantidade abaixo, e menção opcional de substituto), agrupamento inteligente em 5 colunas padronizadas, OCR com coluna da direita (78%/22%) refinada e extração de códigos substitutos para referências alternativas de busca no ERP.",
-  "releaseDate": "2026-11-27T17:30:00-03:00"
+  "change": "v3.5.10: Leitura e extração completa de TODAS as páginas em arquivos PDF (John Deere e PDF geral). Elimina a limitação de ler apenas a 1ª página: extrai texto nativo de todas as páginas com unificação inteligente de blocos no parser John Deere (parseJohnDeere), além de suportar PDFs escaneados via renderização composta contínua de todas as páginas em alta resolução para demarcação e OCR sem perda de itens.",
+  "releaseDate": "2026-11-27T17:55:00-03:00"
 }

@@ -923,17 +923,20 @@ const DemandaApp = (function () {
             if (!file) return;
 
             _setUltimoArquivo({ file: file, nome: file.name || "Cotação PDF", fonte: "pdf" });
-            // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
-            _toast("Renderizando página do PDF para demarcação visual...", "info");
+            // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza todas as páginas do PDF em canvas HD contínuo)
+            _toast("Renderizando páginas do PDF para demarcação visual...", "info");
             (async function () {
                 try {
-                    if (window.DemandaImagemDemarcador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.renderizarPaginaComoImagem === 'function') {
-                        var rend = await DemandaPDF.renderizarPaginaComoImagem(file, 1);
+                    if (window.DemandaImagemDemarcador && typeof DemandaPDF !== 'undefined') {
+                        var rend = typeof DemandaPDF.renderizarTodasPaginasComoImagem === 'function'
+                            ? await DemandaPDF.renderizarTodasPaginasComoImagem(file, 20)
+                            : (typeof DemandaPDF.renderizarPaginaComoImagem === 'function' ? await DemandaPDF.renderizarPaginaComoImagem(file, 1) : null);
                         if (rend && rend.dataUrl) {
+                            var paginasInfo = (rend.numPages && rend.numPages > 1) ? " (" + rend.numPages + " páginas)" : "";
                             DemandaImagemDemarcador.abrir({
                                 file: file,
                                 dataUrl: rend.dataUrl,
-                                nome: file.name || "Cotação PDF",
+                                nome: (file.name || "Cotação PDF") + paginasInfo,
                                 toast: _toast,
                                 onVoltar: function () { openImportModal("pdf"); },
                                 onConfirm: function (grade, estadoDemarcador) {
@@ -941,8 +944,8 @@ const DemandaApp = (function () {
                                         DemandaMapeador.abrir({
                                             rows: grade,
                                             fonte: "pdf",
-                                            _cb: _setUltimoArquivo({ file: file, nome: file.name || "Cotação PDF", fonte: "pdf", rows: grade, estadoDemarcador: estadoDemarcador }),
-                                            nome: file.name || "Cotação PDF",
+                                            _cb: _setUltimoArquivo({ file: file, nome: (file.name || "Cotação PDF") + paginasInfo, fonte: "pdf", rows: grade, estadoDemarcador: estadoDemarcador }),
+                                            nome: (file.name || "Cotação PDF") + paginasInfo,
                                             file: file,
                                             dataUrl: rend.dataUrl,
                                             estadoDemarcador: estadoDemarcador,
@@ -954,13 +957,13 @@ const DemandaApp = (function () {
                                                     cortesPct: estadoDemarcador ? estadoDemarcador.cortesPct : null,
                                                     yTopPct: estadoDemarcador ? estadoDemarcador.yTopPct : null,
                                                     yBottomPct: estadoDemarcador ? estadoDemarcador.yBottomPct : null,
-                                                    nome: file.name || "Cotação PDF",
+                                                    nome: (file.name || "Cotação PDF") + paginasInfo,
                                                     toast: _toast,
                                                     onConfirm: function (novaGrade, novoEstado) {
                                                         DemandaMapeador.abrir({
                                                             rows: novaGrade,
                                                             fonte: "pdf",
-                                                            nome: file.name || "Cotação PDF",
+                                                            nome: (file.name || "Cotação PDF") + paginasInfo,
                                                             file: file,
                                                             dataUrl: rend.dataUrl,
                                                             estadoDemarcador: novoEstado,
@@ -1554,9 +1557,9 @@ const DemandaApp = (function () {
             return;
         }
 
-        // 2. PDF: abre leitor PDF
+        // 2. PDF John Deere: processa todas as páginas do PDF
         if (ehPdf) {
-            _abrirImportPDF(file);
+            _processarPDFJohnDeere(file);
             return;
         }
 
@@ -1586,6 +1589,115 @@ const DemandaApp = (function () {
             onExcelFileSelected(file);
         };
         reader.readAsText(file);
+    }
+
+    async function _processarPDFJohnDeere(file) {
+        if (!file) return;
+        closeModal("modalJohnDeere");
+        _setUltimoArquivo({ file: file, nome: file.name || "Cotação John Deere PDF", fonte: "johndeere" });
+        _toast("Lendo todas as páginas do PDF John Deere...", "info");
+
+        // 1. Prioridade A: Tenta extração de texto nativo de TODAS as páginas
+        try {
+            if (typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.extrairTextoTodasPaginas === 'function') {
+                var res = await DemandaPDF.extrairTextoTodasPaginas(file);
+                var fullText = (res && res.fullText ? res.fullText : '').trim();
+                var numPages = (res && res.numPages) || 1;
+
+                if (fullText.length > 30 && window.DemandaImport && typeof DemandaImport.parseJohnDeere === 'function') {
+                    var grade = DemandaImport.parseJohnDeere(fullText);
+                    if (grade && grade.length > 1) {
+                        _setUltimoArquivo({
+                            file: file,
+                            nome: file.name || "Cotação John Deere PDF",
+                            fonte: "johndeere",
+                            rows: grade,
+                            rawText: fullText
+                        });
+                        DemandaMapeador.abrir({
+                            rows: grade,
+                            rawText: fullText,
+                            fonte: "johndeere",
+                            nome: (file.name || "Cotação John Deere") + " (" + numPages + " pág.)",
+                            file: file,
+                            toast: _toast,
+                            onVoltar: function () { openImportModal("johndeere"); },
+                            onConfirm: function (itens) {
+                                _showConferencia(DemandaImport.validateItens(itens));
+                            }
+                        });
+                        _toast("✓ " + (grade.length - 1) + " produtos identificados em todas as " + numPages + " páginas do PDF!", "success");
+                        return;
+                    }
+                }
+            }
+        } catch (errTexto) {
+            console.warn("[DemandaApp] Falha na extração textual do PDF John Deere:", errTexto);
+        }
+
+        // 2. Prioridade B: Se for PDF escaneado (imagens), renderiza TODAS as páginas combinadas verticalmente
+        try {
+            if (window.DemandaImagemDemarcador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.renderizarTodasPaginasComoImagem === 'function') {
+                _toast("Renderizando todas as páginas do PDF para demarcação visual...", "info");
+                var rend = await DemandaPDF.renderizarTodasPaginasComoImagem(file, 20);
+                if (rend && rend.dataUrl) {
+                    var paginasInfo = rend.numPages > 1 ? " (" + rend.numPages + " páginas)" : "";
+                    DemandaImagemDemarcador.abrir({
+                        file: file,
+                        dataUrl: rend.dataUrl,
+                        nome: (file.name || "PDF John Deere") + paginasInfo,
+                        modoJD: true,
+                        cortesPct: [0.78],
+                        toast: _toast,
+                        onVoltar: function () { openImportModal("johndeere"); },
+                        onConfirm: function (grade, estadoDemarcador) {
+                            DemandaMapeador.abrir({
+                                rows: grade,
+                                fonte: "johndeere",
+                                nome: (file.name || "PDF John Deere") + paginasInfo,
+                                file: file,
+                                dataUrl: rend.dataUrl,
+                                estadoDemarcador: estadoDemarcador,
+                                toast: _toast,
+                                onVoltar: function () {
+                                    DemandaImagemDemarcador.abrir({
+                                        file: file,
+                                        dataUrl: rend.dataUrl,
+                                        cortesPct: estadoDemarcador ? estadoDemarcador.cortesPct : [0.78],
+                                        modoJD: true,
+                                        yTopPct: estadoDemarcador ? estadoDemarcador.yTopPct : null,
+                                        yBottomPct: estadoDemarcador ? estadoDemarcador.yBottomPct : null,
+                                        nome: (file.name || "PDF John Deere") + paginasInfo,
+                                        toast: _toast,
+                                        onConfirm: function (novaGrade, novoEstado) {
+                                            DemandaMapeador.abrir({
+                                                rows: novaGrade,
+                                                fonte: "johndeere",
+                                                nome: (file.name || "PDF John Deere") + paginasInfo,
+                                                file: file,
+                                                dataUrl: novoEstado ? novoEstado.dataUrl : '',
+                                                estadoDemarcador: novoEstado,
+                                                toast: _toast,
+                                                onConfirm: function (its) { _showConferencia(DemandaImport.validateItens(its)); }
+                                            });
+                                        }
+                                    });
+                                },
+                                onConfirm: function (itens) {
+                                    _showConferencia(DemandaImport.validateItens(itens));
+                                }
+                            });
+                        }
+                    });
+                    return;
+                }
+            }
+        } catch (errVisual) {
+            console.warn("[DemandaApp] Falha na renderização visual do PDF John Deere:", errVisual);
+        }
+
+        // 3. Fallback genérico caso PDF.js falhe
+        _abrirImportPDF(file);
     }
 
     function processarTextoJohnDeere() {
@@ -9082,6 +9194,7 @@ const DemandaApp = (function () {
         _setModoJDTab: _setModoJDTab,
         onJohnDeereDrop: onJohnDeereDrop,
         onJohnDeereFileSelected: onJohnDeereFileSelected,
+        _processarPDFJohnDeere: _processarPDFJohnDeere,
         processarTextoJohnDeere: processarTextoJohnDeere,
         onExcelDrop: onExcelDrop,
         onExcelFileSelected: onExcelFileSelected,

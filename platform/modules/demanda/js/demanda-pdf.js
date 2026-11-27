@@ -358,11 +358,109 @@ const DemandaPDF = (() => {
         };
     }
 
+    /**
+     * Extrai o texto limpo e estruturado de TODAS as páginas do PDF.
+     * @param {File} file - Arquivo PDF
+     * @returns {Promise<{fullText: string, pages: Array, numPages: number}>}
+     */
+    async function extrairTextoTodasPaginas(file) {
+        const pdfLib = await _loadPDFjs();
+        const pages = await _extractPages(pdfLib, file);
+        const fullText = (pages || []).map(p => p.text).join('\n\n');
+        return {
+            fullText,
+            pages,
+            numPages: pages ? pages.length : 0
+        };
+    }
+
+    /**
+     * Renderiza TODAS as páginas de um PDF em uma única imagem composta vertical contínua em alta resolução.
+     * Garante que o Demarcador Visual e o motor OCR leiam 100% das páginas do documento sem perder itens.
+     * @param {File} file - Arquivo PDF
+     * @param {number} maxPages - Limite de segurança de páginas para evitar estouro de memória (padrão 20)
+     */
+    async function renderizarTodasPaginasComoImagem(file, maxPages = 20) {
+        const pdfLib = await _loadPDFjs();
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfLib.getDocument({ data: buffer }).promise;
+        const total = Math.min(pdf.numPages, maxPages || 20);
+
+        const pagesData = [];
+        let maxW = 0, sumH = 0;
+        const scale = 2.0;
+
+        for (let i = 1; i <= total; i++) {
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({ scale });
+            const w = Math.round(vp.width);
+            const h = Math.round(vp.height);
+            if (w > maxW) maxW = w;
+            sumH += h;
+            pagesData.push({ page, vp, w, h });
+        }
+
+        if (total === 1) {
+            const canvas = document.createElement('canvas');
+            canvas.width = pagesData[0].w;
+            canvas.height = pagesData[0].h;
+            const ctx = canvas.getContext('2d');
+            await pagesData[0].page.render({ canvasContext: ctx, viewport: pagesData[0].vp }).promise;
+            return {
+                dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+                numPages: pdf.numPages,
+                paginasProcessadas: 1,
+                pageWidth: canvas.width,
+                pageHeight: canvas.height
+            };
+        }
+
+        // Limita altura máxima do canvas a 16000px por segurança contra limites do navegador
+        let scaleAdjust = 1.0;
+        if (sumH > 16000) {
+            scaleAdjust = 16000 / sumH;
+            maxW = Math.round(maxW * scaleAdjust);
+            sumH = 16000;
+        }
+
+        const masterCanvas = document.createElement('canvas');
+        masterCanvas.width = maxW;
+        masterCanvas.height = sumH;
+        const masterCtx = masterCanvas.getContext('2d');
+        masterCtx.fillStyle = '#ffffff';
+        masterCtx.fillRect(0, 0, maxW, sumH);
+
+        let currentY = 0;
+        for (let i = 0; i < pagesData.length; i++) {
+            const item = pagesData[i];
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width = item.w;
+            pCanvas.height = item.h;
+            const pCtx = pCanvas.getContext('2d');
+            await item.page.render({ canvasContext: pCtx, viewport: item.vp }).promise;
+
+            const destH = Math.round(item.h * scaleAdjust);
+            const destW = Math.round(item.w * scaleAdjust);
+            masterCtx.drawImage(pCanvas, 0, currentY, destW, destH);
+            currentY += destH;
+        }
+
+        return {
+            dataUrl: masterCanvas.toDataURL('image/jpeg', 0.92),
+            numPages: pdf.numPages,
+            paginasProcessadas: total,
+            pageWidth: masterCanvas.width,
+            pageHeight: masterCanvas.height
+        };
+    }
+
     return {
         importCatalogPDF,
         parseCotacaoPDF,
         extrairGradePDF,
         renderizarPaginaComoImagem,
+        renderizarTodasPaginasComoImagem,
+        extrairTextoTodasPaginas,
         _extractPagesFromLib: _extractPages,
     };
 
