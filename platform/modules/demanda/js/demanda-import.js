@@ -822,26 +822,169 @@ const DemandaImport = (() => {
         };
     }
 
+    // ── Resiliência de SheetJS e Leitura Nativa de Arquivos Texto / CSV ──
+    let _carregandoSheetJSPromise = null;
+    function garantirSheetJS() {
+        if (typeof XLSX !== 'undefined') return Promise.resolve(window.XLSX);
+        if (_carregandoSheetJSPromise) return _carregandoSheetJSPromise;
+
+        const cdns = [
+            'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+            'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+            'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+        ];
+
+        _carregandoSheetJSPromise = new Promise((resolve, reject) => {
+            let idx = 0;
+            function tentar() {
+                if (typeof XLSX !== 'undefined') return resolve(window.XLSX);
+                if (idx >= cdns.length) {
+                    return reject(new Error('Não foi possível carregar a biblioteca de leitura Excel (SheetJS). Verifique sua conexão à internet.'));
+                }
+                const url = cdns[idx++];
+                const s = document.createElement('script');
+                s.src = url;
+                s.async = true;
+                s.onload = () => {
+                    if (typeof XLSX !== 'undefined') resolve(window.XLSX);
+                    else tentar();
+                };
+                s.onerror = () => {
+                    s.remove();
+                    tentar();
+                };
+                document.head.appendChild(s);
+            }
+            tentar();
+        });
+        return _carregandoSheetJSPromise;
+    }
+
+    /**
+     * Lê arquivo como texto suportando UTF-8 e fallback para Windows-1252 / ISO-8859-1 (acentos em ERPs brasileiros).
+     */
+    async function lerTextoArquivo(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let texto = e.target.result || '';
+                // Se detectar caractere de substituição UTF-8 (\uFFFD), relê com Windows-1252
+                if (texto.indexOf('\uFFFD') >= 0 && typeof FileReader !== 'undefined') {
+                    try {
+                        const readerIso = new FileReader();
+                        readerIso.onload = (ev) => resolve(ev.target.result || texto);
+                        readerIso.onerror = () => resolve(texto);
+                        readerIso.readAsText(file, 'windows-1252');
+                        return;
+                    } catch (_) {}
+                }
+                resolve(texto);
+            };
+            reader.onerror = (err) => reject(new Error('Erro ao ler arquivo: ' + (err && err.message ? err.message : 'Falha de I/O')));
+            reader.readAsText(file, 'utf-8');
+        });
+    }
+
+    /**
+     * Converte texto CSV/TSV em grade 2D considerando delimitadores BR (;), vírgula, tabulação, aspas e quebras de linha dentro de células.
+     */
+    function csvParaGrade(texto) {
+        if (!texto || !texto.trim()) return [];
+        const raw = String(texto).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // Detecta delimitador mais provável analisando as primeiras 15 linhas
+        const amostraLinhas = raw.split('\n').filter(l => l.trim()).slice(0, 15);
+        let countPontoEVirgula = 0, countVirgula = 0, countTab = 0, countPipe = 0;
+        amostraLinhas.forEach(l => {
+            countPontoEVirgula += (l.match(/;/g) || []).length;
+            countVirgula += (l.match(/,/g) || []).length;
+            countTab += (l.match(/\t/g) || []).length;
+            countPipe += (l.match(/\|/g) || []).length;
+        });
+
+        let delim = ';';
+        if (countTab > countPontoEVirgula && countTab > countVirgula) delim = '\t';
+        else if (countPontoEVirgula >= countVirgula && countPontoEVirgula > 0) delim = ';';
+        else if (countVirgula > countPontoEVirgula) delim = ',';
+        else if (countPipe > countPontoEVirgula && countPipe > countVirgula) delim = '|';
+
+        const linhas = [];
+        let linhaAtual = [];
+        let celulaAtual = '';
+        let emAspas = false;
+
+        for (let i = 0; i < raw.length; i++) {
+            const char = raw[i];
+            const proxChar = raw[i + 1];
+
+            if (emAspas) {
+                if (char === '"') {
+                    if (proxChar === '"') {
+                        celulaAtual += '"';
+                        i++;
+                    } else {
+                        emAspas = false;
+                    }
+                } else {
+                    celulaAtual += char;
+                }
+            } else {
+                if (char === '"') {
+                    emAspas = true;
+                } else if (char === delim) {
+                    linhaAtual.push(celulaAtual.trim());
+                    celulaAtual = '';
+                } else if (char === '\n') {
+                    linhaAtual.push(celulaAtual.trim());
+                    celulaAtual = '';
+                    if (linhaAtual.some(c => c !== '')) {
+                        linhas.push(linhaAtual);
+                    }
+                    linhaAtual = [];
+                } else {
+                    celulaAtual += char;
+                }
+            }
+        }
+        if (celulaAtual !== '' || linhaAtual.length > 0) {
+            linhaAtual.push(celulaAtual.trim());
+            if (linhaAtual.some(c => c !== '')) {
+                linhas.push(linhaAtual);
+            }
+        }
+        return linhas;
+    }
+
     // ── Parser de Excel / CSV ─────────────────────────────────
     /**
-     * Processa um arquivo Excel ou CSV usando SheetJS.
-     * SheetJS deve estar carregado globalmente como window.XLSX.
+     * Processa um arquivo Excel ou CSV.
+     * Suporta nativamente CSV/TXT (sem dependências) e carrega SheetJS sob demanda para .xlsx/.xls.
      *
      * @param {File} file - Arquivo do input[type=file]
      * @returns {Promise<{ itens: Array, colunas: object, amostra: Array }>}
      */
     async function parseExcel(file) {
-        if (typeof XLSX === 'undefined') {
-            throw new Error('SheetJS (XLSX) não está carregado. Adicione a biblioteca.');
+        if (!file) throw new Error('Nenhum arquivo fornecido.');
+        const nome = (file.name || '').toLowerCase();
+
+        let rows = [];
+        if (nome.endsWith('.csv') || nome.endsWith('.txt')) {
+            const texto = await lerTextoArquivo(file);
+            rows = csvParaGrade(texto);
+            if (!rows.length) rows = textoParaGrade(texto);
+        } else {
+            await garantirSheetJS();
+            if (typeof XLSX === 'undefined') {
+                throw new Error('SheetJS (XLSX) não está carregado. Adicione a biblioteca.');
+            }
+            const buffer  = await file.arrayBuffer();
+            const wb      = XLSX.read(buffer, { type: 'array' });
+            const sheetNm = wb.SheetNames[0];
+            const sheet   = wb.Sheets[sheetNm];
+            rows          = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
         }
 
-        const buffer  = await file.arrayBuffer();
-        const wb      = XLSX.read(buffer, { type: 'array' });
-        const sheetNm = wb.SheetNames[0];
-        const sheet   = wb.Sheets[sheetNm];
-        const rows    = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-        if (rows.length < 2) throw new Error('Planilha vazia ou sem dados.');
+        if (rows.length < 2) throw new Error('Arquivo vazio ou com menos de 2 linhas.');
 
         // Localiza o cabeçalho nas 10 primeiras linhas (a que reconhecer mais colunas)
         let hdrIdx = -1, colMap = null, melhor = 0;
@@ -1053,7 +1196,7 @@ const DemandaImport = (() => {
         }
 
         // 2. Arquivo Excel ou CSV
-        if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+        if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv') || name.endsWith('.txt')) {
             const res = await parseExcel(file);
             return res.itens || [];
         }
@@ -1071,16 +1214,51 @@ const DemandaImport = (() => {
     }
 
     // ── Leitura em GRADE (linhas x colunas) para o Mapeador de Colunas ──
-    /** Lê Excel/CSV e devolve a grade crua de células (strings/números). */
+    /**
+     * Lê Excel/CSV/TXT e devolve a grade crua de células (strings/números).
+     * CSV/TXT é processado nativamente sem depender de CDNs externas.
+     * Excel (.xlsx, .xls) carrega SheetJS sob demanda se ainda não estiver carregado.
+     */
     async function lerGradeArquivo(file) {
-        if (typeof XLSX === 'undefined') throw new Error('SheetJS (XLSX) não está carregado.');
+        if (!file) throw new Error('Nenhum arquivo fornecido.');
+        const nome = (file.name || '').toLowerCase();
+
+        // 1. Arquivo CSV ou Texto puro: parsing nativo resiliente a delimitadores (; , \t |) e acentos
+        if (nome.endsWith('.csv') || nome.endsWith('.txt')) {
+            const texto = await lerTextoArquivo(file);
+            let grade = csvParaGrade(texto);
+            if (!grade || !grade.length) {
+                grade = textoParaGrade(texto);
+            }
+            if (!grade || !grade.length) {
+                throw new Error('O arquivo CSV/Texto selecionado está vazio ou não possui linhas legíveis.');
+            }
+            return grade;
+        }
+
+        // 2. Arquivo Excel (.xlsx, .xls)
+        await garantirSheetJS();
+        if (typeof XLSX === 'undefined') {
+            throw new Error('Biblioteca de leitura Excel (SheetJS) não carregada.');
+        }
+
         const buffer = await file.arrayBuffer();
         const wb     = XLSX.read(buffer, { type: 'array' });
-        const sheet  = wb.Sheets[wb.SheetNames[0]];
-        const rows   = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
-        return rows
-            .map(r => r.map(c => (c == null ? '' : c)))
-            .filter(r => r.some(c => String(c).trim() !== ''));
+        if (!wb.SheetNames || !wb.SheetNames.length) {
+            throw new Error('A planilha selecionada não contém abas.');
+        }
+        const sheetNm = wb.SheetNames[0];
+        const sheet   = wb.Sheets[sheetNm];
+        // raw: false preserva a formatação visual (ex: zeros à esquerda em códigos, valores numéricos limpos)
+        const rows    = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+        const gradeExcel = rows
+            .map(r => (Array.isArray(r) ? r : []).map(c => (c == null ? '' : String(c).trim())))
+            .filter(r => r.some(c => c !== ''));
+
+        if (!gradeExcel.length) {
+            throw new Error('A planilha selecionada está vazia ou sem dados.');
+        }
+        return gradeExcel;
     }
 
     /** Converte texto colado em grade: tab, ';', '|' ou 2+ espaços (o que for mais consistente). */
@@ -1120,6 +1298,9 @@ const DemandaImport = (() => {
         validateItens,
         lerGradeArquivo,
         textoParaGrade,
+        csvParaGrade,
+        lerTextoArquivo,
+        garantirSheetJS,
         _util: {
             splitCodigoDescricao: _splitCodigoDescricao,
             parseMoedaBR:         _parseMoedaBR,

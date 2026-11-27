@@ -12,23 +12,23 @@ const DemandaMapeador = (() => {
 
     // ── Campos ──────────────────────────────────────────────
     const CAMPOS = {
-        ref:        { label: 'Referência',   fixo: true,  cor: '#60a5fa' },
-        desc:       { label: 'Descrição',    fixo: true,  cor: '#a78bfa' },
-        qtde:       { label: 'Qtde',         fixo: true,  cor: '#34d399' },
-        item:       { label: 'Item',         fixo: false, cor: '#94a3b8' },
+        ref: { label: 'Referência', fixo: true, cor: '#60a5fa' },
+        desc: { label: 'Descrição', fixo: true, cor: '#a78bfa' },
+        qtde: { label: 'Qtde', fixo: true, cor: '#34d399' },
+        item: { label: 'Item', fixo: false, cor: '#94a3b8' },
         codInterno: { label: 'Cód. interno', fixo: false, cor: '#94a3b8' },
-        marca:      { label: 'Marca',        fixo: false, cor: '#f59e0b' },
-        unit:       { label: 'Valor unit.',  fixo: false, cor: '#f472b6' },
-        total:      { label: 'Valor total',  fixo: false, cor: '#fb7185' },
-        obs:        { label: 'Obs',          fixo: false, cor: '#94a3b8' },
+        marca: { label: 'Marca', fixo: false, cor: '#f59e0b' },
+        unit: { label: 'Valor unit.', fixo: false, cor: '#f472b6' },
+        total: { label: 'Valor total', fixo: false, cor: '#fb7185' },
+        obs: { label: 'Obs', fixo: false, cor: '#94a3b8' },
     };
     const ORDEM_CAMPOS = ['ref', 'desc', 'qtde', 'item', 'codInterno', 'marca', 'unit', 'total', 'obs'];
     const SEPARADORES = [
         { v: 'auto', label: 'Automático (código no início ou fim)' },
-        { v: ' - ',  label: '" - " (traço com espaços)' },
-        { v: '-',    label: '"-" (traço)' },
-        { v: ' ',    label: 'Espaço' },
-        { v: '/',    label: '"/" (barra)' },
+        { v: ' - ', label: '" - " (traço com espaços)' },
+        { v: '-', label: '"-" (traço)' },
+        { v: ' ', label: 'Espaço' },
+        { v: '/', label: '"/" (barra)' },
         { v: 'custom', label: 'Outro…' },
     ];
     const MAX_LINHAS_VIEW = 300;
@@ -69,14 +69,14 @@ const DemandaMapeador = (() => {
     // ── Sugestão automática ─────────────────────────────────
     const PADROES_TITULO = [
         ['codInterno', /c[oó]d\.?\s*(int|interno)|interno|c[oó]d\.?\s*(cli|forn)/i],
-        ['total',      /total/i],
-        ['unit',       /pre[çc]o|valor\s*unit|vl\.?\s*unit|unit[áa]rio|^valor$|^vlr/i],
-        ['qtde',       /^(qtde?|qtd|quant|qty|qt\.?)\b|quantidade/i],
-        ['ref',        /^(ref|c[oó]d|part\s*n|p\/n|pn$)|refer[eê]ncia|c[oó]digo|n[úu]mero\s*(da\s*)?pe[çc]a/i],
-        ['desc',       /desc|produto|^pe[çc]as?$|denomina|material|^itens?\s*desc/i],
-        ['marca',      /marca|fabric|brand/i],
-        ['obs',        /^obs|observ|coment/i],
-        ['item',       /^(item|it|seq|n[º°o]\.?|#)$/i],
+        ['total', /total/i],
+        ['unit', /pre[çc]o|valor\s*unit|vl\.?\s*unit|unit[áa]rio|^valor$|^vlr/i],
+        ['qtde', /^(qtde?|qtd|quant|qty|qt\.?)\b|quantidade/i],
+        ['ref', /^(ref|c[oó]d|part\s*n|p\/n|pn$)|refer[eê]ncia|c[oó]digo|n[úu]mero\s*(da\s*)?pe[çc]a/i],
+        ['desc', /desc|produto|^pe[çc]as?$|denomina|material|^itens?\s*desc/i],
+        ['marca', /marca|fabric|brand/i],
+        ['obs', /^obs|observ|coment/i],
+        ['item', /^(item|it|seq|n[º°o]\.?|#)$/i],
     ];
 
     function _detectarTitulos(row) {
@@ -260,7 +260,7 @@ const DemandaMapeador = (() => {
                 alternativas = alternativas.concat(d.alternativas);
             });
             // v3.4.0: Sanitização avançada de ruídos de OCR e pontuações em códigos e descrições
-            let ref  = _str(v.ref).toUpperCase().trim();
+            let ref = _str(v.ref).toUpperCase().trim();
             ref = ref.replace(/^[*|~"“”'`.–—\s]+/, '').replace(/[*|~"“”'`.–—\s]+$/, '');
             let desc = _str(v.desc).trim();
             desc = desc.replace(/^[*|~"“”'`.–—\s]+/, '');
@@ -289,16 +289,16 @@ const DemandaMapeador = (() => {
             if (alternativas.length) obsPartes.push('Ref. alternativas: ' + alternativas.join(', '));
 
             const item = {
-                refOriginal:      ref,
-                descOriginal:     desc || ref,
-                qtdeSolicitada:   Math.round(qtde * 1000) / 1000,
-                marca:            _str(v.marca),
-                obs:              obsPartes.join(' | '),
-                incerteza:        !ref,
-                _rowNum:          r - (cfg.inicio || 0) + 1,
-                _docLine:         r + 1,
-                _rawIndex:        r,
-                _qtdeInvalida:    qtdeInvalida,
+                refOriginal: ref,
+                descOriginal: desc || ref,
+                qtdeSolicitada: Math.round(qtde * 1000) / 1000,
+                marca: _str(v.marca),
+                obs: obsPartes.join(' | '),
+                incerteza: !ref,
+                _rowNum: r - (cfg.inicio || 0) + 1,
+                _docLine: r + 1,
+                _rawIndex: r,
+                _qtdeInvalida: qtdeInvalida,
                 _semQtdeNaOrigem: semQtdeNaOrigem,
             };
             if (unit > 0) item.precoConcorrente = unit;
@@ -348,7 +348,7 @@ const DemandaMapeador = (() => {
         try { return firebase.firestore().collection(DemandaDB.BASE_PATH + '/data/mapeadorModelos'); } catch (_) { return null; }
     }
     function _lsModelos() { try { return JSON.parse(localStorage.getItem(LS_MODELOS) || '[]') || []; } catch (_) { return []; } }
-    function _lsSalvar(lista) { try { localStorage.setItem(LS_MODELOS, JSON.stringify(lista)); } catch (_) {} }
+    function _lsSalvar(lista) { try { localStorage.setItem(LS_MODELOS, JSON.stringify(lista)); } catch (_) { } }
 
     async function carregarModelos() {
         _modelos = _lsModelos();
@@ -369,7 +369,7 @@ const DemandaMapeador = (() => {
         const s = _st;
         const id = s.modeloId && _modelos.some(m => m.id === s.modeloId && m.nome === nome) ? s.modeloId : ('mod_' + Date.now().toString(36));
         let usuario = '';
-        try { const ses = window.ParreiraAuth && ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null; usuario = ses ? (ses.nome || ses.login || '') : ''; } catch (_) {}
+        try { const ses = window.ParreiraAuth && ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null; usuario = ses ? (ses.nome || ses.login || '') : ''; } catch (_) { }
         const modelo = {
             id, nome,
             fonte: s.fonte,
@@ -394,7 +394,7 @@ const DemandaMapeador = (() => {
         _modelos = _modelos.filter(m => m.id !== id);
         _lsSalvar(_modelos);
         const col = _colModelos();
-        if (col) { try { await col.doc(id).delete(); } catch (_) {} }
+        if (col) { try { await col.doc(id).delete(); } catch (_) { } }
     }
 
     function _melhorModelo() {
@@ -726,7 +726,7 @@ const DemandaMapeador = (() => {
                 (antes || depois ? '' : `<button class="mpd-exc-b ${excl.has(r) ? 'is-fora' : ''}" data-exc="${r}" title="${excl.has(r) ? 'Restaurar linha ' + numExibicao : 'Excluir linha ' + numExibicao + ' da importação'}">` +
                     `<span class="material-icons-round" style="font-size:14px;vertical-align:middle">${excl.has(r) ? 'undo' : 'delete_outline'}</span>` +
                     (excl.has(r) ? '<span class="mpd-exc-lbl">Restaurar</span>' : '') +
-                `</button>`) +
+                    `</button>`) +
                 `</div></td>`;
             for (let c = 0; c < n; c++) {
                 const v = _cel(rows[r], c);

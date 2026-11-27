@@ -1,3 +1,20 @@
+### Versão 3.5.8 (Build 231) - 27/11/2026
+- **Correção Definitiva da Importação de Excel e CSV**: Solucionada a falha que impedia o carregamento de arquivos `.xlsx`, `.xls`, `.csv` e `.txt` na Central de Cotação.
+- **Parser Nativo e Resiliente de CSV / TXT**:
+  - Leitura direta via JavaScript nativo sem dependência de bibliotecas externas (SheetJS).
+  - Reconhecimento automático de delimitadores brasileiros comuns em ERPs: ponto e vírgula (`;`), vírgula (`,`), tabulação (`\t`) e pipe (`|`).
+  - Suporte completo a células entre aspas duplas (`"..."`) e quebras de linha internas.
+  - Compatibilidade com codificações brasileiras: suporte a UTF-8 com fallback automático para Windows-1252 / ISO-8859-1 para evitar perda de acentos em textos exportados de ERPs.
+- **Carregamento Dinâmico e Fallback do SheetJS para Excel**:
+  - Carregamento sob demanda com fallback automático entre CDNs (Cloudflare -> jsDelivr -> unpkg) caso a biblioteca não esteja disponível no primeiro momento.
+  - O operador não é mais bloqueado se uma CDN oscilar ou demorar a carregar.
+- **Desbloqueio do Seletor de Arquivos (`input[type="file"]`)**:
+  - Limpeza automática do valor do seletor de arquivos (`input.value = ''`) tanto ao abrir o modal quanto ao clicar ou selecionar o arquivo.
+  - Permite ao operador selecionar o mesmo arquivo novamente sem travamento ou falta de resposta do navegador.
+- **Feedback Visual e Tratamento de Erros**:
+  - Exibição de spinner de carregamento durante a leitura de arquivos volumosos.
+  - Notificações de toast descritivas e mensagens visuais em caso de arquivos vazios ou ilegíveis.
+
 ### Versão 3.5.7 (Build 229) - 26/11/2026
 - **Clareza e Alta Resolução na Digitalização OCR**: Canvas de pré-processamento otimizado com densidade ótica balanceada (mínimo de ~2400px de largura) e interpolação de alta fidelidade sem artefatos JPEG de bloco, preservando nitidez de números finos, vírgulas e pontos decimais.
 - **Clusterização Geométrica das Linhas Horizontais no Demarcador**: Substituído o cálculo de centróide móvel por agrupamento robusto baseado na altura mediana `H` e sobreposição vertical (`vertical overlap`), impedindo que números da coluna de identificação/Item sejam engolidos pela linha vizinha ou que linhas colidam.

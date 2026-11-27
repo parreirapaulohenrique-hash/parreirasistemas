@@ -1,9 +1,9 @@
 {
-  "version": "3.5.7",
-  "build": "20261126-v3.5.7",
+  "version": "3.5.8",
+  "build": "20261127-v3.5.8",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-11-26",
-  "change": "v3.5.7: Aprimoramento da clareza e fidelidade na digitalização de fotos de peças e documentos — Resolução e nitidez otimizadas para OCR de alta precisão (sem artefatos de bloco em dígitos finos), clusterização vertical robusta de linhas horizontais por sobreposição geométrica (sem colisão de linhas vizinhas nem engolimento de itens), consolidação inteligente de continuações descritivas multiline e blindagem de quantidade (eliminação de quantidades inexistentes e diferenciação explícita de itens sem quantidade na imagem original).",
-  "releaseDate": "2026-11-26T15:20:00-03:00"
+  "lastUpdate": "2026-11-27",
+  "change": "v3.5.8: Correção definitiva da importação de arquivos Excel (.xlsx, .xls) e CSV (.csv, .txt) — Parser nativo e resiliente para arquivos CSV/TXT com detecção automática de delimitadores brasileiros (ponto e vírgula, vírgula, tabulação, pipe) e suporte a acentuação UTF-8/Windows-1252 sem dependência externa, carregamento dinâmico sob demanda do SheetJS com fallback para CDNs alternativas, reset automático do seletor de arquivos ao abrir e selecionar permitindo reimportar o mesmo arquivo, e feedback visual com tratamento robusto de erros.",
+  "releaseDate": "2026-11-27T08:25:00-03:00"
 }

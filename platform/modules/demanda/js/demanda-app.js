@@ -847,7 +847,8 @@ const DemandaApp = (function () {
             _atualizarContadorLinhasTexto();
             _openModal("modalTexto");
         } else if (type === "excel") {
-            var prev = document.getElementById("excelPreviewArea"); if (prev) prev.style.display = "none";
+            var fi = document.getElementById("excelFileInput"); if (fi) fi.value = "";
+            var prev = document.getElementById("excelPreviewArea"); if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
             var btn = document.getElementById("btnConfirmExcel"); if (btn) btn.style.display = "none";
             var up = document.getElementById("excelUploadArea"); if (up) up.style.display = "";
             _openModal("modalExcel");
@@ -1808,6 +1809,9 @@ const DemandaApp = (function () {
 
     function onExcelFileSelected(file) {
         if (!file) return;
+        var fi = document.getElementById("excelFileInput");
+        if (fi) fi.value = ""; // Limpa para permitir selecionar o mesmo arquivo novamente
+
         var area = document.getElementById("excelUploadArea");
         var prev = document.getElementById("excelPreviewArea");
         var nomeArq = (file.name || "").toLowerCase();
@@ -1830,14 +1834,22 @@ const DemandaApp = (function () {
             return;
         }
 
-        if (typeof DemandaImport === "undefined" || typeof XLSX === "undefined") {
-            _toast("SheetJS não carregado. Importe via texto por enquanto.", "error"); return;
+        if (typeof DemandaImport === "undefined") {
+            _toast("Módulo de importação não carregado. Recarregue a página.", "error");
+            return;
         }
+
         if (area) area.style.display = "none";
+        if (prev) {
+            prev.style.display = "";
+            prev.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2rem'>sync</span>" +
+                "<p style='margin-top:.5rem'>Lendo dados da planilha / arquivo...</p></div>";
+        }
 
         _setUltimoArquivo({ file: file, nome: file.name, fonte: "excel" });
-        // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
-        if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
+        // Excel/CSV/TXT -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
+        if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv|txt)$/i.test(nomeArq)) {
             DemandaImport.lerGradeArquivo(file).then(function (rows) {
                 closeModal("modalExcel");
                 if (area) area.style.display = "";
@@ -1856,7 +1868,14 @@ const DemandaApp = (function () {
                     }
                 });
             }).catch(function (err) {
-                if (prev) { prev.style.display = ""; prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro ao ler arquivo: " + _esc(err.message || err) + "</div>"; }
+                var msg = (err && err.message) ? err.message : String(err);
+                _toast("Erro ao ler arquivo: " + msg, "error");
+                if (prev) {
+                    prev.style.display = "";
+                    prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem;text-align:center;font-weight:600'>" +
+                        "<span class='material-icons-round' style='vertical-align:middle;margin-right:4px'>error_outline</span>" +
+                        _esc(msg) + "</div>";
+                }
                 if (area) area.style.display = "";
             });
             return;
