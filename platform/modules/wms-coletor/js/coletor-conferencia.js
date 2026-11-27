@@ -388,7 +388,15 @@ function _atualizarUltimoLido(item, lido, status, esperado) {
         panel.innerHTML = `
             <span class="material-icons-round" style="font-size:2rem;color:#ef4444;">error_outline</span>
             <div><div style="font-size:.82rem;font-weight:700;color:#ef4444;">Código não encontrado nesta NF</div>
-            <div style="font-size:.72rem;color:var(--text-secondary);font-family:monospace;">${lido}</div></div>`;
+            <div style="font-size:.72rem;color:var(--text-secondary);font-family:monospace;">${lido}</div>
+            <div id="conf-notfound-erp" style="font-size:.72rem;color:var(--text-secondary);margin-top:.2rem;"></div></div>`;
+        // Identifica o produto no catálogo do ERP (ou pela API, se for EAN) para orientar o operador
+        if (window.WmsErpCatalog) {
+            window.WmsErpCatalog.findByCode(lido).then(p => {
+                const el = document.getElementById('conf-notfound-erp');
+                if (el && p) el.textContent = `No ERP: ${p.sku} — ${p.descricao} (não pertence a esta NF)`;
+            }).catch(() => {});
+        }
         return;
     }
 

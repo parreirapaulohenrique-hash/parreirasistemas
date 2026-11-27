@@ -296,7 +296,127 @@ window.loadCadastroView = function (viewId) {
     if (!data[config.key]) data[config.key] = [];
     const items = data[config.key];
 
+    // Produtos: se o catálogo do ERP (IndexedDB) tiver itens, mostra o catálogo paginado
+    if (viewId === 'cad-prod-cadastro' && window.WmsErpCatalog) {
+        window.WmsErpCatalog.count()
+            .then(n => n > 0 ? renderProdutosErp(container, n) : renderCadGrid(container, config, items, viewId))
+            .catch(() => renderCadGrid(container, config, items, viewId));
+        return;
+    }
+
     renderCadGrid(container, config, items, viewId);
+};
+
+// ===========================================
+// PRODUTOS DO ERP — catálogo local (WmsErpCatalog / IndexedDB)
+// ===========================================
+const _prodErp = { search: '', page: 1, somenteComSaldo: false, timer: null };
+const _escCad  = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function renderProdutosErp(container, totalCatalogo) {
+    const meta    = await window.WmsErpCatalog.getMeta('lastSync').catch(() => null);
+    const manuais = (getCadastroData().produtos || []).length;
+    container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span class="material-icons-round" style="font-size:1.5rem; color:var(--wms-primary);">inventory_2</span>
+                <div>
+                    <h3 style="font-size:1rem;">Produtos
+                        <span style="font-size:.68rem; background:rgba(99,102,241,.15); color:var(--wms-primary); padding:.1rem .45rem; border-radius:4px; vertical-align:middle; font-weight:700;">ERP MaxData</span>
+                    </h3>
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">${totalCatalogo.toLocaleString('pt-BR')} no catálogo${meta?.at ? ' • sincronizado em ' + new Date(meta.at).toLocaleString('pt-BR') : ''}</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <div style="display:flex; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:0 0.5rem;">
+                    <span class="material-icons-round" style="font-size:1rem; color:var(--text-secondary);">search</span>
+                    <input type="text" id="prodErpSearch" placeholder="SKU, ref., descrição, fabricante..." value="${_escCad(_prodErp.search)}"
+                        style="background:none; border:none; color:var(--text-primary); padding:0.5rem; outline:none; font-size:0.85rem; width:240px;"
+                        oninput="prodErpBuscar(this.value)">
+                </div>
+                <label style="display:flex; align-items:center; gap:.35rem; font-size:.8rem; color:var(--text-secondary); cursor:pointer;">
+                    <input type="checkbox" ${_prodErp.somenteComSaldo ? 'checked' : ''} onchange="prodErpSomenteSaldo(this.checked)" style="accent-color:var(--wms-primary);"> Só com saldo
+                </label>
+                <button class="btn btn-secondary" onclick="switchView('cfg-integracao')" title="Configurações → Integrações → Sincronizar Produtos">
+                    <span class="material-icons-round" style="font-size:1rem;">sync</span> Sincronizar
+                </button>
+                ${manuais ? `<button class="btn btn-secondary" onclick="prodErpVerManuais()">
+                    <span class="material-icons-round" style="font-size:1rem;">edit_note</span> Cadastrados no WMS (${manuais})
+                </button>` : ''}
+                <button class="btn btn-primary" onclick="openCadForm('cad-prod-cadastro')">
+                    <span class="material-icons-round" style="font-size:1rem;">add</span> Novo
+                </button>
+            </div>
+        </div>
+        <div class="card" style="overflow:hidden;">
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>SKU</th><th>Ref. Fabricante</th><th>Descrição</th><th>Grupo</th><th>Fabricante</th><th>UN</th>
+                            <th style="text-align:right;">Peso (kg)</th><th style="text-align:right;">A × L × P (cm)</th>
+                            <th style="text-align:right;">Saldo ERP</th><th>Ativo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prodErpBody">
+                        <tr><td colspan="10" style="text-align:center; padding:2rem; color:var(--text-secondary);">Carregando catálogo...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="prodErpPager" style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:.75rem 1rem; border-top:1px solid var(--border-color); font-size:.8rem; color:var(--text-secondary);"></div>
+        </div>
+    `;
+    prodErpCarregar();
+}
+
+async function prodErpCarregar() {
+    const body  = document.getElementById('prodErpBody');
+    const pager = document.getElementById('prodErpPager');
+    if (!body) return;
+    let r;
+    try {
+        r = await window.WmsErpCatalog.list({ search: _prodErp.search, page: _prodErp.page, pageSize: 50, somenteComSaldo: _prodErp.somenteComSaldo });
+    } catch (e) {
+        body.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:2rem; color:var(--danger);">Erro ao ler o catálogo: ${_escCad(e.message)}</td></tr>`;
+        return;
+    }
+    _prodErp.page = r.page;
+    const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
+    body.innerHTML = r.items.length ? r.items.map(p => {
+        const saldo = Number(p.saldoErp || 0);
+        const cor   = saldo > 0 ? '#10b981' : saldo < 0 ? '#ef4444' : 'var(--text-secondary)';
+        const dim   = (p.altura || p.largura || p.profundidade) ? `${fmt(p.altura)} × ${fmt(p.largura)} × ${fmt(p.profundidade)}` : '-';
+        return `<tr>
+            <td style="font-family:monospace; font-weight:600;">${_escCad(p.sku)}</td>
+            <td style="font-family:monospace;">${_escCad(p.codigoFab) || '-'}</td>
+            <td>${_escCad(p.descricao)}</td>
+            <td style="font-size:.8rem;">${_escCad(p.grupo) || '-'}</td>
+            <td style="font-size:.8rem;">${_escCad(p.fabricante) || '-'}</td>
+            <td>${_escCad(p.unidade)}</td>
+            <td style="text-align:right;">${p.pesoBruto ? fmt(p.pesoBruto) : '-'}</td>
+            <td style="text-align:right; font-size:.8rem;">${dim}</td>
+            <td style="text-align:right; font-weight:700; color:${cor};">${fmt(saldo)}</td>
+            <td><span style="color:${p.ativo ? 'var(--success)' : 'var(--danger)'};">${p.ativo ? 'Sim' : 'Não'}</span></td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="10" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum produto encontrado.</td></tr>`;
+
+    if (pager) pager.innerHTML = `
+        <span>${r.total.toLocaleString('pt-BR')} produto(s) • página ${r.page} de ${r.pages}</span>
+        <span style="display:flex; gap:.5rem;">
+            <button class="btn btn-secondary" style="padding:.3rem .7rem;" ${r.page <= 1 ? 'disabled' : ''} onclick="prodErpPagina(${r.page - 1})">‹ Anterior</button>
+            <button class="btn btn-secondary" style="padding:.3rem .7rem;" ${r.page >= r.pages ? 'disabled' : ''} onclick="prodErpPagina(${r.page + 1})">Próxima ›</button>
+        </span>`;
+}
+
+window.prodErpBuscar = function (v) {
+    clearTimeout(_prodErp.timer);
+    _prodErp.timer = setTimeout(() => { _prodErp.search = v; _prodErp.page = 1; prodErpCarregar(); }, 250);
+};
+window.prodErpSomenteSaldo = function (on) { _prodErp.somenteComSaldo = !!on; _prodErp.page = 1; prodErpCarregar(); };
+window.prodErpPagina       = function (p)  { _prodErp.page = Math.max(1, p); prodErpCarregar(); };
+window.prodErpVerManuais   = function () {
+    const c = document.getElementById('view-dynamic');
+    if (c) renderCadGrid(c, CAD_CONFIG['cad-prod-cadastro'], getCadastroData().produtos || [], 'cad-prod-cadastro');
 };
 
 

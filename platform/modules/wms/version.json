@@ -1,6 +1,6 @@
 {
-  "version": "2.3.2",
+  "version": "2.4.0",
   "date": "2026-11-27",
-  "build": "20261127-0840",
-  "last_change": "Fix: baixa da NF de entrada no MaxData via endpoint oficial PUT /entry/{id}/markaschecked { conferidorId, pendente:false }; removidas chamadas inexistentes (/entry/checkin, /entry/markaschecked sem id, PUT /entry/{id}); finalização da conferência no Coletor não depende mais de WmsIntegration"
+  "build": "20261127-1015",
+  "last_change": "Feat: integração ERP passa a alimentar o WMS — catálogo local de produtos (IndexedDB) no Cadastro de Produtos, Saldo ERP e carga inicial SEM ENDEREÇO na Consulta de Estoque, distribuição via Transferência, clientes do ERP no Cadastro de Clientes e identificação de código desconhecido no Coletor"
 }

@@ -347,7 +347,8 @@ function renderTransferencia(container) {
                 <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:1rem; align-items:end; margin-bottom:1rem;">
                     <div class="form-group">
                         <label class="form-label">Endereço Origem</label>
-                        <input id="trf-origem" class="form-input" placeholder="Ex: 01-01-0101" style="font-family:monospace;">
+                        <input id="trf-origem" class="form-input" placeholder="Ex: 01-01-0101 ou SEM ENDEREÇO" style="font-family:monospace;" list="trf-origem-opcoes">
+                        <datalist id="trf-origem-opcoes"><option value="SEM ENDEREÇO"></option></datalist>
                     </div>
                     <span class="material-icons-round" style="font-size:1.5rem; color:var(--primary-color); padding-bottom:0.6rem;">arrow_forward</span>
                     <div class="form-group">
@@ -367,6 +368,9 @@ function renderTransferencia(container) {
                 <button onclick="salvarTransferencia()" class="btn btn-primary">
                     <span class="material-icons-round" style="font-size:1rem;">swap_horiz</span> Registrar Transferência
                 </button>
+                <div style="margin-top:.75rem; font-size:.75rem; color:var(--text-secondary);">
+                    Para distribuir a carga inicial do ERP pelos endereços, use a origem <strong>SEM ENDEREÇO</strong>.
+                </div>
             </div>
         </div>
 
@@ -402,17 +406,43 @@ function renderTransferencia(container) {
     `;
 }
 
-window.salvarTransferencia = function () {
-    const sku = document.getElementById('trf-sku').value || 'SKU-0000';
+window.salvarTransferencia = async function () {
+    let sku = document.getElementById('trf-sku').value || 'SKU-0000';
     const qtd = parseInt(document.getElementById('trf-qtd').value) || 1;
-    const origem = document.getElementById('trf-origem').value || '00-00-0000';
+    let origem = document.getElementById('trf-origem').value || '00-00-0000';
     const destino = document.getElementById('trf-destino').value || '00-00-0000';
     const motivo = document.getElementById('trf-motivo').value;
+    let desc = `Produto ${sku}`;
+
+    // Distribuição da carga inicial do ERP: origem SEM ENDEREÇO → endereço real (movimenta o estoque de verdade)
+    if (/^\s*SEM[\s\-_]*ENDERE[CÇ]O\s*$/i.test(origem)) {
+        sku = String(document.getElementById('trf-sku').value || '').trim();
+        const dest = String(document.getElementById('trf-destino').value || '').trim();
+        if (!sku || !dest || qtd <= 0) { alert('Informe SKU, quantidade e endereço de destino.'); return; }
+        if (!window.WmsErpCatalog || !window.StockManager) { alert('Catálogo do ERP indisponível.'); return; }
+
+        const end = window.StockManager.getData().addresses.find(a => (a.id || a.address) === dest);
+        if (!end) { alert(`O endereço de destino ${dest} não existe.`); return; }
+        if (end.status === 'BLOQUEADO' || end.blocked) { alert(`O endereço ${dest} está bloqueado.`); return; }
+        if (end.status === 'OCUPADO' && end.sku && String(end.sku) !== sku) { alert(`O endereço ${dest} já está ocupado pelo SKU ${end.sku}.`); return; }
+
+        const prod = await window.WmsErpCatalog.get(sku).catch(() => null);
+        desc = prod?.descricao || desc;
+        try {
+            await window.WmsErpCatalog.baixarSemEndereco(sku, qtd);
+        } catch (e) { alert(e.message); return; }
+        if (!window.StockManager.add(sku, qtd, dest, desc, prod?.unidade || 'UN', 'TRF-SEM-ENDERECO')) {
+            await window.WmsErpCatalog.devolverSemEndereco(sku, qtd, { descricao: desc, unidade: prod?.unidade || 'UN' }).catch(() => {});
+            alert(`Não foi possível gravar no endereço ${dest}. O saldo SEM ENDEREÇO foi devolvido.`);
+            return;
+        }
+        origem = window.WmsErpCatalog.SEM_ENDERECO;
+    }
 
     const transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     transferencias.push({
         id: `TRF-${String(transferencias.length + 1).padStart(3, '0')}`,
-        sku, desc: `Produto ${sku}`, qtd, origem, destino, motivo,
+        sku, desc, qtd, origem, destino, motivo,
         status: 'CONCLUÍDA', data: new Date().toISOString()
     });
 

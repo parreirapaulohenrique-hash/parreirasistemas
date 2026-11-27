@@ -566,9 +566,29 @@ const ErpUI = {
             if (!erp) throw new Error('ERP não configurado. Configure e salve antes de sincronizar.');
 
             let result;
-            if (type === 'clients')  result = await erp.syncClients();
+            // WMS + MaxData: produtos vão para o catálogo local do WMS (IndexedDB) e clientes também
+            // para o Cadastro de Clientes do WMS. Demais módulos seguem o fluxo original do adaptador.
+            const wmsCatalogo = this._moduleContext === 'wms' && window.WmsErpCatalog && typeof erp._fetchWithAuth === 'function';
+            if (type === 'clients') {
+                result = await erp.syncClients();
+                if (wmsCatalogo && typeof erp._getLocalClients === 'function') {
+                    const r = window.WmsErpCatalog.importClients(erp._getLocalClients());
+                    this._addLog('info', `👥 ${r.total} cliente(s) do ERP no Cadastro de Clientes do WMS (${r.novos} novos${r.manuais ? `, ${r.manuais} manuais mantidos` : ''}).`);
+                }
+            }
             if (type === 'nfs')      result = await erp.syncNFs({ status: 'pendente' });
-            if (type === 'products') result = await erp.syncProducts();
+            if (type === 'products') {
+                result = wmsCatalogo
+                    ? await window.WmsErpCatalog.syncProducts({
+                        fetchJson: async (path, params) => {
+                            const r = await erp._fetchWithAuth(erp._buildUrl(path, params), { method: 'GET' });
+                            if (!r.ok) throw new Error(`GET /${path}: HTTP ${r.status}`);
+                            return r.json();
+                        },
+                        onLog: (t, m) => this._addLog(t, m)
+                    })
+                    : await erp.syncProducts();
+            }
             if (type === 'orders')   result = await erp.syncOrders();
 
             const summary = result

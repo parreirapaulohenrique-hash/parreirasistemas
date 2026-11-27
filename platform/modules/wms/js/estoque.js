@@ -214,6 +214,7 @@ function getMockStock() {
 // --- CONSULTA DE ESTOQUE (by SKU) ---
 function renderConsultaEstoque(container) {
     const stock = getMockStock();
+    const skusUnicos = new Set(stock.map(p => p.sku)).size;
 
     container.innerHTML = `
         <div class="card" style="margin-bottom:1.5rem;">
@@ -222,7 +223,13 @@ function renderConsultaEstoque(container) {
                     <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">search</span>
                     Consulta de Estoque
                 </h3>
-                <span style="font-size:0.75rem; color:var(--text-secondary);">${stock.length} produtos</span>
+                <div style="display:flex; align-items:center; gap:.75rem;">
+                    <button id="est-btn-carga-erp" class="btn btn-secondary" onclick="cargaInicialSaldoErp()" style="display:none; font-size:.8rem; padding:.35rem .8rem;"
+                        title="Cria o saldo SEM ENDEREÇO a partir do saldo do ERP, para distribuir pelos endereços">
+                        <span class="material-icons-round" style="font-size:1rem;">move_to_inbox</span> Carga inicial do saldo ERP
+                    </button>
+                    <span id="est-count-label" style="font-size:0.75rem; color:var(--text-secondary);">${stock.length} registros</span>
+                </div>
             </div>
             <div style="padding:1rem 1.5rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:center; border-bottom:1px solid var(--border-color);">
                 <input id="est-search-sku" type="text" placeholder="Buscar por SKU ou Descrição..."
@@ -234,6 +241,7 @@ function renderConsultaEstoque(container) {
                     background:var(--bg-card); color:var(--text-primary); font-size:0.85rem; outline:none;">
                     <option value="">Todos Status</option>
                     <option value="DISPONÍVEL">Disponível</option>
+                    <option value="A ENDEREÇAR">A endereçar (sem endereço)</option>
                     <option value="QUARENTENA">Quarentena</option>
                     <option value="BLOQUEADO">Bloqueado</option>
                 </select>
@@ -250,6 +258,7 @@ function renderConsultaEstoque(container) {
                             <th>Descrição</th>
                             <th>Endereço</th>
                             <th style="text-align:right;">Saldo</th>
+                            <th style="text-align:right;" title="Saldo total do produto no ERP (informativo)">Saldo ERP</th>
                             <th>UN</th>
                             <th>Lote</th>
                             <th>Validade</th>
@@ -262,26 +271,30 @@ function renderConsultaEstoque(container) {
         </div>
 
         <!-- Summary Cards -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:1rem;">
             <div class="card" style="padding:1rem; text-align:center;">
                 <div style="font-size:0.75rem; color:var(--text-secondary);">Total SKUs</div>
-                <div style="font-size:1.3rem; font-weight:700;">${stock.length}</div>
+                <div id="est-card-skus" style="font-size:1.3rem; font-weight:700;">${skusUnicos}</div>
             </div>
             <div class="card" style="padding:1rem; text-align:center;">
                 <div style="font-size:0.75rem; color:var(--text-secondary);">Saldo Total</div>
-                <div style="font-size:1.3rem; font-weight:700;">${stock.reduce((s, p) => s + p.saldo, 0).toLocaleString('pt-BR')}</div>
+                <div id="est-card-saldo" style="font-size:1.3rem; font-weight:700;">${stock.reduce((s, p) => s + p.saldo, 0).toLocaleString('pt-BR')}</div>
             </div>
             <div class="card" style="padding:1rem; text-align:center;">
                 <div style="font-size:0.75rem; color:var(--text-secondary);">Disponíveis</div>
-                <div style="font-size:1.3rem; font-weight:700; color:#10b981;">${stock.filter(p => p.status === 'DISPONÍVEL').length}</div>
+                <div id="est-card-disp" style="font-size:1.3rem; font-weight:700; color:#10b981;">${stock.filter(p => p.status === 'DISPONÍVEL').length}</div>
+            </div>
+            <div class="card" style="padding:1rem; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-secondary);">A endereçar</div>
+                <div id="est-card-aend" style="font-size:1.3rem; font-weight:700; color:#3b82f6;">0</div>
             </div>
             <div class="card" style="padding:1rem; text-align:center;">
                 <div style="font-size:0.75rem; color:var(--text-secondary);">Quarentena</div>
-                <div style="font-size:1.3rem; font-weight:700; color:#f59e0b;">${stock.filter(p => p.status === 'QUARENTENA').length}</div>
+                <div id="est-card-quar" style="font-size:1.3rem; font-weight:700; color:#f59e0b;">${stock.filter(p => p.status === 'QUARENTENA').length}</div>
             </div>
             <div class="card" style="padding:1rem; text-align:center;">
                 <div style="font-size:0.75rem; color:var(--text-secondary);">Bloqueados</div>
-                <div style="font-size:1.3rem; font-weight:700; color:#ef4444;">${stock.filter(p => p.status === 'BLOQUEADO').length}</div>
+                <div id="est-card-bloq" style="font-size:1.3rem; font-weight:700; color:#ef4444;">${stock.filter(p => p.status === 'BLOQUEADO').length}</div>
             </div>
         </div>
     `;
@@ -289,7 +302,66 @@ function renderConsultaEstoque(container) {
     // Store for filtering
     window._estoqueData = stock;
     filterEstoque();
+    _enriquecerEstoqueComErp(stock);
 }
+
+// Junta o saldo SEM ENDEREÇO e o Saldo ERP (catálogo WmsErpCatalog) às linhas endereçadas do WMS
+async function _enriquecerEstoqueComErp(stockEnderecado) {
+    if (!window.WmsErpCatalog) return;
+    try {
+        const n = await window.WmsErpCatalog.count();
+        const btn = document.getElementById('est-btn-carga-erp');
+        if (btn) btn.style.display = n > 0 ? 'inline-flex' : 'none';
+        if (!n) return;
+
+        const [saldos, semEnd] = await Promise.all([window.WmsErpCatalog.saldoMap(), window.WmsErpCatalog.listSemEndereco()]);
+        const linhasSem = semEnd.map(s => ({
+            sku: s.sku, desc: s.descricao || 'Produto', endereco: window.WmsErpCatalog.SEM_ENDERECO,
+            saldo: Number(s.qtd || 0), unidade: s.unidade || 'UN', status: 'A ENDEREÇAR', lote: '-', validade: ''
+        }));
+        const todas = [...stockEnderecado, ...linhasSem].map(r => {
+            const erp = saldos.get(String(r.sku));
+            return {
+                ...r,
+                saldoErp: erp ? erp.saldoErp : null,
+                desc: (r.desc === 'Produto Sem Nome' && erp) ? erp.descricao : r.desc
+            };
+        });
+        window._estoqueData = todas;
+
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('est-card-skus',  new Set(todas.map(p => p.sku)).size.toLocaleString('pt-BR'));
+        set('est-card-saldo', todas.reduce((s, p) => s + (Number(p.saldo) || 0), 0).toLocaleString('pt-BR'));
+        set('est-card-disp',  todas.filter(p => p.status === 'DISPONÍVEL').length.toLocaleString('pt-BR'));
+        set('est-card-aend',  linhasSem.length.toLocaleString('pt-BR'));
+        set('est-count-label', `${todas.length.toLocaleString('pt-BR')} registros`);
+        filterEstoque();
+    } catch (e) {
+        console.warn('[Estoque] Falha ao carregar dados do ERP:', e.message);
+    }
+}
+
+// Carga inicial: saldo SEM ENDEREÇO = saldo ERP − saldo já endereçado no WMS
+window.cargaInicialSaldoErp = async function () {
+    if (!window.WmsErpCatalog || !window.StockManager) return;
+    try {
+        const jaTem = (await window.WmsErpCatalog.listSemEndereco()).length;
+        const msg = jaTem
+            ? `Já existe saldo SEM ENDEREÇO para ${jaTem} produto(s).\n\nRecalcular agora? Cada produto passa a ter: saldo do ERP − saldo já endereçado no WMS.`
+            : `Criar o saldo inicial SEM ENDEREÇO a partir do saldo do ERP?\n\nCada produto com saldo positivo no ERP entra como SEM ENDEREÇO (descontando o que já estiver endereçado no WMS).\nDepois, distribua pelos endereços em Estoque → Transferência de Endereço, com origem "SEM ENDEREÇO".`;
+        if (!confirm(msg)) return;
+
+        const enderecado = {};
+        window.StockManager.getStockList().forEach(r => { enderecado[r.sku] = (enderecado[r.sku] || 0) + (Number(r.saldo) || 0); });
+        const r = await window.WmsErpCatalog.carregarSaldoInicial({ saldoEnderecado: enderecado });
+        window.StockManager.logTransaction('AJUSTE', '*', r.qtdTotal, 'CARGA-INICIAL-ERP',
+            `Carga inicial do saldo ERP: ${r.linhas} produto(s) SEM ENDEREÇO`, window.WmsErpCatalog.SEM_ENDERECO);
+        alert(`✅ Saldo inicial carregado: ${r.linhas.toLocaleString('pt-BR')} produto(s), ${r.qtdTotal.toLocaleString('pt-BR')} unidade(s) SEM ENDEREÇO.`);
+        renderConsultaEstoque(document.getElementById('view-dynamic'));
+    } catch (e) {
+        alert('Falha na carga inicial: ' + e.message);
+    }
+};
 
 window.filterEstoque = function () {
     const search = (document.getElementById('est-search-sku')?.value || '').toLowerCase();
@@ -299,20 +371,27 @@ window.filterEstoque = function () {
     if (!tbody) return;
 
     const filtered = stock.filter(p => {
-        const matchSearch = !search || p.sku.toLowerCase().includes(search) || p.desc.toLowerCase().includes(search);
+        const matchSearch = !search || String(p.sku).toLowerCase().includes(search) || String(p.desc).toLowerCase().includes(search);
         const matchStatus = !statusFilter || p.status === statusFilter;
         return matchSearch && matchStatus;
     });
 
-    tbody.innerHTML = filtered.map(p => {
-        const statusColor = p.status === 'DISPONÍVEL' ? '#10b981' : p.status === 'QUARENTENA' ? '#f59e0b' : '#ef4444';
-        const statusBg = p.status === 'DISPONÍVEL' ? 'rgba(16,185,129,0.12)' : p.status === 'QUARENTENA' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)';
+    const LIMITE = 300;   // milhares de linhas SEM ENDEREÇO travariam a tela
+    const cores = {
+        'DISPONÍVEL':  ['#10b981', 'rgba(16,185,129,0.12)'],
+        'A ENDEREÇAR': ['#3b82f6', 'rgba(59,130,246,0.12)'],
+        'QUARENTENA':  ['#f59e0b', 'rgba(245,158,11,0.12)']
+    };
+    tbody.innerHTML = filtered.slice(0, LIMITE).map(p => {
+        const [statusColor, statusBg] = cores[p.status] || ['#ef4444', 'rgba(239,68,68,0.12)'];
+        const semEnd = p.status === 'A ENDEREÇAR';
         return `
             <tr>
                 <td style="font-weight:600; font-family:monospace;">${p.sku}</td>
                 <td>${p.desc}</td>
-                <td style="font-family:monospace; font-size:0.8rem;">${p.endereco}</td>
-                <td style="text-align:right; font-weight:600;">${p.saldo.toLocaleString('pt-BR')}</td>
+                <td style="font-family:monospace; font-size:0.8rem;${semEnd ? ' color:#3b82f6; font-weight:600;' : ''}">${p.endereco}</td>
+                <td style="text-align:right; font-weight:600;">${Number(p.saldo || 0).toLocaleString('pt-BR')}</td>
+                <td style="text-align:right; font-size:0.8rem; color:var(--text-secondary);">${p.saldoErp == null ? '-' : Number(p.saldoErp).toLocaleString('pt-BR')}</td>
                 <td>${p.unidade}</td>
                 <td style="font-size:0.8rem;">${p.lote}</td>
                 <td style="font-size:0.8rem;">${p.validade || '-'}</td>
@@ -321,8 +400,12 @@ window.filterEstoque = function () {
             </tr>`;
     }).join('');
 
+    if (filtered.length > LIMITE) {
+        tbody.innerHTML += `<tr><td colspan="9" style="text-align:center; padding:1rem; color:var(--text-secondary); font-size:.8rem;">
+            Mostrando ${LIMITE} de ${filtered.length.toLocaleString('pt-BR')} registros — refine a busca por SKU ou descrição.</td></tr>`;
+    }
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum produto encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum produto encontrado.</td></tr>`;
     }
 };
 
